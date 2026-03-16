@@ -25,7 +25,7 @@ async function loadTask({ cwd, slug, taskUrlBase, file, taskUrl }) {
   if (!slug) {
     throw new Error("slug is required. Set it in .nibras.json or NIBRAS_SLUG.");
   }
-  const url = `${taskUrlBase.replace(/\\/$/, "")}/${slug}`;
+  const url = `${taskUrlBase.replace(/\/$/, "")}/${slug}`;
   return fetchText(url);
 }
 
