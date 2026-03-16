@@ -9,7 +9,6 @@ const { updateBuildpack } = require("./updateBuildpack");
 const { resolveManualScore, computePercentage: computeManualPercentage } = require("./manualGrade");
 const { autoCheck } = require("./autoCheck");
 const { setupProject } = require("./setup");
-const { runCommand } = require("./exec");
 const path = require("path");
 
 function printUsage() {
@@ -218,32 +217,10 @@ function runTask(argv, subject, project, config) {
   });
 }
 
-async function openDirectory(destPath) {
-  let command = "xdg-open";
-  let args = [destPath];
-  if (process.platform === "darwin") {
-    command = "open";
-  } else if (process.platform === "win32") {
-    command = "cmd";
-    args = ["/c", "start", "", destPath];
-  }
-  try {
-    const result = await runCommand(command, args, { cwd: destPath });
-    if (result.code !== 0) {
-      throw new Error(result.stderr || `Failed to open directory with ${command}.`);
-    }
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error(`Open failed. You can 'cd' to: ${destPath}`);
-  }
-}
-
 function runSetup(argv, subject, project, config) {
   const cmd = new Command();
   cmd.option("--url <url>", "Override setup zip URL");
   cmd.option("--dir <path>", "Override destination directory");
-  cmd.option("--open", "Open destination directory after setup");
-  cmd.option("--print-cd", "Print a shell cd command to enter the directory");
   cmd.parse(["node", "nibras", ...argv], { from: "user" });
   const opts = cmd.opts();
 
@@ -259,16 +236,8 @@ function runSetup(argv, subject, project, config) {
     projectConfig: projectCfg,
     subjectConfig
   }).then((result) => {
-    if (opts.printCd) {
-      // eslint-disable-next-line no-console
-      console.log(`cd ${result.destPath}`);
-      return;
-    }
     // eslint-disable-next-line no-console
     console.log(`Downloaded and extracted to ${result.destPath}`);
-    if (opts.open) {
-      return openDirectory(result.destPath);
-    }
   });
 }
 
