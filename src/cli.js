@@ -147,7 +147,7 @@ function runTest(argv, subject, project, config) {
     // eslint-disable-next-line no-console
     console.log(`Auto-check: ${auto.earnedPoints}/${auto.totalPoints} (${auto.percentage}%)`);
     auto.results.forEach((result) => {
-      const status = result.matched ? "PASS" : "FAIL";
+      const status = result.matched ? "\x1b[32mPASS\x1b[0m" : "FAIL";
       // eslint-disable-next-line no-console
       console.log(`${result.id}: ${status} (${result.earned}/${result.points})`);
     });
