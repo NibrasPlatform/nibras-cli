@@ -81,14 +81,6 @@ nibras cs161 setup exam1
 nibras ping
 ```
 
-## Visuals
-
-![Nibras CLI Overview](assets/cli-overview.svg)
-
-![Setup Flow](assets/setup-flow.svg)
-
-![Grading Flow](assets/grading-flow.svg)
-
 ## Grading
 
 `check` grading prefers auto-checking if a grading file is found (private
