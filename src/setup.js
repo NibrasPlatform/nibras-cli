@@ -11,10 +11,24 @@ async function downloadWithCurl(url, outPath, cwd) {
 }
 
 async function downloadFile(url, outPath, cwd) {
-  let result = await downloadWithWget(url, outPath, cwd);
-  if (result.code === 0) return result;
-  result = await downloadWithCurl(url, outPath, cwd);
-  return result;
+  try {
+    const result = await downloadWithWget(url, outPath, cwd);
+    if (result.code === 0) return result;
+  } catch (err) {
+    if (!err || err.code !== "ENOENT") {
+      throw err;
+    }
+  }
+
+  try {
+    const result = await downloadWithCurl(url, outPath, cwd);
+    return result;
+  } catch (err) {
+    if (err && err.code === "ENOENT") {
+      throw new Error("Neither wget nor curl is available. Install one to use setup.");
+    }
+    throw err;
+  }
 }
 
 async function unzipFile(zipPath, cwd) {
