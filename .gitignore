@@ -4,3 +4,7 @@ dist/
 .DS_Store
 *.log
 tmp/
+.idea/
+exam1.zip
+exam1/
+package-lock.json
