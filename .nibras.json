@@ -1,4 +1,5 @@
 {
+  "requireGrading": true,
   "subjects": {
     "cs161": {
       "taskFile": "CS161.md",
