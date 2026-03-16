@@ -15,6 +15,14 @@ function copyFileIntoTemp(cwd, file, tempRoot) {
   fs.copyFileSync(src, dest);
 }
 
+async function runGit(args, cwd, errorMessage) {
+  const result = await runCommand("git", args, { cwd });
+  if (result.code !== 0) {
+    throw new Error(result.stderr || errorMessage);
+  }
+  return result;
+}
+
 async function submit({ cwd, submissionRef, submitRemote, files }) {
   if (!submitRemote) {
     throw new Error("submitRemote is required. Set it in .nibras.json or NIBRAS_SUBMIT_REMOTE.");
@@ -30,17 +38,14 @@ async function submit({ cwd, submissionRef, submitRemote, files }) {
   }
   fileList.forEach((file) => copyFileIntoTemp(cwd, file, tempRoot));
 
-  await runCommand("git", ["init"], { cwd: tempRoot });
-  await runCommand("git", ["add", "."], { cwd: tempRoot });
-  await runCommand("git", ["commit", "-m", "submit"], { cwd: tempRoot });
+  await runGit(["init"], tempRoot, "Failed to initialize temporary submission repository.");
+  await runGit(["config", "user.name", "nibras"], tempRoot, "Failed to configure git user.name.");
+  await runGit(["config", "user.email", "nibras@local"], tempRoot, "Failed to configure git user.email.");
+  await runGit(["add", "."], tempRoot, "Failed to stage submission files.");
+  await runGit(["commit", "-m", "submit"], tempRoot, "Failed to create submission commit.");
 
   const branch = `submit/${submissionRef}`;
-  const push = await runCommand("git", ["push", submitRemote, `HEAD:refs/heads/${branch}`], {
-    cwd: tempRoot
-  });
-  if (push.code !== 0) {
-    throw new Error(push.stderr || "Failed to push submission.");
-  }
+  await runGit(["push", submitRemote, `HEAD:refs/heads/${branch}`], tempRoot, "Failed to push submission.");
   return { branch, files: fileList.length };
 }
 

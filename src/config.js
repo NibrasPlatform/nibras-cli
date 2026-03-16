@@ -13,6 +13,14 @@ const DEFAULT_CONFIG = {
   }
 };
 
+function readEnvOverride(name) {
+  return Object.prototype.hasOwnProperty.call(process.env, name) ? process.env[name] : undefined;
+}
+
+function definedEntries(entries) {
+  return Object.fromEntries(entries.filter(([, value]) => value !== undefined));
+}
+
 function readJsonIfExists(filePath) {
   try {
     const raw = fs.readFileSync(filePath, "utf8");
@@ -28,12 +36,12 @@ function readJsonIfExists(filePath) {
 function loadConfig(cwd) {
   const configPath = path.join(cwd, ".nibras.json");
   const fileConfig = readJsonIfExists(configPath) || {};
-  const envConfig = {
-    slug: process.env.NIBRAS_SLUG || "",
-    submitRemote: process.env.NIBRAS_SUBMIT_REMOTE || "",
-    taskUrlBase: process.env.NIBRAS_TASK_URL_BASE || "",
-    gradingRoot: process.env.NIBRAS_GRADING_ROOT || ""
-  };
+  const envConfig = definedEntries([
+    ["slug", readEnvOverride("NIBRAS_SLUG")],
+    ["submitRemote", readEnvOverride("NIBRAS_SUBMIT_REMOTE")],
+    ["taskUrlBase", readEnvOverride("NIBRAS_TASK_URL_BASE")],
+    ["gradingRoot", readEnvOverride("NIBRAS_GRADING_ROOT")]
+  ]);
   return {
     ...DEFAULT_CONFIG,
     ...fileConfig,
