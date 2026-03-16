@@ -8,7 +8,9 @@
           "path": "Stanford Data/cs161/Exams/1",
           "totalPoints": 100,
           "scoresFile": "scores.json",
-          "gradingFile": "grading.json"
+          "setupUrl": "https://github.com/EpitomeZied/nibras-cli/releases/download/v1/exam1.zip",
+          "setupZipName": "exam1.zip",
+          "setupDir": "."
         },
         "exam2": {
           "type": "check",

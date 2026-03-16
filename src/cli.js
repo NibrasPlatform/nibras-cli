@@ -130,26 +130,22 @@ function runTest(argv, subject, project, config) {
   } else if (!path.isAbsolute(gradingFile)) {
     gradingPath = gradingFile;
   }
+  const requireGrading = Boolean(gradingRoot || opts.grading);
   const auto = autoCheck({
     cwd: process.cwd(),
     projectPath: projectConfig.path || project,
     gradingFile: gradingPath,
-    answersDir: opts.answersDir || projectConfig.answersDir
+    answersDir: opts.answersDir || projectConfig.answersDir,
+    requireGrading
   });
 
   if (auto.used) {
     // eslint-disable-next-line no-console
     console.log(`Auto-check: ${auto.earnedPoints}/${auto.totalPoints} (${auto.percentage}%)`);
     auto.results.forEach((result) => {
-      if (result.missing) {
-        // eslint-disable-next-line no-console
-        console.log(`${result.id}: missing answer file (${result.answerPath})`);
-        return;
-      }
+      const status = result.matched ? "PASS" : "FAIL";
       // eslint-disable-next-line no-console
-      console.log(
-        `${result.id}: ${result.earned}/${result.points} (${result.matched}/${result.totalItems} items matched)`
-      );
+      console.log(`${result.id}: ${status} (${result.earned}/${result.points})`);
     });
     const minScore = toNumber(opts.minScore, 100);
     if (auto.percentage < minScore) {
