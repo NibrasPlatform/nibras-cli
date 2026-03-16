@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a1f2a"/>
+      <stop offset="100%" stop-color="#102a43"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#bg)"/>
+
+  <g font-family="sans-serif" font-size="18" fill="#e2e8f0" stroke="#334155" stroke-width="2">
+    <rect x="70" y="120" width="250" height="90" rx="12" fill="#111827"/>
+    <text x="195" y="170" text-anchor="middle">GitHub Release</text>
+
+    <rect x="355" y="120" width="250" height="90" rx="12" fill="#111827"/>
+    <text x="480" y="160" text-anchor="middle">nibras setup</text>
+    <text x="480" y="185" text-anchor="middle">download + unzip</text>
+
+    <rect x="640" y="120" width="250" height="90" rx="12" fill="#111827"/>
+    <text x="765" y="160" text-anchor="middle">Project Folder</text>
+    <text x="765" y="185" text-anchor="middle">ready to use</text>
+  </g>
+
+  <g stroke="#64748b" stroke-width="3" fill="none">
+    <path d="M320 165 L355 165"/>
+    <path d="M605 165 L640 165"/>
+  </g>
+
+  <text x="480" y="300" fill="#94a3b8" font-family="monospace" font-size="18" text-anchor="middle">
+    nibras cs161 setup exam1
+  </text>
+</svg>
