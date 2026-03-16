@@ -32,7 +32,8 @@ Create `.nibras.json` in your project root:
 ```
 
 For auto-checking, add `grading.json` to the project folder and create one
-answer file per question (e.g., `q1.txt`).
+answer file per question (e.g., `q1.txt`). You can store answers elsewhere and
+pass `--answers-dir`.
 
 Example `grading.json`:
 

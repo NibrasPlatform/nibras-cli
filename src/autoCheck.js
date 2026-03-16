@@ -77,7 +77,7 @@ function validateGradingSchema(grading, gradingPath) {
   });
 }
 
-function autoCheck({ cwd, projectPath, gradingFile }) {
+function autoCheck({ cwd, projectPath, gradingFile, answersDir }) {
   const gradingPath = path.isAbsolute(gradingFile)
     ? gradingFile
     : path.join(cwd, projectPath, gradingFile);
@@ -94,7 +94,12 @@ function autoCheck({ cwd, projectPath, gradingFile }) {
   let totalPoints = 0;
 
   grading.questions.forEach((question) => {
-    const answerPath = path.join(cwd, projectPath, question.answerFile);
+    const answerBase = answersDir
+      ? path.isAbsolute(answersDir)
+        ? answersDir
+        : path.join(cwd, answersDir)
+      : path.join(cwd, projectPath);
+    const answerPath = path.join(answerBase, question.answerFile);
     const points = Number(question.points);
     totalPoints += points;
 

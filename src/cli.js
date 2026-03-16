@@ -60,7 +60,8 @@ function runTest(argv, subject, project, config) {
     .option("--earned <number>", "Earned points for check grading")
     .option("--total <number>", "Total points for check grading")
     .option("--scores <path>", "Scores JSON file for check grading")
-    .option("--grading <path>", "grading.json file for auto-checking");
+    .option("--grading <path>", "grading.json file for auto-checking")
+    .option("--answers-dir <path>", "Directory that contains answer files");
   cmd.parse(["node", "nibras", ...argv], { from: "user" });
   const opts = cmd.opts();
 
@@ -103,7 +104,8 @@ function runTest(argv, subject, project, config) {
   const auto = autoCheck({
     cwd: process.cwd(),
     projectPath: projectConfig.path || project,
-    gradingFile
+    gradingFile,
+    answersDir: opts.answersDir || projectConfig.answersDir
   });
 
   if (auto.used) {
