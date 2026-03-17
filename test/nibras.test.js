@@ -3,8 +3,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const http = require("node:http");
 const { spawnSync } = require("node:child_process");
 
+const { validateAiGradeResponse } = require("../src/aiGrade");
 const { autoCheck } = require("../src/autoCheck");
 const { run } = require("../src/cli");
 const { loadConfig } = require("../src/config");
@@ -74,6 +76,59 @@ function commandExists(command) {
   return result.status === 0;
 }
 
+function createSemanticQuestion(overrides = {}) {
+  return {
+    id: "q2",
+    mode: "semantic",
+    points: 30,
+    answerFile: "q2.txt",
+    prompt: "Explain why Dijkstra's algorithm fails with negative edges.",
+    rubric: [
+      {
+        id: "reasoning",
+        description: "Explains the finalized-distance issue.",
+        points: 15
+      },
+      {
+        id: "example",
+        description: "Provides a correct example or equivalent reasoning.",
+        points: 15
+      }
+    ],
+    ...overrides
+  };
+}
+
+async function startMockAiServer(handler) {
+  const requests = [];
+  const server = http.createServer(async (req, res) => {
+    let raw = "";
+    req.on("data", (chunk) => {
+      raw += chunk.toString();
+    });
+    req.on("end", async () => {
+      const body = raw ? JSON.parse(raw) : {};
+      requests.push(body);
+      try {
+        const payload = await handler(body);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(payload));
+      } catch (err) {
+        res.writeHead(err.statusCode || 500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  return {
+    requests,
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    close: () => new Promise((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())))
+  };
+}
+
 test("loadConfig keeps file values when env overrides are absent", () => {
   const dir = makeTempDir();
   fs.writeFileSync(
@@ -82,7 +137,10 @@ test("loadConfig keeps file values when env overrides are absent", () => {
       slug: "org/repo",
       submitRemote: "git@example.com:course/submissions.git",
       taskUrlBase: "https://tasks.example.test",
-      gradingRoot: "/tmp/grading"
+      gradingRoot: "/tmp/grading",
+      ai: {
+        model: "file-model"
+      }
     })
   );
 
@@ -91,7 +149,8 @@ test("loadConfig keeps file values when env overrides are absent", () => {
       NIBRAS_SLUG: undefined,
       NIBRAS_SUBMIT_REMOTE: undefined,
       NIBRAS_TASK_URL_BASE: undefined,
-      NIBRAS_GRADING_ROOT: undefined
+      NIBRAS_GRADING_ROOT: undefined,
+      NIBRAS_AI_MODEL: undefined
     },
     () => loadConfig(dir)
   );
@@ -100,6 +159,7 @@ test("loadConfig keeps file values when env overrides are absent", () => {
   assert.equal(config.submitRemote, "git@example.com:course/submissions.git");
   assert.equal(config.taskUrlBase, "https://tasks.example.test");
   assert.equal(config.gradingRoot, "/tmp/grading");
+  assert.equal(config.ai.model, "file-model");
 });
 
 test("loadConfig still lets explicit env vars override file config", () => {
@@ -108,20 +168,28 @@ test("loadConfig still lets explicit env vars override file config", () => {
     path.join(dir, ".nibras.json"),
     JSON.stringify({
       slug: "file/slug",
-      submitRemote: "git@example.com:file.git"
+      submitRemote: "git@example.com:file.git",
+      ai: {
+        model: "file-model",
+        minConfidence: 0.8
+      }
     })
   );
 
   const config = withEnv(
     {
       NIBRAS_SLUG: "env/slug",
-      NIBRAS_SUBMIT_REMOTE: "git@example.com:env.git"
+      NIBRAS_SUBMIT_REMOTE: "git@example.com:env.git",
+      NIBRAS_AI_MODEL: "env-model",
+      NIBRAS_AI_MIN_CONFIDENCE: "0.9"
     },
     () => loadConfig(dir)
   );
 
   assert.equal(config.slug, "env/slug");
   assert.equal(config.submitRemote, "git@example.com:env.git");
+  assert.equal(config.ai.model, "env-model");
+  assert.equal(config.ai.minConfidence, 0.9);
 });
 
 test("updateBuildpack preserves unrelated config fields", () => {
@@ -159,7 +227,7 @@ test("updateBuildpack preserves unrelated config fields", () => {
   assert.ok(updated.subjects.cs161.projects.exam1);
 });
 
-test("autoCheck normalizes whitespace and uses answersDir", () => {
+test("autoCheck normalizes whitespace and uses answersDir", async () => {
   const dir = makeTempDir();
   const projectDir = path.join(dir, "exam1");
   const answersDir = path.join(dir, "answers");
@@ -189,7 +257,7 @@ test("autoCheck normalizes whitespace and uses answersDir", () => {
   fs.writeFileSync(path.join(answersDir, "q1.txt"), "The   quick\nbrown   fox\n");
   fs.writeFileSync(path.join(answersDir, "q2.txt"), "Wrong");
 
-  const result = autoCheck({
+  const result = await autoCheck({
     cwd: dir,
     projectPath: "exam1",
     gradingFile: "grading.json",
@@ -210,11 +278,11 @@ test("autoCheck normalizes whitespace and uses answersDir", () => {
   );
 });
 
-test("autoCheck throws when grading is required but missing", () => {
+test("autoCheck throws when grading is required but missing", async () => {
   const dir = makeTempDir();
   fs.mkdirSync(path.join(dir, "exam1"), { recursive: true });
 
-  assert.throws(
+  await assert.rejects(
     () =>
       autoCheck({
         cwd: dir,
@@ -223,6 +291,159 @@ test("autoCheck throws when grading is required but missing", () => {
         requireGrading: true
       }),
     /grading\.json not found/
+  );
+});
+
+test("autoCheck grades semantic questions with a mocked grader", async () => {
+  const dir = makeTempDir();
+  const projectDir = path.join(dir, "exam1");
+  fs.mkdirSync(projectDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(projectDir, "grading.json"),
+    JSON.stringify({
+      totalPoints: 50,
+      questions: [
+        {
+          id: "q1",
+          points: 20,
+          answerFile: "q1.txt",
+          solutions: ["42"]
+        },
+        createSemanticQuestion()
+      ]
+    })
+  );
+  fs.writeFileSync(path.join(projectDir, "q1.txt"), "42");
+  fs.writeFileSync(
+    path.join(projectDir, "q2.txt"),
+    "Dijkstra can fail because a later negative edge can lower a distance that was already finalized."
+  );
+
+  const result = await autoCheck({
+    cwd: dir,
+    projectPath: "exam1",
+    gradingFile: "grading.json",
+    requireGrading: true,
+    subject: "cs161",
+    project: "exam1",
+    aiConfig: {
+      minConfidence: 0.8
+    },
+    aiGrader: async () => ({
+      score: 24,
+      confidence: 0.87,
+      needsReview: false,
+      criterionScores: [
+        { id: "reasoning", points: 15, earned: 15, justification: "Good." },
+        { id: "example", points: 15, earned: 9, justification: "Partial." }
+      ],
+      reasoningSummary: "Strong reasoning, partial example.",
+      evidenceQuotes: [
+        "later negative edge can lower a distance that was already finalized"
+      ]
+    })
+  });
+
+  assert.equal(result.earnedPoints, 44);
+  assert.equal(result.reviewRequired, false);
+  assert.deepEqual(
+    result.results.map((entry) => ({ id: entry.id, mode: entry.mode, earned: entry.earned })),
+    [
+      { id: "q1", mode: "exact", earned: 20 },
+      { id: "q2", mode: "semantic", earned: 24 }
+    ]
+  );
+});
+
+test("autoCheck marks low-confidence semantic answers for review", async () => {
+  const dir = makeTempDir();
+  const projectDir = path.join(dir, "exam1");
+  fs.mkdirSync(projectDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(projectDir, "grading.json"),
+    JSON.stringify({
+      totalPoints: 30,
+      questions: [createSemanticQuestion()]
+    })
+  );
+  fs.writeFileSync(path.join(projectDir, "q2.txt"), "Negative edges can improve a finalized node.");
+
+  const result = await autoCheck({
+    cwd: dir,
+    projectPath: "exam1",
+    gradingFile: "grading.json",
+    requireGrading: true,
+    subject: "cs161",
+    project: "exam1",
+    aiConfig: {
+      minConfidence: 0.8
+    },
+    aiGrader: async () => ({
+      score: 18,
+      confidence: 0.61,
+      needsReview: false,
+      criterionScores: [
+        { id: "reasoning", points: 15, earned: 12, justification: "Mostly right." },
+        { id: "example", points: 15, earned: 6, justification: "Weak example." }
+      ],
+      reasoningSummary: "Partial answer.",
+      evidenceQuotes: ["Negative edges can improve a finalized node."]
+    })
+  });
+
+  assert.equal(result.reviewRequired, true);
+  assert.equal(result.results[0].needsReview, true);
+});
+
+test("autoCheck rejects invalid semantic schema", async () => {
+  const dir = makeTempDir();
+  const projectDir = path.join(dir, "exam1");
+  fs.mkdirSync(projectDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(projectDir, "grading.json"),
+    JSON.stringify({
+      totalPoints: 30,
+      questions: [
+        createSemanticQuestion({
+          rubric: [{ id: "reasoning", description: "Only half rubric", points: 15 }]
+        })
+      ]
+    })
+  );
+  fs.writeFileSync(path.join(projectDir, "q2.txt"), "answer");
+
+  await assert.rejects(
+    () =>
+      autoCheck({
+        cwd: dir,
+        projectPath: "exam1",
+        gradingFile: "grading.json",
+        requireGrading: true
+      }),
+    /rubric points/
+  );
+});
+
+test("validateAiGradeResponse rejects evidence quotes not present in answer", () => {
+  const question = createSemanticQuestion();
+  assert.throws(
+    () =>
+      validateAiGradeResponse(
+        {
+          score: 24,
+          confidence: 0.9,
+          needsReview: false,
+          criterionScores: [
+            { id: "reasoning", points: 15, earned: 15, justification: "Good." },
+            { id: "example", points: 15, earned: 9, justification: "Partial." }
+          ],
+          reasoningSummary: "Summary.",
+          evidenceQuotes: ["not in the answer"]
+        },
+        question,
+        "real answer text"
+      ),
+    /was not found/
   );
 });
 
@@ -291,7 +512,7 @@ test("submit works without relying on global git identity", async () => {
   assert.match(showRef.stdout, /refs\/heads\/submit\/cs161\/exam1/);
 });
 
-test("run test uses config-backed auto-check flow", async () => {
+test("run test uses config-backed exact auto-check flow", async () => {
   const dir = makeTempDir();
   const gradingRoot = path.join(dir, "grading");
   const answersDir = path.join(dir, "answers");
@@ -348,6 +569,247 @@ test("run test uses config-backed auto-check flow", async () => {
   } finally {
     process.chdir(previousCwd);
     process.exitCode = previousExitCode;
+  }
+});
+
+test("run test supports semantic grading, review files, and fail-on-review", async () => {
+  const dir = makeTempDir();
+  const gradingRoot = path.join(dir, "grading");
+  const answersDir = path.join(dir, "answers");
+  const reviewFile = path.join(dir, "review", "semantic.json");
+  fs.mkdirSync(path.join(gradingRoot, "cs161", "exam1"), { recursive: true });
+  fs.mkdirSync(answersDir, { recursive: true });
+
+  fs.writeFileSync(
+    path.join(dir, ".nibras.json"),
+    JSON.stringify({
+      requireGrading: true,
+      gradingRoot,
+      ai: {
+        provider: "openai",
+        model: "config-model",
+        minConfidence: 0.8
+      },
+      subjects: {
+        cs161: {
+          projects: {
+            exam1: {
+              type: "check",
+              path: "student/exam1"
+            }
+          }
+        }
+      }
+    })
+  );
+
+  fs.writeFileSync(
+    path.join(gradingRoot, "cs161", "exam1", "grading.json"),
+    JSON.stringify({
+      totalPoints: 30,
+      questions: [createSemanticQuestion()]
+    })
+  );
+  fs.writeFileSync(
+    path.join(answersDir, "q2.txt"),
+    "Once you finalize a node, a later negative edge can lower it again."
+  );
+
+  const server = await startMockAiServer(async () => ({
+    choices: [
+      {
+        message: {
+          content: JSON.stringify({
+            score: 18,
+            confidence: 0.61,
+            needsReview: false,
+            criterionScores: [
+              {
+                id: "reasoning",
+                points: 15,
+                earned: 12,
+                justification: "Mostly right."
+              },
+              {
+                id: "example",
+                points: 15,
+                earned: 6,
+                justification: "Weak example."
+              }
+            ],
+            reasoningSummary: "Partial answer.",
+            evidenceQuotes: [
+              "Once you finalize a node, a later negative edge can lower it again."
+            ]
+          })
+        }
+      }
+    ]
+  }));
+
+  const previousCwd = process.cwd();
+  const previousExitCode = process.exitCode;
+  process.chdir(dir);
+  process.exitCode = undefined;
+
+  try {
+    const logs = await withEnv(
+      {
+        NIBRAS_AI_API_KEY: "test-key",
+        NIBRAS_AI_BASE_URL: server.baseUrl
+      },
+      () =>
+        captureLogs(() =>
+          run([
+            "node",
+            "bin/nibras.js",
+            "cs161",
+            "test",
+            "exam1",
+            "--answers-dir",
+            answersDir,
+            "--review-file",
+            reviewFile,
+            "--fail-on-review",
+            "--ai-model",
+            "flag-model"
+          ])
+        )
+    );
+
+    assert.equal(process.exitCode, 1);
+    assert.match(logs.join("\n"), /q2: 18\/30 AI\(confidence 0.61\) REVIEW/);
+    assert.match(logs.join("\n"), /Review: 1 question require instructor review/);
+    assert.equal(server.requests[0].model, "flag-model");
+
+    const review = JSON.parse(fs.readFileSync(reviewFile, "utf8"));
+    assert.equal(review.reviewRequired, true);
+    assert.equal(review.results[0].mode, "semantic");
+    assert.equal(review.results[0].needsReview, true);
+    assert.equal(review.results[0].confidence, 0.61);
+  } finally {
+    await server.close();
+    process.chdir(previousCwd);
+    process.exitCode = previousExitCode;
+  }
+});
+
+test("run test fails when semantic grading is disabled", async () => {
+  const dir = makeTempDir();
+  const gradingRoot = path.join(dir, "grading");
+  const answersDir = path.join(dir, "answers");
+  fs.mkdirSync(path.join(gradingRoot, "cs161", "exam1"), { recursive: true });
+  fs.mkdirSync(answersDir, { recursive: true });
+
+  fs.writeFileSync(
+    path.join(dir, ".nibras.json"),
+    JSON.stringify({
+      requireGrading: true,
+      gradingRoot,
+      subjects: {
+        cs161: {
+          projects: {
+            exam1: {
+              type: "check",
+              path: "student/exam1"
+            }
+          }
+        }
+      }
+    })
+  );
+  fs.writeFileSync(
+    path.join(gradingRoot, "cs161", "exam1", "grading.json"),
+    JSON.stringify({
+      totalPoints: 30,
+      questions: [createSemanticQuestion()]
+    })
+  );
+  fs.writeFileSync(path.join(answersDir, "q2.txt"), "answer");
+
+  const previousCwd = process.cwd();
+  process.chdir(dir);
+  try {
+    await assert.rejects(
+      () =>
+        run([
+          "node",
+          "bin/nibras.js",
+          "cs161",
+          "test",
+          "exam1",
+          "--answers-dir",
+          answersDir,
+          "--no-ai"
+        ]),
+      /requires AI grading/
+    );
+  } finally {
+    process.chdir(previousCwd);
+  }
+});
+
+test("run test fails with a clear error when semantic grading lacks an API key", async () => {
+  const dir = makeTempDir();
+  const gradingRoot = path.join(dir, "grading");
+  const answersDir = path.join(dir, "answers");
+  fs.mkdirSync(path.join(gradingRoot, "cs161", "exam1"), { recursive: true });
+  fs.mkdirSync(answersDir, { recursive: true });
+
+  fs.writeFileSync(
+    path.join(dir, ".nibras.json"),
+    JSON.stringify({
+      requireGrading: true,
+      gradingRoot,
+      ai: {
+        provider: "openai",
+        model: "config-model"
+      },
+      subjects: {
+        cs161: {
+          projects: {
+            exam1: {
+              type: "check",
+              path: "student/exam1"
+            }
+          }
+        }
+      }
+    })
+  );
+  fs.writeFileSync(
+    path.join(gradingRoot, "cs161", "exam1", "grading.json"),
+    JSON.stringify({
+      totalPoints: 30,
+      questions: [createSemanticQuestion()]
+    })
+  );
+  fs.writeFileSync(path.join(answersDir, "q2.txt"), "answer");
+
+  const previousCwd = process.cwd();
+  process.chdir(dir);
+  try {
+    await withEnv(
+      {
+        NIBRAS_AI_API_KEY: undefined
+      },
+      () =>
+        assert.rejects(
+          () =>
+            run([
+              "node",
+              "bin/nibras.js",
+              "cs161",
+              "test",
+              "exam1",
+              "--answers-dir",
+              answersDir
+            ]),
+          /NIBRAS_AI_API_KEY/
+        )
+    );
+  } finally {
+    process.chdir(previousCwd);
   }
 });
 

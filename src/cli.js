@@ -9,6 +9,7 @@ const { updateBuildpack } = require("./updateBuildpack");
 const { resolveManualScore, computePercentage: computeManualPercentage } = require("./manualGrade");
 const { autoCheck } = require("./autoCheck");
 const { setupProject } = require("./setup");
+const { writeReviewOutput } = require("./reviewOutput");
 const path = require("path");
 
 function printUsage() {
@@ -75,7 +76,11 @@ function runTest(argv, subject, project, config) {
     .option("--scores <path>", "Scores JSON file for check grading")
     .option("--grading <path>", "grading.json file for auto-checking")
     .option("--grading-root <path>", "Root directory for private grading files")
-    .option("--answers-dir <path>", "Directory that contains answer files");
+    .option("--answers-dir <path>", "Directory that contains answer files")
+    .option("--ai-model <model>", "AI model override for semantic grading")
+    .option("--review-file <path>", "Write semantic grading review output to a JSON file")
+    .option("--fail-on-review", "Exit non-zero if any semantic question requires review")
+    .option("--no-ai", "Disable AI semantic grading");
   cmd.parse(["node", "nibras", ...argv], { from: "user" });
   const opts = cmd.opts();
 
@@ -122,12 +127,18 @@ function runTest(argv, subject, project, config) {
     config.gradingRoot;
 
   let gradingPath = gradingFile;
-  if (gradingRoot) {
+  if (path.isAbsolute(gradingFile)) {
+    gradingPath = gradingFile;
+  } else if (gradingRoot) {
     const root = path.isAbsolute(gradingRoot) ? gradingRoot : path.join(process.cwd(), gradingRoot);
     gradingPath = path.join(root, subject, project, gradingFile);
-  } else if (!path.isAbsolute(gradingFile)) {
+  } else {
     gradingPath = gradingFile;
   }
+  const aiConfig = {
+    ...(config.ai || {}),
+    model: opts.aiModel || (config.ai && config.ai.model) || ""
+  };
   const requireGrading = Boolean(
     opts.grading ||
       gradingRoot ||
@@ -140,41 +151,77 @@ function runTest(argv, subject, project, config) {
     projectPath: projectConfig.path || project,
     gradingFile: gradingPath,
     answersDir: opts.answersDir || projectConfig.answersDir,
-    requireGrading
+    requireGrading,
+    aiConfig,
+    aiEnabled: opts.ai !== false,
+    subject,
+    project
   });
 
-  if (auto.used) {
+  return Promise.resolve(auto).then((resolvedAuto) => {
+    if (!resolvedAuto.used) {
+      const { earnedPoints, totalPoints } = resolveManualScore({
+        cwd: process.cwd(),
+        project,
+        projectConfig,
+        earnedOverride: opts.earned,
+        totalOverride: opts.total,
+        scoresPathOverride: opts.scores
+      });
+      const score = computeManualPercentage(earnedPoints, totalPoints);
+      const minScore = toNumber(opts.minScore, 100);
+
+      // eslint-disable-next-line no-console
+      console.log(`Score: ${score}% (${earnedPoints}/${totalPoints})`);
+      if (score < minScore) {
+        process.exitCode = 1;
+      }
+      return;
+    }
+
     // eslint-disable-next-line no-console
-    console.log(`Auto-check: ${auto.earnedPoints}/${auto.totalPoints} (${auto.percentage}%)`);
-    auto.results.forEach((result) => {
+    console.log(`Auto-check: ${resolvedAuto.earnedPoints}/${resolvedAuto.totalPoints} (${resolvedAuto.percentage}%)`);
+    resolvedAuto.results.forEach((result) => {
+      if (result.mode === "semantic") {
+        const reviewSuffix = result.needsReview ? " REVIEW" : "";
+        // eslint-disable-next-line no-console
+        console.log(`${result.id}: ${result.earned}/${result.points} AI(confidence ${result.confidence.toFixed(2)})${reviewSuffix}`);
+        result.criterionScores.forEach((criterion) => {
+          // eslint-disable-next-line no-console
+          console.log(`  ${criterion.id}: ${criterion.earned}/${criterion.points}`);
+        });
+        return;
+      }
+
       const status = result.matched ? "\x1b[32mPASS\x1b[0m" : "FAIL";
       // eslint-disable-next-line no-console
       console.log(`${result.id}: ${status} (${result.earned}/${result.points})`);
     });
     const minScore = toNumber(opts.minScore, 100);
-    if (auto.percentage < minScore) {
+    if (resolvedAuto.reviewRequired) {
+      const reviewCount = resolvedAuto.results.filter((result) => result.needsReview).length;
+      const suffix = reviewCount === 1 ? "" : "s";
+      // eslint-disable-next-line no-console
+      console.log(`Review: ${reviewCount} question${suffix} require instructor review`);
+    }
+    if (opts.reviewFile) {
+      const reviewPath = writeReviewOutput({
+        cwd: process.cwd(),
+        filePath: opts.reviewFile,
+        subject,
+        project,
+        summary: resolvedAuto
+      });
+      // eslint-disable-next-line no-console
+      console.log(`Review file: ${reviewPath}`);
+    }
+    if (resolvedAuto.percentage < minScore) {
       process.exitCode = 1;
     }
-    return Promise.resolve();
-  }
-
-  const { earnedPoints, totalPoints } = resolveManualScore({
-    cwd: process.cwd(),
-    project,
-    projectConfig,
-    earnedOverride: opts.earned,
-    totalOverride: opts.total,
-    scoresPathOverride: opts.scores
+    if (opts.failOnReview && resolvedAuto.reviewRequired) {
+      process.exitCode = 1;
+    }
   });
-  const score = computeManualPercentage(earnedPoints, totalPoints);
-  const minScore = toNumber(opts.minScore, 100);
-
-  // eslint-disable-next-line no-console
-  console.log(`Score: ${score}% (${earnedPoints}/${totalPoints})`);
-  if (score < minScore) {
-    process.exitCode = 1;
-  }
-  return Promise.resolve();
 }
 
 function runSubmit(argv, subject, project, config) {
