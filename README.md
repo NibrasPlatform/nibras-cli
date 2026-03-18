@@ -102,9 +102,33 @@ npm run api:dev
 npm run web:dev
 ```
 
+ngrok-ready local development:
+
+```bash
+cp .env.ngrok.example .env
+docker compose up -d
+npm run db:push
+npm run api:dev
+npm run web:dev
+npm run proxy:dev
+ngrok http 8080
+```
+
+Use one HTTPS tunnel:
+- proxy tunnel -> local `http://127.0.0.1:8080`
+
+The local proxy fans requests out like this:
+- `/v1/*` and `/dev/*` -> local API `http://127.0.0.1:4848`
+- everything else -> local web app `http://127.0.0.1:3000`
+
+GitHub cannot call `127.0.0.1`, so the public tunnel URLs must be used in both
+the GitHub App settings and the `.env` file.
+
 Required GitHub App settings:
-- Set the GitHub App `Setup URL` to `http://127.0.0.1:3000/install/complete`
-- Set the callback URL for the OAuth flow to `http://127.0.0.1:4848/v1/github/oauth/callback`
+- Set the GitHub App `Setup URL` to `<public-url>/install/complete`
+- Set the callback URL for the OAuth flow to `<public-url>/v1/github/oauth/callback`
+- Set the webhook URL to `<public-url>/v1/github/webhooks`
+- Set the homepage URL to `<public-url>/`
 - Fill `GITHUB_APP_ID`, `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET`,
   `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_NAME`, and `GITHUB_WEBHOOK_SECRET`
 - Optionally set `GITHUB_TEMPLATE_OWNER` and `GITHUB_TEMPLATE_REPO` to enable
@@ -117,6 +141,90 @@ Implemented product pieces:
 - Installation ownership verification before linking an installation to a user
 - HMAC verification for GitHub webhooks using `X-Hub-Signature-256`
 - A real Next.js web app under `apps/web/`
+
+For a full manual validation path, see `TEST_SCENARIO.md`.
+
+### GitHub App Checklist
+
+Use this checklist when creating the GitHub App for Nibras.
+
+1. Create the app under your personal account or the owning organization.
+   GitHub Docs: https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app
+
+2. Fill the core registration fields.
+   `GitHub App name`: short, unique, <= 34 chars.
+   `Homepage URL`: `<public-url>/`
+   `Callback URL`: `<public-url>/v1/github/oauth/callback`
+   `Setup URL`: `<public-url>/install/complete`
+   `Webhook URL`: `<public-url>/v1/github/webhooks`
+   `Webhook secret`: generate a random secret and put it in `GITHUB_WEBHOOK_SECRET`.
+
+3. Enable the auth modes this repo uses.
+   Enable `Device Flow`.
+   Keep `Request user authorization (OAuth) during installation` disabled.
+   Keep expiring user tokens enabled.
+   Callback URL docs: https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/about-the-user-authorization-callback-url
+
+4. Set the minimum permissions.
+   Repository permissions:
+   `Contents`: Read and write
+   `Metadata`: Read-only
+   Do not grant broader permissions unless the product actually needs them.
+
+5. Subscribe to the events the backend handles.
+   Enable `Push`.
+   The webhook endpoint in [apps/api/src/app.ts](/home/zied/nibras-cli/apps/api/src/app.ts) currently validates signatures and handles push deliveries.
+
+6. Choose installation scope.
+   For private testing, choose `Only on this account`.
+   Move to `Any account` only when you are ready for broader installs.
+
+7. Generate credentials and store them in `.env`.
+   Copy the App ID, Client ID, Client Secret, App name, and private key into `.env`.
+   Put the private key into `GITHUB_APP_PRIVATE_KEY` with literal newlines or escaped `\n`.
+
+8. If you want automatic repo provisioning from a template, configure:
+   `GITHUB_TEMPLATE_OWNER`
+   `GITHUB_TEMPLATE_REPO`
+   The authenticated GitHub user must be allowed to generate repos from that template.
+
+9. Start the local stack with public URLs.
+   For ngrok:
+   `cp .env.ngrok.example .env`
+   `docker compose up -d`
+   `npm run db:push`
+   `npm run api:dev`
+   `npm run web:dev`
+   `npm run proxy:dev`
+   `ngrok http 8080`
+
+10. Update the GitHub App settings whenever your tunnel URLs change.
+   If your ngrok URLs rotate, update:
+   `Homepage URL`
+   `Callback URL`
+   `Setup URL`
+   `Webhook URL`
+   and the matching env vars in `.env`.
+
+11. Verify webhook signing.
+   GitHub Docs: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+   This repo verifies `X-Hub-Signature-256` using `GITHUB_WEBHOOK_SECRET`.
+
+12. Validate the full product flow.
+   Open the web app.
+   Sign in with GitHub.
+   Install the GitHub App.
+   Complete linking on `/install/complete`.
+   Run `nibras login`, `nibras whoami`, `nibras ping`, `nibras setup --project cs161/exam1`, and `nibras submit`.
+
+### Local Webhook Tips
+
+GitHub’s webhook docs use `smee.io` as a local forwarding option:
+https://docs.github.com/en/webhooks/using-webhooks/handling-webhook-deliveries
+
+This repo is now ngrok-ready, so you can use either approach:
+- `ngrok` if you want one direct public HTTPS URL that the local proxy fans out to the API and web app
+- `smee` if you only need webhook forwarding and want GitHub’s documented local workflow
 
 ## Quick Start
 
