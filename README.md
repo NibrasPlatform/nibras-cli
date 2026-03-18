@@ -7,11 +7,29 @@ operators first, with student-facing commands built on top of the same config.
 
 Supported workflows:
 - Strict private auto-grading with `grading.json`
+- Semantic grading with review output for written answers
 - Manual score fallback for `check` projects when auto-grading is not active
 - Optional `check50` execution for `check50` projects
 - Setup bundle download and extraction
 - Task loading from a local file or a remote URL
 - Git-based submission to a submission remote
+
+## At a Glance
+
+Use `nibras` when you need one config file to drive the whole course workflow:
+
+- `task`: show instructions from a local file or remote source
+- `test`: run exact-match grading, semantic grading, manual scoring, or `check50`
+- `submit`: copy project files into a temporary Git repo and push a submission branch
+- `setup`: download or copy starter materials and unzip them into place
+- `ping`: verify that the submission remote is reachable
+
+Typical workflows:
+
+- Strict exam grading with private `grading.json`
+- Mixed courses where some projects require strict grading and others use `scores.json`
+- AI-assisted review flows for free-form written answers
+- Student submission pipelines that do not expose private grading assets
 
 ## Prerequisites
 
@@ -74,6 +92,13 @@ Supported environment overrides:
 - `NIBRAS_SUBMIT_REMOTE`
 - `NIBRAS_TASK_URL_BASE`
 - `NIBRAS_GRADING_ROOT`
+- `NIBRAS_AI_PROVIDER`
+- `NIBRAS_AI_MODEL`
+- `NIBRAS_AI_API_KEY`
+- `NIBRAS_AI_BASE_URL`
+- `NIBRAS_AI_TIMEOUT_MS`
+- `NIBRAS_AI_MAX_RETRIES`
+- `NIBRAS_AI_MIN_CONFIDENCE`
 
 ### Top-level keys
 
@@ -85,6 +110,7 @@ Supported environment overrides:
 | `localChecks` | boolean | Default local execution preference for `check50` projects. |
 | `requireGrading` | boolean | When true, missing `grading.json` is an error and manual fallback is blocked for `check` projects. Narrower project or subject values override broader ones, including explicit `false`. |
 | `gradingRoot` | string | Root directory used to look up private grading files for auto-checking. It does not by itself make missing grading files fatal. |
+| `ai` | object | Default semantic-grading provider settings such as model, API key, timeout, retries, and confidence threshold. |
 | `buildpack.node` | string | Node version recorded by `nibras update-buildpack`. |
 | `subjects` | object | Per-subject configuration and project catalog. |
 
@@ -208,6 +234,37 @@ This example mirrors the current repo layout and project catalog.
 }
 ```
 
+### AI configuration
+
+Semantic grading uses top-level `ai` settings plus command-line overrides.
+
+Supported keys:
+
+| Key | Type | Purpose |
+| --- | --- | --- |
+| `provider` | string | AI provider name. Current supported value is `openai`. |
+| `model` | string | Model name used for semantic grading. |
+| `apiKey` | string | Provider API key. Can also come from `NIBRAS_AI_API_KEY`. |
+| `baseUrl` | string | Base URL for an OpenAI-compatible API. |
+| `timeoutMs` | number | Request timeout in milliseconds. |
+| `maxRetries` | number | Retry count for retryable provider failures. |
+| `minConfidence` | number | Default review threshold between `0` and `1`. |
+
+Example:
+
+```json
+{
+  "ai": {
+    "provider": "openai",
+    "model": "gpt-4.1-mini",
+    "baseUrl": "https://api.openai.com/v1",
+    "timeoutMs": 30000,
+    "maxRetries": 2,
+    "minConfidence": 0.8
+  }
+}
+```
+
 ## Command Reference
 
 ### `nibras <subject> test <project>`
@@ -232,6 +289,10 @@ Flags:
 - `--grading <path>`: Grading file name or absolute path
 - `--grading-root <path>`: Private grading root
 - `--answers-dir <path>`: Answer directory for auto-checking
+- `--ai-model <model>`: Override the configured semantic-grading model
+- `--review-file <path>`: Write review JSON for semantic grading
+- `--fail-on-review`: Exit non-zero if any semantic answer requires review
+- `--no-ai`: Disable semantic grading and fail if the grading schema requires it
 
 Examples:
 
@@ -471,6 +532,74 @@ Mixed-course example:
 }
 ```
 
+### Semantic grading mode for `check` projects
+
+Semantic grading is enabled per question by setting `mode: "semantic"` in
+`grading.json`.
+
+Question requirements:
+
+- `prompt`: the actual question prompt
+- `rubric`: non-empty array of rubric items
+- rubric item `id`, `description`, and `points`
+- rubric-point total must equal question `points`
+
+Optional fields:
+
+- `examples`: labeled answer examples for the grader
+- `minConfidence`: per-question override for review threshold
+
+Example semantic question:
+
+```json
+{
+  "id": "q2",
+  "mode": "semantic",
+  "points": 30,
+  "answerFile": "q2.txt",
+  "prompt": "Explain why Dijkstra's algorithm fails with negative edges.",
+  "rubric": [
+    {
+      "id": "reasoning",
+      "description": "Explains the finalized-distance issue.",
+      "points": 15
+    },
+    {
+      "id": "example",
+      "description": "Provides a correct example or equivalent reasoning.",
+      "points": 15
+    }
+  ],
+  "minConfidence": 0.8
+}
+```
+
+Runtime behavior:
+
+- the CLI sends the prompt, rubric, and answer text to an OpenAI-compatible API
+- the model must return strict JSON
+- the CLI validates rubric totals, criterion IDs, score totals, and evidence quotes
+- answers are marked for review when the model sets `needsReview: true` or
+  confidence is below the configured threshold
+
+Required runtime config:
+
+- `ai.provider`, currently `openai`
+- `ai.model` or `--ai-model`
+- `NIBRAS_AI_API_KEY` or `ai.apiKey`
+
+Review workflow:
+
+- `--review-file` writes structured grading output to JSON
+- `--fail-on-review` makes review-required results fail CI or release checks
+- `--no-ai` disables semantic grading entirely and causes semantic questions to fail fast
+
+Console output format:
+
+- `Auto-check: earned/total (percentage%)`
+- semantic question lines in the form `q2: 18/30 AI(confidence 0.61) REVIEW`
+- rubric detail lines for each semantic criterion
+
 ### `check50` projects
 
 `check50` support is optional and only applies to projects configured as
@@ -489,6 +618,31 @@ Requirements:
 - `check50` must return JSON output
 
 ## Setup, Task, Submit, and Ping Details
+
+## Resolution Rules
+
+### Config and flags
+
+Config loading happens in two stages:
+
+- `.nibras.json`
+- supported top-level environment overrides
+- built-in defaults for missing keys
+
+Then each command resolves its own flags and scoped config. Common command-level
+resolution patterns are:
+
+- command flags
+- project config
+- subject config
+- top-level config
+- hardcoded defaults
+
+Notable exceptions:
+
+- `requireGrading` uses nearest-defined config scope, with explicit `false` preserved
+- `--grading` always forces strict grading for that invocation
+- relative project paths resolve from the current working directory, while absolute paths are used as-is
 
 ### Setup behavior
 
