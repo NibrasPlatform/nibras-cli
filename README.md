@@ -11,6 +11,7 @@ This repo now also includes a hosted-style v1 vertical slice:
 - a Fastify API app under `apps/api/`
 - shared contracts and core helpers under `packages/`
 - compatibility routing back to the legacy `nibras <subject> <command> <project>` flow
+- a tracked student projects dashboard at `/projects` backed by `/v1/tracking/*`
 
 Supported workflows:
 - Strict private auto-grading with `grading.json`
@@ -150,6 +151,10 @@ Implemented product pieces:
 - Installation ownership verification before linking an installation to a user
 - HMAC verification for GitHub webhooks using `X-Hub-Signature-256`
 - A real Next.js web app under `apps/web/`
+- Integrated project tracking for courses, milestones, reviews, and activity feeds
+
+Project tracking docs:
+- `docs/project-tracking.md`
 
 For a full manual validation path, see `TEST_SCENARIO.md`.
 
