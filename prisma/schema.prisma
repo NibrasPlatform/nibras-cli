@@ -250,10 +250,11 @@ model SubmissionAttempt {
   projectRelease   ProjectRelease    @relation(fields: [projectReleaseId], references: [id], onDelete: Cascade)
   userProjectRepo  UserProjectRepo   @relation(fields: [userProjectRepoId], references: [id], onDelete: Cascade)
   milestone        Milestone?        @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
-  reviews          Review[]
-  githubDeliveries GithubDelivery[]
-  auditLogs        AuditLog[]
-  verificationRuns VerificationRun[]
+  reviews           Review[]
+  githubDeliveries  GithubDelivery[]
+  auditLogs         AuditLog[]
+  verificationRuns  VerificationRun[]
+  verificationJob   VerificationJob?
 
   @@unique([userId, projectId, commitSha])
 }
@@ -311,6 +312,19 @@ model VerificationRun {
   status              SubmissionStatus  @default(queued)
   log                 String
   startedAt           DateTime?
+  finishedAt          DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  submissionAttempt   SubmissionAttempt @relation(fields: [submissionAttemptId], references: [id], onDelete: Cascade)
+}
+
+model VerificationJob {
+  id                  String            @id @default(cuid())
+  submissionAttemptId String            @unique
+  status              SubmissionStatus  @default(queued)
+  attempt             Int               @default(0)
+  maxAttempts         Int               @default(3)
+  claimedAt           DateTime?
   finishedAt          DateTime?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt

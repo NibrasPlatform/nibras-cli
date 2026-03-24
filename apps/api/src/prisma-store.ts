@@ -1080,13 +1080,22 @@ export class PrismaStore implements AppStore {
       },
       include: { project: true }
     });
-    await this.prisma.verificationRun.create({
-      data: {
-        submissionAttemptId: created.id,
-        status: SubmissionStatus.queued,
-        log: "Queued"
-      }
-    });
+    // Create both a VerificationRun (log record) and a VerificationJob (queue record)
+    await Promise.all([
+      this.prisma.verificationRun.create({
+        data: {
+          submissionAttemptId: created.id,
+          status: SubmissionStatus.queued,
+          log: "Queued"
+        }
+      }),
+      this.prisma.verificationJob.create({
+        data: {
+          submissionAttemptId: created.id,
+          status: SubmissionStatus.queued
+        }
+      })
+    ]);
     return toSubmissionRecord(created);
   }
 
@@ -1115,38 +1124,7 @@ export class PrismaStore implements AppStore {
     if (!submission) {
       return null;
     }
-
-    const ageMs = Date.now() - submission.createdAt.getTime();
-    if (!submission.milestoneId && submission.status === SubmissionStatus.queued && ageMs > 1200) {
-      await this.prisma.submissionAttempt.update({
-        where: { id: submission.id },
-        data: {
-          status: SubmissionStatus.running,
-          summary: "Verification is running."
-        }
-      });
-    }
-    if (!submission.milestoneId && submission.status === SubmissionStatus.running && ageMs > 2600) {
-      const nextStatus =
-        submission.localTestExitCode && submission.localTestExitCode !== 0
-          ? SubmissionStatus.failed
-          : SubmissionStatus.passed;
-      await this.prisma.submissionAttempt.update({
-        where: { id: submission.id },
-        data: {
-          status: nextStatus,
-          summary: nextStatus === SubmissionStatus.passed
-            ? "Verification passed."
-            : "Verification failed because the reported local tests failed."
-        }
-      });
-    }
-
-    const refreshed = await this.prisma.submissionAttempt.findUnique({
-      where: { id: submissionId },
-      include: { project: true }
-    });
-    return refreshed ? toSubmissionRecord(refreshed) : null;
+    return toSubmissionRecord(submission);
   }
 
   async listCourseMemberships(apiBaseUrl: string, userId: string): Promise<CourseMembershipRecord[]> {
