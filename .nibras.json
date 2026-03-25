@@ -1,0 +1,76 @@
+{
+  "requireGrading": true,
+  "subjects": {
+    "cs161": {
+      "taskFile": "CS161.md",
+      "projects": {
+        "exam1": {
+          "type": "check",
+          "path": "Stanford Data/cs161/Exams/1",
+          "totalPoints": 100,
+          "scoresFile": "scores.json"
+        },
+        "exam2": {
+          "type": "check",
+          "path": "Stanford Data/cs161/Exams/2",
+          "totalPoints": 100,
+          "scoresFile": "scores.json"
+        },
+        "exam-final": {
+          "type": "check",
+          "path": "Stanford Data/cs161/Exams/final",
+          "totalPoints": 100,
+          "scoresFile": "scores.json"
+        },
+        "section1": {
+          "type": "check",
+          "path": "Stanford Data/cs161/sections/1",
+          "totalPoints": 100,
+          "scoresFile": "scores.json"
+        },
+        "section2": {
+          "type": "check",
+          "path": "Stanford Data/cs161/sections/2",
+          "totalPoints": 100,
+          "scoresFile": "scores.json"
+        },
+        "section3": {
+          "type": "check",
+          "path": "Stanford Data/cs161/sections/3",
+          "totalPoints": 100,
+          "scoresFile": "scores.json"
+        },
+        "section4": {
+          "type": "check",
+          "path": "Stanford Data/cs161/sections/4",
+          "totalPoints": 100,
+          "scoresFile": "scores.json"
+        },
+        "section5": {
+          "type": "check",
+          "path": "Stanford Data/cs161/sections/5",
+          "totalPoints": 100,
+          "scoresFile": "scores.json"
+        },
+        "section6": {
+          "type": "check",
+          "path": "Stanford Data/cs161/sections/6",
+          "totalPoints": 100,
+          "scoresFile": "scores.json"
+        },
+        "section7": {
+          "type": "check",
+          "path": "Stanford Data/cs161/sections/7",
+          "totalPoints": 100,
+          "scoresFile": "scores.json"
+        },
+        "section8": {
+          "type": "check",
+          "path": "Stanford Data/cs161/sections/8",
+          "totalPoints": 100,
+          "scoresFile": "scores.json"
+        }
+      }
+    }
+  }
+}
