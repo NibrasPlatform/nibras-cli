@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { StudentProjectsDashboardResponse, TrackingMilestone } from "@nibras/contracts";
 import { apiFetch } from "../../lib/session";
+import { loadDashboardData } from "./load-dashboard-data.js";
 import styles from "./page.module.css";
 
 type MePayload = {
@@ -16,8 +17,10 @@ type MePayload = {
   apiBaseUrl: string;
 };
 
-type InstallUrlPayload = {
-  installUrl: string;
+type GitHubConfigPayload = {
+  configured: boolean;
+  appName?: string;
+  webBaseUrl?: string;
 };
 
 function formatShortDate(value: string | null): string {
@@ -38,6 +41,8 @@ function sortByDueDate(left: TrackingMilestone, right: TrackingMilestone): numbe
 export default function DashboardPage() {
   const [me, setMe] = useState<MePayload | null>(null);
   const [installUrl, setInstallUrl] = useState("");
+  const [githubConfig, setGitHubConfig] = useState<GitHubConfigPayload | null>(null);
+  const [githubAppMessage, setGitHubAppMessage] = useState("");
   const [dashboard, setDashboard] = useState<StudentProjectsDashboardResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -47,21 +52,20 @@ export default function DashboardPage() {
 
     void (async () => {
       try {
-        const [meResponse, installResponse, dashboardResponse] = await Promise.all([
-          apiFetch("/v1/web/session", { auth: true }),
-          apiFetch("/v1/github/install-url", { auth: true }),
-          apiFetch("/v1/tracking/dashboard/student", { auth: true })
-        ]);
-
-        const mePayload = await meResponse.json() as MePayload;
-        const installPayload = await installResponse.json() as InstallUrlPayload;
-        const dashboardPayload = await dashboardResponse.json() as StudentProjectsDashboardResponse;
+        const payload = await loadDashboardData({
+          fetchJson: async (path: string, init?: RequestInit & { auth?: boolean }) => {
+            const response = await apiFetch(path, init);
+            return response.json() as Promise<unknown>;
+          }
+        });
 
         if (!alive) return;
 
-        setMe(mePayload);
-        setInstallUrl(installPayload.installUrl || "");
-        setDashboard(dashboardPayload);
+        setMe(payload.me as MePayload);
+        setDashboard(payload.dashboard as StudentProjectsDashboardResponse);
+        setGitHubConfig(payload.githubConfig as GitHubConfigPayload);
+        setInstallUrl(payload.installUrl);
+        setGitHubAppMessage(payload.githubAppMessage);
       } catch (err) {
         if (alive) {
           setError(err instanceof Error ? err.message : String(err));
@@ -297,9 +301,10 @@ export default function DashboardPage() {
                 </div>
               </dl>
               <div className={styles.statusActions}>
-                <a className="buttonSecondary" href="/install/complete">Finish setup</a>
+                {githubConfig?.configured ? <a className="buttonSecondary" href="/install/complete">Finish setup</a> : null}
                 {installUrl ? <a className="buttonPrimary" href={installUrl}>Open install flow</a> : null}
               </div>
+              {githubAppMessage ? <p className="statusMessage">{githubAppMessage}</p> : null}
             </div>
           </section>
         </div>
