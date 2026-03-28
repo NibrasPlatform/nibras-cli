@@ -46,11 +46,6 @@ export default function HomePage() {
         <div className={styles.navLogo}>
           <NibrasLogo variant="inverse" width={110} priority />
         </div>
-        <div className={styles.navLinks}>
-          <a href="#" className={styles.navLink}>Docs</a>
-          <a href="#" className={styles.navLink}>Pricing</a>
-          <a href="#" className={styles.navLink}>About</a>
-        </div>
       </nav>
 
       {/* Hero */}
