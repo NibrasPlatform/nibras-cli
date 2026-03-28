@@ -1,185 +1,223 @@
-# Nibras Test Scenario
+# Nibras Manual Test Scenario
 
-This document is the practical test plan for validating the current Nibras
-product.
+This is the canonical manual validation path for Nibras.
 
-Use it in this order:
+## Purpose
 
-1. Local product sanity test
-2. Hosted-style local test with Postgres
-3. GitHub App test with ngrok
-4. Submission flow test
-5. Failure and recovery test
+A run is only considered successful if all of these are true:
 
-## What You Need Before Testing
+- preflight passes
+- fresh DB bootstrap succeeds
+- API, web, and worker start cleanly
+- GitHub OAuth succeeds
+- GitHub App install succeeds
+- CLI login, setup, and submit succeed
+- webhook delivery is accepted
+- submission transitions past `queued` to a terminal state
+
+## Prerequisites
 
 - Node.js 18+
-- `git`
+- npm
 - Docker
-- `ngrok` if you want to test real GitHub callbacks and webhooks
-- A GitHub App if you want to validate the live GitHub flow
+- git
+- ngrok
+- a GitHub App with the required permissions and events
+- a GitHub account authorized to install and use that app
 
-## Scenario 1: Local Product Sanity Test
+## Fresh Local Bootstrap
 
-Goal: verify the repo still builds and the automated tests pass.
-
-Commands:
-
-```bash
-npm install
-npm test
-npm run web:build
-```
-
-Expected result:
-
-- `npm test` passes
-- `npm run web:build` passes
-- no TypeScript build errors
-
-This is the fastest check after every code change.
-
-## Scenario 2: Hosted Local Test Without Real GitHub
-
-Goal: verify the API, CLI, and web stack run locally even without live GitHub credentials.
-
-Commands:
+Start every acceptance run from a fresh local Postgres state.
 
 ```bash
 cp .env.example .env
-docker compose up -d
-npm run db:push
-npm run api:dev
-npm run web:dev
+npm run db:local:reset
+npm run db:local:migrate
+npm run build
 ```
 
-Open another shell:
+Notes:
+
+- If you reuse an existing database without a reset, Prisma drift or data-loss warnings can block the workflow.
+- The accepted manual-test path is always fresh-volume first.
+- `npm run db:push` remains available for disposable development only. It is not part of the acceptance path.
+
+## Local Preflight
+
+Run the automated smoke gate before starting services:
 
 ```bash
-nibras --plain
-nibras ping --plain
+npm run manual:preflight
 ```
 
 Expected result:
 
-- API starts on `http://127.0.0.1:4848`
-- web starts on `http://127.0.0.1:3000`
-- `nibras` shows the new CLI help
-- `nibras ping` reaches the API
+- all Node tests pass
+- the Next.js production build passes
 
-What this proves:
+## Local Stack Validation
 
-- monorepo builds
-- Prisma schema is usable
-- CLI can talk to the API
-- web app renders
+Start the local stack in three terminals.
 
-What this does not prove:
+Terminal 1:
 
-- real GitHub login
-- real GitHub App installation
-- real webhook delivery
+```bash
+npm run api:dev
+```
 
-## Scenario 3: Real GitHub App Test With ngrok
+Terminal 2:
 
-Goal: validate the live GitHub integration end to end.
+```bash
+npm run worker:dev
+```
 
-### 3.1 Configure public URLs
+Terminal 3:
 
-Commands:
+```bash
+npm run web:dev
+```
+
+Validate the running services:
+
+```bash
+curl http://127.0.0.1:4848/healthz
+curl http://127.0.0.1:4848/readyz
+curl http://127.0.0.1:9090/healthz
+curl http://127.0.0.1:4848/v1/health
+curl -I http://127.0.0.1:3000
+```
+
+Browser validation:
+
+- open `http://127.0.0.1:3000/`
+- confirm the home page renders
+
+Expected result:
+
+- all health endpoints return `{"ok":true}`
+- the web app responds with HTTP 200
+- none of the services crash on startup
+
+## GitHub Live Validation
+
+Use `.env.ngrok.example` for this phase.
+
+### Configure the local stack
+
+1. Copy the ngrok-ready env file.
 
 ```bash
 cp .env.ngrok.example .env
-docker compose up -d
-npm run db:push
+```
+
+2. Reset and migrate the local database.
+
+```bash
+npm run db:local:reset
+npm run db:local:migrate
+npm run build
+```
+
+3. Start the local services in separate terminals.
+
+Terminal 1:
+
+```bash
 npm run api:dev
+```
+
+Terminal 2:
+
+```bash
+npm run worker:dev
+```
+
+Terminal 3:
+
+```bash
 npm run web:dev
+```
+
+Terminal 4:
+
+```bash
 npm run proxy:dev
+```
+
+4. Start the public tunnel.
+
+```bash
 ngrok http 8080
 ```
 
-Update `.env`:
+5. Copy the generated public URL into these env vars in `.env`:
 
-- `NIBRAS_API_BASE_URL=https://your-public-ngrok-url`
-- `NIBRAS_WEB_BASE_URL=https://your-public-ngrok-url`
-- `NEXT_PUBLIC_NIBRAS_API_BASE_URL=https://your-public-ngrok-url`
-- `NEXT_PUBLIC_NIBRAS_WEB_BASE_URL=https://your-public-ngrok-url`
-- add all GitHub App credentials
+- `NIBRAS_API_BASE_URL`
+- `NIBRAS_WEB_BASE_URL`
+- `NEXT_PUBLIC_NIBRAS_API_BASE_URL`
+- `NEXT_PUBLIC_NIBRAS_WEB_BASE_URL`
 
-The proxy handles:
+6. Restart the API, web app, and proxy after editing `.env`.
 
-- `/v1/*` and `/dev/*` -> API on `127.0.0.1:4848`
-- everything else -> web app on `127.0.0.1:3000`
+### Configure the GitHub App
 
-### 3.2 Configure the GitHub App
-
-Set these values in the GitHub App settings:
+Set the GitHub App values exactly like this:
 
 - Homepage URL: `<public-url>/`
 - Callback URL: `<public-url>/v1/github/oauth/callback`
 - Setup URL: `<public-url>/install/complete`
 - Webhook URL: `<public-url>/v1/github/webhooks`
-- Webhook secret: same as `GITHUB_WEBHOOK_SECRET`
+- Webhook secret: same value as `GITHUB_WEBHOOK_SECRET`
 
-Auth settings:
+Authentication settings:
 
-- Device Flow: enabled
-- Request user authorization (OAuth) during installation: disabled
+- Device Flow enabled
+- Request user authorization (OAuth) during installation disabled
 
-Permissions:
+Repository permissions:
 
-- Repository contents: Read and write
+- Contents: Read and write
 - Metadata: Read-only
 
-Events:
+Subscribed events:
 
 - Push
 
-### 3.3 Start the stack
+### Verify GitHub config before browser login
 
-Commands:
+Run:
 
 ```bash
-curl https://your-public-ngrok-url/v1/health
-open https://your-public-ngrok-url/
+curl https://<public-url>/v1/github/config
 ```
 
-### 3.4 Validate browser login
+Expected result:
 
-Steps:
+- the response includes `"configured": true`
 
-1. Open the web app home page
+### Validate browser OAuth and install flow
+
+1. Open `https://<public-url>/`
 2. Click `Sign in with GitHub`
-3. Complete GitHub OAuth
+3. Complete the GitHub OAuth flow
 4. Confirm redirect to `/auth/complete`
 5. Confirm redirect to `/dashboard`
+6. From the dashboard click `Install GitHub App`
+7. Install the app on the target account
+8. Confirm GitHub redirects back to `/install/complete`
+9. Confirm the page auto-links the installation and redirects back to `/dashboard`
+10. If the automatic link fails, use the manual installation ID form as a fallback
 
 Expected result:
 
-- browser stores a session
-- dashboard loads
-- the user and GitHub login appear
+- the browser session is established
+- the dashboard loads successfully
+- the API accepts the installation callback state and installation ID
+- the dashboard eventually shows that the app is installed
 
-### 3.5 Validate GitHub App install flow
+## CLI Learner Flow
 
-Steps:
-
-1. From the dashboard click `Install GitHub App`
-2. Install the app on the target GitHub account
-3. Open `/install/complete`
-4. Paste the installation ID
-5. Submit the form
-
-Expected result:
-
-- the API accepts the installation ID
-- the dashboard eventually shows `App installed: yes`
-
-## Scenario 4: CLI Login and Setup Test
-
-Goal: validate the learner CLI path with a live backend.
-
-Commands:
+Use the live backend from the previous section.
 
 ```bash
 nibras login
@@ -188,30 +226,28 @@ nibras ping
 mkdir -p /tmp/nibras-e2e
 cd /tmp/nibras-e2e
 nibras setup --project cs161/exam1 --dir .
+nibras task
+nibras test
 ```
 
 Expected result:
 
-- `nibras login` opens the browser or prints the verification URL
-- `nibras whoami` shows your GitHub account
-- `nibras ping` shows:
+- `nibras login` completes the device flow
+- `nibras whoami` shows the authenticated user
+- `nibras ping` reports:
   - API reachable
   - Auth valid
   - GitHub linked
   - GitHub App installed
-- `setup` creates:
+- `nibras setup` writes:
   - `.nibras/project.json`
   - `.nibras/task.md`
+- `nibras task` prints the task text
+- `nibras test` runs the project-local test command
 
-If template repo generation is configured, also expect:
+## Submission And Verification Flow
 
-- a real GitHub repo created in your account
-
-## Scenario 5: Submission Flow Test
-
-Goal: validate that submit creates a commit, pushes, and reaches verification state.
-
-In the provisioned project directory:
+Use the same provisioned directory from the CLI flow.
 
 ```bash
 mkdir -p answers
@@ -223,26 +259,55 @@ nibras submit
 
 Expected result:
 
-- `nibras test` runs local public tests
-- `nibras submit` stages allowed files only
+- the local test command runs
 - a commit is created
-- push succeeds
-- API returns submission states such as:
-  - `queued`
-  - `running`
-  - `passed` or `failed`
+- the branch push succeeds
+- GitHub delivers the push webhook
+- the API and worker move the submission through verification
+- the final status becomes one of:
+  - `passed`
+  - `failed`
+  - `needs_review`
 
-Webhook-specific expectation:
+Important:
 
-- GitHub sends a `push` delivery to `/v1/github/webhooks`
-- Nibras validates `X-Hub-Signature-256`
-- submission state moves forward
+- `npm run worker:dev` must be running before `nibras submit`, otherwise the submission may remain `queued`
 
-## Scenario 6: Failure and Recovery Test
+## Failure And Recovery Checks
 
-Run these on purpose.
+Run these as explicit troubleshooting gates.
 
-### 6.1 Missing GitHub credentials
+### Stale DB state
+
+Symptom:
+
+- Prisma warns about drift or data loss
+- `db:push` or startup steps fail unexpectedly
+
+Recovery:
+
+```bash
+npm run db:local:reset
+npm run db:local:migrate
+```
+
+### Stale ngrok URL
+
+Symptom:
+
+- OAuth callback fails
+- browser login redirects to the wrong origin
+- GitHub App setup cannot complete
+- webhook deliveries fail from GitHub
+
+Recovery:
+
+- update the current ngrok URL in `.env`
+- update the same URL in the GitHub App settings
+- restart the API, web app, and proxy
+- sign in again
+
+### Missing GitHub env vars
 
 Remove one of:
 
@@ -254,9 +319,9 @@ Remove one of:
 Expected result:
 
 - GitHub-specific endpoints fail clearly
-- non-GitHub local development still works in fallback mode
+- non-GitHub local development can still run in fallback mode
 
-### 6.2 Wrong webhook secret
+### Wrong webhook secret
 
 Set a bad `GITHUB_WEBHOOK_SECRET`.
 
@@ -264,25 +329,15 @@ Expected result:
 
 - webhook requests are rejected with `401`
 
-### 6.3 Wrong callback/setup/webhook URLs
-
-Use stale ngrok URLs.
-
-Expected result:
-
-- OAuth callback fails
-- GitHub App setup cannot complete
-- webhook deliveries fail from GitHub
-
-### 6.4 Submit from wrong repo
+### Wrong repo or repo mismatch
 
 Run `nibras submit` from an unrelated git repo.
 
 Expected result:
 
-- submit fails or ping shows repo mismatch
+- submit fails or `nibras ping` shows the repo mismatch
 
-### 6.5 Forbidden files in submit
+### Forbidden changed files during submit
 
 Modify a file outside `submission.allowedPaths`.
 
@@ -290,43 +345,24 @@ Expected result:
 
 - `nibras submit` refuses to proceed
 
-## Fast Acceptance Checklist
+## Final Acceptance Checklist
 
-Mark the product healthy only if all of these are true:
-
-- `npm test` passes
-- `npm run web:build` passes
-- API starts with Postgres
-- Web app starts
-- GitHub OAuth works
-- GitHub App installation works
-- `nibras login` works
-- `nibras setup` works
-- `nibras submit` pushes successfully
-- webhook signature validation succeeds
-- submission status updates after the push
-
-## What Is Still Missing
-
-The product is much closer, but it is not fully finished yet.
-
-The main missing pieces are:
-
-- real production deployment instead of local/manual startup only
-- a real background verification worker for authoritative grading jobs
-- end-to-end live GitHub repo provisioning validation with your actual GitHub App credentials
-- stronger session/token security for production, especially secret storage and rotation
-- production observability: metrics, alerts, structured logs, audit review flow
-- CI/CD release pipeline for API, web, and CLI together
-
-## Recommended Test Order For You
-
-If you want the shortest path:
-
-1. Run `npm test`
-2. Run `npm run web:build`
-3. Run Scenario 2
-4. If that works, run Scenario 3
-5. Then run Scenario 4 and Scenario 5
-
-That gives you a clean progression from local confidence to real GitHub validation.
+- [ ] `npm run manual:preflight` passes
+- [ ] `npm run db:local:reset` succeeds
+- [ ] `npm run db:local:migrate` succeeds
+- [ ] `npm run build` succeeds on fresh local state
+- [ ] API starts and `/healthz` returns `{"ok":true}`
+- [ ] API `/readyz` returns `{"ok":true}`
+- [ ] worker starts and `/healthz` returns `{"ok":true}`
+- [ ] web app starts and serves the home page on `http://127.0.0.1:3000/`
+- [ ] `https://<public-url>/v1/github/config` reports `"configured": true`
+- [ ] browser GitHub OAuth succeeds
+- [ ] GitHub App installation succeeds
+- [ ] `nibras login` succeeds
+- [ ] `nibras setup --project cs161/exam1 --dir .` writes `.nibras/project.json`
+- [ ] `nibras setup --project cs161/exam1 --dir .` writes `.nibras/task.md`
+- [ ] `nibras ping` reports valid auth, linked GitHub, and installed GitHub App
+- [ ] `nibras submit` pushes successfully
+- [ ] the submission leaves `queued`
+- [ ] the submission reaches a terminal state
+- [ ] webhook signature validation succeeds

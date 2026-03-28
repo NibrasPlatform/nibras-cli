@@ -1,0 +1,223 @@
+.hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.heroCopy {
+  max-width: 42rem;
+  display: grid;
+  gap: 14px;
+}
+
+.heroCopy p {
+  max-width: 38rem;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.stateCard,
+.panel,
+.statCard {
+  padding: 22px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.statCard {
+  display: grid;
+  gap: 10px;
+}
+
+.statLabel {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.statCard strong {
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);
+  gap: 18px;
+}
+
+.leftColumn,
+.rightColumn {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.panelHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.panelHead h2 {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+}
+
+.activityList,
+.progressList,
+.projectList,
+.deadlineList {
+  display: grid;
+  gap: 14px;
+}
+
+.activityItem,
+.projectItem {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+}
+
+.activityItem {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.activityItem strong,
+.deadlineItem strong,
+.projectItem strong,
+.progressHead strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.activityItem span,
+.activityItem time,
+.deadlineItem span,
+.deadlineItem time,
+.projectMeta span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.progressItem {
+  display: grid;
+  gap: 10px;
+}
+
+.progressHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.progressTrack {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), #38bdf8);
+}
+
+.projectTop,
+.projectMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.deadlineItem {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.deadlineBullet {
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.statusPanel {
+  display: grid;
+  gap: 18px;
+}
+
+.statusPanel dl {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.statusPanel dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.statusPanel dt {
+  color: var(--text-muted);
+}
+
+.statusPanel dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.statusActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 1200px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .hero,
+  .activityItem,
+  .projectTop,
+  .projectMeta,
+  .statusPanel dl div,
+  .statusActions {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -5,6 +5,7 @@
   "type": "commonjs",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -w -p tsconfig.json --preserveWatchOutput"
   }
 }

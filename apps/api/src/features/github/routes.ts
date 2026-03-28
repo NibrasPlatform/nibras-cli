@@ -26,6 +26,41 @@ import { createWebSessionCookie } from "../../lib/web-session";
 import { PrismaStore } from "../../prisma-store";
 import { AppStore } from "../../store";
 
+function resolveSafeReturnTo(
+  candidate: string | undefined,
+  fallback: string,
+  requestBase: string,
+  configuredWebBaseUrl: string | undefined
+): string {
+  const allowedOrigins = new Set<string>();
+
+  for (const value of [requestBase, configuredWebBaseUrl, fallback]) {
+    if (!value) continue;
+    try {
+      allowedOrigins.add(new URL(value).origin);
+    } catch {
+      continue;
+    }
+  }
+
+  try {
+    const fallbackUrl = new URL(fallback);
+    if (!candidate) {
+      return fallbackUrl.toString();
+    }
+    const resolved = new URL(candidate, fallbackUrl);
+    if (!["http:", "https:"].includes(resolved.protocol)) {
+      return fallbackUrl.toString();
+    }
+    if (!allowedOrigins.has(resolved.origin)) {
+      return fallbackUrl.toString();
+    }
+    return resolved.toString();
+  } catch {
+    return fallback;
+  }
+}
+
 export function registerGitHubRoutes(
   app: FastifyInstance,
   store: AppStore,
@@ -133,8 +168,14 @@ export function registerGitHubRoutes(
       return;
     }
     const query = request.query as { return_to?: string };
-    const returnTo = query.return_to || `${githubConfig.webBaseUrl || requestBaseUrl(request)}/auth/complete`;
-    const statePayload = createSignedState(githubConfig.clientSecret, { returnTo });
+    const fallbackReturnTo = `${githubConfig.webBaseUrl || requestBaseUrl(request)}/auth/complete`;
+    const returnTo = resolveSafeReturnTo(
+      query.return_to,
+      fallbackReturnTo,
+      requestBaseUrl(request),
+      githubConfig.webBaseUrl
+    );
+    const statePayload = createSignedState(githubConfig.clientSecret, { returnTo }, { ttlSeconds: 600 });
     reply.redirect(buildGitHubOAuthUrl(githubConfig, statePayload));
   });
 
@@ -165,11 +206,16 @@ export function registerGitHubRoutes(
       refreshTokenExpiresIn: tokenResponse.refreshTokenExpiresIn
     });
     const webSession = await store.createWebSession(requestBaseUrl(request), user.id);
-    const redirectUrl = new URL(state.returnTo || `${githubConfig.webBaseUrl || requestBaseUrl(request)}/auth/complete`);
+    const redirectUrl = resolveSafeReturnTo(
+      state.returnTo,
+      `${githubConfig.webBaseUrl || requestBaseUrl(request)}/auth/complete`,
+      requestBaseUrl(request),
+      githubConfig.webBaseUrl
+    );
     void reply.header("Set-Cookie", createWebSessionCookie(request, webSession.sessionToken, {
       maxAgeSeconds: 30 * 24 * 60 * 60
     }));
-    reply.redirect(redirectUrl.toString());
+    reply.redirect(redirectUrl);
   });
 
   app.get("/v1/github/install-url", async (request, reply) => {
@@ -179,10 +225,10 @@ export function registerGitHubRoutes(
       reply.code(503).send({ error: "GitHub App is not configured." });
       return;
     }
-    const signedState = Buffer.from(JSON.stringify({
+    const signedState = createSignedState(githubConfig.clientSecret, {
       userId: auth.user.id,
-      returnTo: `${githubConfig.webBaseUrl || requestBaseUrl(request)}/install/complete`
-    })).toString("base64url");
+      returnTo: `${githubConfig.webBaseUrl || requestBaseUrl(request)}/dashboard`
+    }, { ttlSeconds: 1800 });
     return GitHubInstallUrlResponseSchema.parse({
       installUrl: buildGitHubInstallUrl(githubConfig, signedState)
     });
@@ -196,6 +242,24 @@ export function registerGitHubRoutes(
       return;
     }
     const payload = GitHubInstallationCompleteRequestSchema.parse(request.body);
+    let redirectTo = `${githubConfig.webBaseUrl || requestBaseUrl(request)}/dashboard`;
+    if (payload.state) {
+      const state = verifySignedState(githubConfig.clientSecret, payload.state);
+      if (!state) {
+        reply.code(400).send({ error: "Invalid installation state." });
+        return;
+      }
+      if (state.userId && state.userId !== auth.user.id) {
+        reply.code(403).send({ error: "Installation state does not belong to the authenticated user." });
+        return;
+      }
+      redirectTo = resolveSafeReturnTo(
+        state.returnTo,
+        redirectTo,
+        requestBaseUrl(request),
+        githubConfig.webBaseUrl
+      );
+    }
     const account = await store.getGithubAccountForUser(auth.user.id);
     if (!account?.userAccessToken) {
       reply.code(400).send({ error: "GitHub user token is missing for this account." });
@@ -210,7 +274,8 @@ export function registerGitHubRoutes(
     const user = await store.linkGitHubInstallation(auth.user.id, payload.installationId);
     return GitHubInstallationCompleteResponseSchema.parse({
       githubAppInstalled: user.githubAppInstalled,
-      installationId: payload.installationId
+      installationId: payload.installationId,
+      redirectTo
     });
   });
 
@@ -234,7 +299,13 @@ export function registerGitHubRoutes(
     const event = request.headers["x-github-event"];
     const deliveryIdHeader = request.headers["x-github-delivery"];
     const deliveryId = Array.isArray(deliveryIdHeader) ? deliveryIdHeader[0] : deliveryIdHeader;
-    const payload = JSON.parse(rawBody.toString("utf8")) as Record<string, unknown>;
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(rawBody.toString("utf8")) as Record<string, unknown>;
+    } catch {
+      reply.code(400).send({ error: "Invalid webhook JSON payload." });
+      return;
+    }
     if (event === "push" || event === "pull_request") {
       const repository = payload.repository as Record<string, unknown> | undefined;
       const owner = repository?.owner as Record<string, unknown> | undefined;

@@ -40,6 +40,10 @@ export type GitHubTokenResponse = {
   tokenType?: string;
 };
 
+export type SignedStateOptions = {
+  ttlSeconds?: number;
+};
+
 export function loadGitHubAppConfig(): GitHubAppConfig | null {
   const appId = process.env.GITHUB_APP_ID;
   const clientId = process.env.GITHUB_APP_CLIENT_ID;
@@ -193,10 +197,30 @@ export async function exchangeGitHubOAuthCode(config: GitHubAppConfig, code: str
 
 export async function getGitHubUser(config: GitHubAppConfig, userToken: string): Promise<GitHubUser> {
   const payload = await githubRequest<Record<string, unknown>>("https://api.github.com/user", {}, userToken, config.apiVersion);
+  let email = payload.email ? String(payload.email) : null;
+
+  if (!email) {
+    try {
+      const emails = await githubRequest<Array<Record<string, unknown>>>(
+        "https://api.github.com/user/emails",
+        {},
+        userToken,
+        config.apiVersion
+      );
+      const preferred = emails.find((entry) => entry.primary === true && entry.verified === true && typeof entry.email === "string")
+        || emails.find((entry) => entry.verified === true && typeof entry.email === "string")
+        || emails.find((entry) => entry.primary === true && typeof entry.email === "string")
+        || emails.find((entry) => typeof entry.email === "string");
+      email = preferred && preferred.email ? String(preferred.email) : null;
+    } catch {
+      email = null;
+    }
+  }
+
   return {
     id: Number(payload.id),
     login: String(payload.login),
-    email: payload.email ? String(payload.email) : null,
+    email,
     name: payload.name ? String(payload.name) : null
   };
 }
@@ -269,8 +293,14 @@ export async function generateRepositoryFromTemplate(
   };
 }
 
-export function createSignedState(secret: string, payload: Record<string, string>): string {
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+export function createSignedState(secret: string, payload: Record<string, string>, options: SignedStateOptions = {}): string {
+  const ttlSeconds = options.ttlSeconds ?? 600;
+  const now = Math.floor(Date.now() / 1000);
+  const body = Buffer.from(JSON.stringify({
+    payload,
+    iat: now,
+    exp: now + ttlSeconds
+  })).toString("base64url");
   const signature = crypto.createHmac("sha256", secret).update(body).digest("base64url");
   return `${body}.${signature}`;
 }
@@ -286,7 +316,28 @@ export function verifySignedState(secret: string, signedState: string): Record<s
   if (expectedBuffer.length !== providedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, providedBuffer)) {
     return null;
   }
-  return JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as Record<string, string>;
+
+  try {
+    const decoded = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as unknown;
+
+    if (decoded && typeof decoded === "object" && "payload" in decoded) {
+      const envelope = decoded as { payload?: Record<string, string>; exp?: number };
+      if (!envelope.payload || typeof envelope.payload !== "object") {
+        return null;
+      }
+      if (typeof envelope.exp === "number" && envelope.exp < Math.floor(Date.now() / 1000)) {
+        return null;
+      }
+      return envelope.payload;
+    }
+
+    if (decoded && typeof decoded === "object") {
+      return decoded as Record<string, string>;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export function verifyWebhookSignature(secret: string, body: Buffer, signatureHeader: string | undefined): boolean {

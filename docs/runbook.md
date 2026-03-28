@@ -1,5 +1,7 @@
 # Nibras Operator Runbook
 
+For the canonical manual validation sequence, use `TEST_SCENARIO.md`.
+
 ## Services
 
 | Service | Default port | Health check |
@@ -174,14 +176,17 @@ Key metrics:
 
 ### Local dev
 ```bash
-docker compose up -d        # postgres
-npm run db:generate
-npm run db:push             # dev only — never use in production
+cp .env.example .env
+npm run db:local:reset      # destructive local reset for operator testing
+npm run db:local:migrate
 npm run build
 npm run api:dev             # API on :4848
-npm run worker:dev          # worker
+npm run worker:dev          # worker on :9090
 npm run web:dev             # web on :3000
 ```
+
+Use `npm run db:push` only for disposable development. Do not use it as the
+canonical manual-test path.
 
 ### Production
 ```bash

@@ -135,12 +135,14 @@ export const GitHubConfigResponseSchema = z.object({
 });
 
 export const GitHubInstallationCompleteRequestSchema = z.object({
-  installationId: z.string().min(1)
+  installationId: z.string().min(1),
+  state: z.string().min(1).optional()
 });
 
 export const GitHubInstallationCompleteResponseSchema = z.object({
   githubAppInstalled: z.boolean(),
-  installationId: z.string().min(1)
+  installationId: z.string().min(1),
+  redirectTo: z.string().url().optional()
 });
 
 export type ProjectManifest = z.infer<typeof ProjectManifestSchema>;
