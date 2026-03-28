@@ -14,6 +14,15 @@ export default function HomePage() {
     setSubmitting(true);
     try {
       const apiBaseUrl = await discoverApiBaseUrl();
+      const configRes = await fetch(`${apiBaseUrl}/v1/github/config`);
+      if (configRes.ok) {
+        const config = await configRes.json() as { configured: boolean };
+        if (!config.configured) {
+          setError("GitHub App is not configured on this server. Set GITHUB_APP_ID, GITHUB_APP_CLIENT_ID, and related environment variables, then restart the API.");
+          setSubmitting(false);
+          return;
+        }
+      }
       const returnTo = `${window.location.origin}/auth/complete`;
       window.location.href = `${apiBaseUrl}/v1/github/oauth/start?return_to=${encodeURIComponent(returnTo)}`;
     } catch (err) {
