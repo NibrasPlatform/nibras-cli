@@ -1,0 +1,184 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(320px, 1.1fr) minmax(360px, 0.9fr);
+}
+
+.brandPanel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 40px;
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.22), transparent 26%),
+    linear-gradient(180deg, #031846 0%, #102a63 100%);
+  color: #fff;
+}
+
+.brandHeader {
+  display: flex;
+  align-items: flex-start;
+}
+
+.brandHeader p {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  max-width: 28rem;
+}
+
+.brandLogo {
+  display: inline-flex;
+  align-items: center;
+}
+
+.brandCopy {
+  display: grid;
+  gap: 18px;
+  max-width: 34rem;
+}
+
+.brandCopy h1 {
+  margin: 0;
+  font-size: clamp(2.4rem, 4vw, 4.4rem);
+  line-height: 1.02;
+}
+
+.brandCopy p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.signalGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.signalCard {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+}
+
+.signalCard span {
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.5;
+}
+
+.formPanel {
+  display: grid;
+  place-items: center;
+  padding: 32px;
+}
+
+.formCard {
+  width: min(460px, 100%);
+  display: grid;
+  gap: 22px;
+  padding: 28px;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  box-shadow: var(--shadow-lg);
+}
+
+.formIntro {
+  display: grid;
+  gap: 12px;
+}
+
+.formIntro h2 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.roleSelector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.roleCard {
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  padding: 16px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.roleCard span {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.roleCardActive {
+  border-color: color-mix(in srgb, var(--primary) 32%, var(--border));
+  background: var(--primary-soft);
+}
+
+.formGroup {
+  display: grid;
+  gap: 10px;
+}
+
+.formGroup label,
+.labelRow span {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.actions :global(.buttonPrimary) {
+  flex: 1 1 220px;
+}
+
+.inlineCode {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  color: var(--text);
+}
+
+@media (max-width: 980px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .brandPanel,
+  .formPanel {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .signalGrid,
+  .roleSelector {
+    grid-template-columns: 1fr;
+  }
+
+  .formCard,
+  .brandPanel {
+    padding: 20px;
+  }
+}

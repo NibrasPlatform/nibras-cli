@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/session";
+import styles from "./page.module.css";
 
 export default function AuthCompletePage() {
   const [status, setStatus] = useState("Completing sign-in...");
@@ -24,13 +25,15 @@ export default function AuthCompletePage() {
   }, []);
 
   return (
-    <main>
-      <div className="shell">
-        <section className="card">
-          <h1>Auth Complete</h1>
-          <p>{status}</p>
-        </section>
-      </div>
+    <main className="pageWrap">
+      <section className={`${styles.card} surfaceCard`}>
+        <div className={styles.badge}>Session</div>
+        <h1>Finishing sign-in</h1>
+        <p className="statusMessage">{status}</p>
+        <div className={styles.progressRail}>
+          <span className={styles.progressFill} />
+        </div>
+      </section>
     </main>
   );
 }

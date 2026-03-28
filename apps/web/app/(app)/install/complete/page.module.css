@@ -1,0 +1,36 @@
+.hero {
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  width: min(760px, 100%);
+  padding: 24px;
+}
+
+.form {
+  display: grid;
+  gap: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 10px;
+}
+
+.field span {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.status {
+  margin: 16px 0 0;
+  color: var(--text-muted);
+}
