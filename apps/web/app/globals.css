@@ -278,8 +278,10 @@ main {
 
 .profileCircle,
 .avatarCircle {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  font-size: 14px;
 }
 
 .sidebar {
@@ -448,14 +450,29 @@ main {
   border-radius: 12px;
   background: var(--surface-strong);
   border: 1px solid var(--border);
+  min-width: 0;
+}
+
+.sidebarProfile > div {
+  min-width: 0;
+  flex: 1;
 }
 
 .sidebarProfile strong {
+  display: block;
   font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebarProfile span:not(.avatarCircle) {
-  font-size: 11.5px;
+  display: block;
+  font-size: 11px;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .logoutLink {
