@@ -1,29 +1,64 @@
+const GITHUB_APP_UNCONFIGURED_MESSAGE = "GitHub App installation is not configured for this deployment.";
+const GITHUB_APP_UNAVAILABLE_MESSAGE = "GitHub App status is temporarily unavailable.";
+
+function toErrorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export async function loadDashboardData({ fetchJson }) {
-  const [me, dashboard, githubConfig] = await Promise.all([
+  const githubConfigResultPromise = fetchJson("/v1/github/config")
+    .then((githubConfig) => ({ status: "fulfilled", githubConfig }))
+    .catch((error) => ({ status: "rejected", error }));
+
+  const [me, dashboard] = await Promise.all([
     fetchJson("/v1/web/session", { auth: true }),
-    fetchJson("/v1/tracking/dashboard/student", { auth: true }),
-    fetchJson("/v1/github/config")
+    fetchJson("/v1/tracking/dashboard/student", { auth: true })
   ]);
 
-  let installUrl = "";
-  let githubAppMessage = "";
+  const githubConfigResult = await githubConfigResultPromise;
 
-  if (githubConfig.configured) {
-    try {
-      const installPayload = await fetchJson("/v1/github/install-url", { auth: true });
-      installUrl = installPayload.installUrl || "";
-    } catch (error) {
-      githubAppMessage = error instanceof Error ? error.message : String(error);
-    }
-  } else {
-    githubAppMessage = "GitHub App installation is not configured for this deployment.";
+  if (githubConfigResult.status === "rejected") {
+    return {
+      me,
+      dashboard,
+      githubConfig: null,
+      installUrl: "",
+      githubAppMessage: GITHUB_APP_UNAVAILABLE_MESSAGE,
+      githubAppStatus: "unavailable"
+    };
   }
 
-  return {
-    me,
-    dashboard,
-    githubConfig,
-    installUrl,
-    githubAppMessage
-  };
+  const { githubConfig } = githubConfigResult;
+
+  if (!githubConfig.configured) {
+    return {
+      me,
+      dashboard,
+      githubConfig,
+      installUrl: "",
+      githubAppMessage: GITHUB_APP_UNCONFIGURED_MESSAGE,
+      githubAppStatus: "unconfigured"
+    };
+  }
+
+  try {
+    const installPayload = await fetchJson("/v1/github/install-url", { auth: true });
+    return {
+      me,
+      dashboard,
+      githubConfig,
+      installUrl: installPayload.installUrl || "",
+      githubAppMessage: "",
+      githubAppStatus: "configured"
+    };
+  } catch (error) {
+    return {
+      me,
+      dashboard,
+      githubConfig,
+      installUrl: "",
+      githubAppMessage: toErrorMessage(error),
+      githubAppStatus: "configured"
+    };
+  }
 }

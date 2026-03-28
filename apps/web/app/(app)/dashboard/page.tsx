@@ -1,27 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { StudentProjectsDashboardResponse, TrackingMilestone } from "@nibras/contracts";
+import type { TrackingMilestone } from "@nibras/contracts";
 import { apiFetch } from "../../lib/session";
 import { loadDashboardData } from "./load-dashboard-data.js";
+import type { LoadDashboardDataResult } from "./load-dashboard-data.js";
 import styles from "./page.module.css";
-
-type MePayload = {
-  user: {
-    username: string;
-    email: string;
-    githubLogin: string;
-    githubLinked: boolean;
-    githubAppInstalled: boolean;
-  };
-  apiBaseUrl: string;
-};
-
-type GitHubConfigPayload = {
-  configured: boolean;
-  appName?: string;
-  webBaseUrl?: string;
-};
 
 function formatShortDate(value: string | null): string {
   if (!value) return "No due date";
@@ -39,11 +23,7 @@ function sortByDueDate(left: TrackingMilestone, right: TrackingMilestone): numbe
 }
 
 export default function DashboardPage() {
-  const [me, setMe] = useState<MePayload | null>(null);
-  const [installUrl, setInstallUrl] = useState("");
-  const [githubConfig, setGitHubConfig] = useState<GitHubConfigPayload | null>(null);
-  const [githubAppMessage, setGitHubAppMessage] = useState("");
-  const [dashboard, setDashboard] = useState<StudentProjectsDashboardResponse | null>(null);
+  const [data, setData] = useState<LoadDashboardDataResult | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -61,11 +41,7 @@ export default function DashboardPage() {
 
         if (!alive) return;
 
-        setMe(payload.me as MePayload);
-        setDashboard(payload.dashboard as StudentProjectsDashboardResponse);
-        setGitHubConfig(payload.githubConfig as GitHubConfigPayload);
-        setInstallUrl(payload.installUrl);
-        setGitHubAppMessage(payload.githubAppMessage);
+        setData(payload);
       } catch (err) {
         if (alive) {
           setError(err instanceof Error ? err.message : String(err));
@@ -81,6 +57,12 @@ export default function DashboardPage() {
       alive = false;
     };
   }, []);
+
+  const me = data?.me || null;
+  const dashboard = data?.dashboard || null;
+  const githubConfig = data?.githubConfig || null;
+  const installUrl = data?.installUrl || "";
+  const githubAppMessage = data?.githubAppMessage || "";
 
   const allMilestones = useMemo(() => {
     if (!dashboard) return [];
