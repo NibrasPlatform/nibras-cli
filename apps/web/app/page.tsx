@@ -55,15 +55,6 @@ export default function HomePage() {
 
       {/* Hero */}
       <div className={styles.hero}>
-        <div className={styles.heroLogo}>
-          <NibrasLogo variant="inverse" width={140} priority />
-        </div>
-
-        <span className={styles.badge}>
-          <span className={styles.badgeDot} />
-          GitHub-Linked Course Platform
-        </span>
-
         <h1 className={styles.headline}>
           The smartest way<br />to run your course.
         </h1>
