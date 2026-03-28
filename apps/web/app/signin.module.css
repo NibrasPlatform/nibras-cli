@@ -2,8 +2,7 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(420px, 0.9fr);
-  width: min(100%, 1800px);
-  margin: 0 auto;
+  width: 100%;
 }
 
 .brandPanel {
@@ -17,6 +16,7 @@
     radial-gradient(circle at 82% 24%, rgba(59, 130, 246, 0.16), transparent 24%),
     linear-gradient(180deg, #031846 0%, #102a63 100%);
   color: #fff;
+  min-height: 100vh;
 }
 
 .brandHeader {
