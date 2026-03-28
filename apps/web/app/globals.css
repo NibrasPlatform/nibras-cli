@@ -218,6 +218,26 @@ main {
   gap: 14px;
 }
 
+.headerStatusChip {
+  display: grid;
+  gap: 2px;
+  min-height: 44px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.headerStatusChip strong {
+  font-size: 13px;
+}
+
+.headerStatusChip span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 .headerSearch {
   width: min(360px, 36vw);
   display: flex;

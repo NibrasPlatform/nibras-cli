@@ -99,52 +99,6 @@
   font-size: 2rem;
 }
 
-.roleSelector {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.roleCard {
-  text-align: left;
-  display: grid;
-  gap: 8px;
-  padding: 16px 14px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-}
-
-.roleCard span {
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.roleCardActive {
-  border-color: color-mix(in srgb, var(--primary) 32%, var(--border));
-  background: var(--primary-soft);
-}
-
-.formGroup {
-  display: grid;
-  gap: 10px;
-}
-
-.formGroup label,
-.labelRow span {
-  color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.labelRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -172,8 +126,7 @@
 }
 
 @media (max-width: 640px) {
-  .signalGrid,
-  .roleSelector {
+  .signalGrid {
     grid-template-columns: 1fr;
   }
 

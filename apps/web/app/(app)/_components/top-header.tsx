@@ -43,16 +43,16 @@ export default function TopHeader({
       </div>
 
       <div className="headerActions">
-        <label className="headerSearch" aria-label="Search placeholder">
-          <span aria-hidden="true">⌕</span>
-          <input type="text" placeholder="Search projects, milestones, commands" disabled />
-        </label>
+        <div className="headerStatusChip" aria-live="polite">
+          <strong>{user?.githubLinked ? "GitHub connected" : loading ? "Checking session" : "Session active"}</strong>
+          <span>{user?.githubAppInstalled ? "App installed" : "Install pending"}</span>
+        </div>
         <ThemeToggle />
         <div className="profileChip" aria-live="polite">
           <span className="profileCircle">{loading ? "…" : getInitials(identity)}</span>
           <div>
             <strong>{loading ? "Loading" : identity}</strong>
-            <span>{user?.githubAppInstalled ? "GitHub App linked" : "Hosted session"}</span>
+            <span>{user?.githubAppInstalled ? "GitHub App linked" : "Hosted web session"}</span>
           </div>
         </div>
       </div>
