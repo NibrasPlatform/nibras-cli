@@ -12,7 +12,7 @@
     "packages/*"
   ],
   "scripts": {
-    "start": "node bin/nibras.js",
+    "start": "node -r dotenv/config bin/nibras.js",
     "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push",
     "db:migrate": "npx prisma migrate dev",
@@ -20,10 +20,14 @@
     "db:local:reset": "docker compose down -v && docker compose up -d && until docker compose exec -T postgres pg_isready -U nibras -d nibras; do sleep 1; done",
     "db:local:migrate": "npm run db:deploy",
     "build": "npm run db:generate && npm run build -w @nibras/contracts && npm run build -w @nibras/core && npm run build -w @nibras/github && npm run build -w @nibras/grading && npm run build -w @nibras/api && npm run build -w @nibras/proxy && npm run build -w @nibras/cli && npm run build -w @nibras/worker",
-    "api:dev": "node apps/api/dist/server.js",
-    "worker:dev": "node apps/worker/dist/worker.js",
-    "proxy:dev": "node apps/proxy/dist/server.js",
+    "api:dev": "node -r dotenv/config apps/api/dist/server.js",
+    "worker:dev": "node -r dotenv/config apps/worker/dist/worker.js",
+    "proxy:dev": "node -r dotenv/config apps/proxy/dist/server.js",
     "web:dev": "npm run dev -w @nibras/web",
+    "dev:bootstrap": "node scripts/dev-bootstrap.js",
+    "dev:watch": "concurrently -k --names contracts,core,github,grading,api,proxy,worker \"npm run watch -w @nibras/contracts\" \"npm run watch -w @nibras/core\" \"npm run watch -w @nibras/github\" \"npm run watch -w @nibras/grading\" \"npm run watch -w @nibras/api\" \"npm run watch -w @nibras/proxy\" \"npm run watch -w @nibras/worker\"",
+    "dev:services": "concurrently -k --names api,worker,web \"nodemon --watch apps/api/dist --watch packages/contracts/dist --watch packages/core/dist --watch packages/github/dist --watch packages/grading/dist --ext js,json --signal SIGTERM --exec \\\"npm run api:dev\\\"\" \"nodemon --watch apps/worker/dist --watch packages/contracts/dist --watch packages/core/dist --watch packages/github/dist --watch packages/grading/dist --ext js,json --signal SIGTERM --exec \\\"npm run worker:dev\\\"\" \"npm run dev -w @nibras/web\"",
+    "dev": "npm run dev:bootstrap && concurrently -k \"npm run dev:watch\" \"npm run dev:services\"",
     "web:build": "npm run build -w @nibras/web",
     "manual:preflight": "npm test && npm run web:build",
     "test": "npm run build && node --test test/*.js",
@@ -43,6 +47,9 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "concurrently": "^9.2.1",
+    "dotenv": "^16.6.1",
+    "nodemon": "^3.1.10",
     "prisma": "^6.5.0",
     "typescript": "^5.8.3"
   },

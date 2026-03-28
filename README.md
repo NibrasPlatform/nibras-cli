@@ -47,7 +47,7 @@ Project tracking docs:
 ## Install
 
 ```bash
-npm install
+npm ci
 npm install -g .
 ```
 
@@ -72,22 +72,31 @@ This runs:
 
 ## Local Dev Summary
 
-Use a fresh local Postgres volume for acceptance testing:
+For the base local stack, GitHub App variables are optional. You only need them
+for live OAuth and webhook validation.
+
+Primary local run path:
 
 ```bash
+npm ci
 cp .env.example .env
-npm run db:local:reset
-npm run db:local:migrate
-npm run build
+npm run dev
 ```
 
-Then start the local services in separate terminals:
+`npm run dev` will:
 
-```bash
-npm run api:dev
-npm run worker:dev
-npm run web:dev
-```
+- require `.env`
+- start the local Postgres container with Docker Compose
+- wait for Postgres readiness
+- run `npx prisma migrate deploy`
+- build the TypeScript services once
+- start TypeScript watch mode plus the API, worker, and web dev servers
+
+Expected local endpoints:
+
+- API health: `http://127.0.0.1:4848/v1/health`
+- Web app: `http://127.0.0.1:3000`
+- Worker health: `http://127.0.0.1:9090/healthz`
 
 When `DATABASE_URL` is set, the API uses Prisma/Postgres instead of the
 file-backed dev store. The Prisma schema lives in `prisma/schema.prisma`.
@@ -96,6 +105,18 @@ file-backed dev store. The Prisma schema lives in `prisma/schema.prisma`.
 the canonical acceptance path.
 
 For the full step-by-step manual validation sequence, use `TEST_SCENARIO.md`.
+
+## Destructive Maintenance
+
+To reset the local Postgres volume from scratch:
+
+```bash
+npm run db:local:reset
+npm run db:local:migrate
+```
+
+`db:local:reset` removes the Docker volume. It is opt-in maintenance, not part
+of the default `npm run dev` flow.
 
 ## GitHub App Summary
 

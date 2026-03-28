@@ -5,6 +5,7 @@
   "main": "dist/worker.js",
   "scripts": {
     "build": "tsc",
+    "watch": "tsc -w -p tsconfig.json --preserveWatchOutput",
     "dev": "node dist/worker.js"
   },
   "dependencies": {
