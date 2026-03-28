@@ -68,12 +68,6 @@ export default function HomePage() {
       {/* Sign-in card */}
       <div className={styles.cardWrap}>
         <div className={styles.formCard}>
-          <div className={styles.formLogo}>
-            <NibrasLogo variant="inverse" width={100} priority />
-          </div>
-
-          <div className={styles.divider} />
-
           <div className={styles.formIntro}>
             <h2>Welcome back</h2>
             <p>Sign in with GitHub to access your dashboard, projects, and course activity.</p>
