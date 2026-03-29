@@ -11,8 +11,8 @@ import {
   SystemRole,
   TrackingSubmissionType
 } from "@prisma/client";
-import { generateRepositoryFromTemplate, GitHubAppConfig } from "@nibras/github";
-import { encrypt as encryptValue, decrypt as decryptValue } from "@nibras/core";
+import { generateRepositoryFromTemplate, GitHubAppConfig } from "@praxis/github";
+import { encrypt as encryptValue, decrypt as decryptValue } from "@praxis/core";
 import {
   ActivityRecord,
   AppStore,
@@ -45,11 +45,11 @@ function defaultTask(): string {
   return [
     "# CS161 / exam1",
     "",
-    "This is the first hosted-style Nibras task.",
+    "This is the first hosted-style Praxis task.",
     "",
-    "1. Run `nibras login` against the hosted API.",
-    "2. Run `nibras test` inside a provisioned project repo.",
-    "3. Run `nibras submit` to push and wait for verification."
+    "1. Run `praxis login` against the hosted API.",
+    "2. Run `praxis test` inside a provisioned project repo.",
+    "3. Run `praxis submit` to push and wait for verification."
   ].join("\n");
 }
 
@@ -377,15 +377,15 @@ export class PrismaStore implements AppStore {
     if (this.seeded) {
       return;
     }
-    if (process.env.NODE_ENV === "production" && process.env.NIBRAS_ENABLE_DEMO_SEED !== "1") {
+    if (process.env.NODE_ENV === "production" && process.env.PRAXIS_ENABLE_DEMO_SEED !== "1") {
       this.seeded = true;
       return;
     }
     const [existingCourse, existingProject, existingDemoUser, existingInstructorUser, existingRelease, existingMemberships, existingMilestones] = await Promise.all([
       this.prisma.course.findUnique({ where: { slug: "cs161" } }),
       this.prisma.project.findUnique({ where: { slug: "cs161/exam1" } }),
-      this.prisma.user.findUnique({ where: { email: "demo@nibras.dev" } }),
-      this.prisma.user.findUnique({ where: { email: "instructor@nibras.dev" } }),
+      this.prisma.user.findUnique({ where: { email: "demo@praxis.dev" } }),
+      this.prisma.user.findUnique({ where: { email: "instructor@praxis.dev" } }),
       this.prisma.projectRelease.findFirst({
         where: {
           project: { slug: "cs161/exam1" }
@@ -480,7 +480,7 @@ export class PrismaStore implements AppStore {
     });
 
     await this.prisma.user.upsert({
-      where: { email: "demo@nibras.dev" },
+      where: { email: "demo@praxis.dev" },
       update: {
         username: "demo",
         githubLinked: true,
@@ -489,7 +489,7 @@ export class PrismaStore implements AppStore {
       },
       create: {
         username: "demo",
-        email: "demo@nibras.dev",
+        email: "demo@praxis.dev",
         githubLinked: true,
         githubAppInstalled: true,
         systemRole: SystemRole.user
@@ -497,7 +497,7 @@ export class PrismaStore implements AppStore {
     });
 
     await this.prisma.user.upsert({
-      where: { email: "instructor@nibras.dev" },
+      where: { email: "instructor@praxis.dev" },
       update: {
         username: "instructor",
         githubLinked: true,
@@ -506,7 +506,7 @@ export class PrismaStore implements AppStore {
       },
       create: {
         username: "instructor",
-        email: "instructor@nibras.dev",
+        email: "instructor@praxis.dev",
         githubLinked: true,
         githubAppInstalled: true,
         systemRole: SystemRole.admin
@@ -514,11 +514,11 @@ export class PrismaStore implements AppStore {
     });
 
     const user = await this.prisma.user.findUniqueOrThrow({
-      where: { email: "demo@nibras.dev" }
+      where: { email: "demo@praxis.dev" }
     });
 
     const instructor = await this.prisma.user.findUniqueOrThrow({
-      where: { email: "instructor@nibras.dev" }
+      where: { email: "instructor@praxis.dev" }
     });
 
     await this.prisma.githubAccount.upsert({
@@ -534,11 +534,11 @@ export class PrismaStore implements AppStore {
 
     await this.prisma.githubAccount.upsert({
       where: { userId: instructor.id },
-      update: { githubUserId: "instructor-user-id", login: "nibras-instructor" },
+      update: { githubUserId: "instructor-user-id", login: "praxis-instructor" },
       create: {
         userId: instructor.id,
         githubUserId: "instructor-user-id",
-        login: "nibras-instructor",
+        login: "praxis-instructor",
         installationId: "demo-installation"
       }
     });
@@ -650,7 +650,7 @@ export class PrismaStore implements AppStore {
 
   private async getDefaultUser(): Promise<{ id: string }> {
     return this.prisma.user.findUniqueOrThrow({
-      where: { email: "demo@nibras.dev" },
+      where: { email: "demo@praxis.dev" },
       select: { id: true }
     });
   }
@@ -698,11 +698,11 @@ export class PrismaStore implements AppStore {
       }
     });
 
-    // Encrypt tokens at rest when NIBRAS_ENCRYPTION_KEY is set.
+    // Encrypt tokens at rest when PRAXIS_ENCRYPTION_KEY is set.
     // Falls back to plaintext in dev so local flow works without the key.
     const maybeEncrypt = (value: string | undefined | null): string | null => {
       if (!value) return null;
-      if (!process.env.NIBRAS_ENCRYPTION_KEY) return value;
+      if (!process.env.PRAXIS_ENCRYPTION_KEY) return value;
       try { return encryptValue(value); } catch { return value; }
     };
 
@@ -771,7 +771,7 @@ export class PrismaStore implements AppStore {
     }
     // Decrypt token if encryption key is configured; fall back to stored value
     const maybeDecrypt = (value: string | null): string | null => {
-      if (!value || !process.env.NIBRAS_ENCRYPTION_KEY) return value;
+      if (!value || !process.env.PRAXIS_ENCRYPTION_KEY) return value;
       try { return decryptValue(value); } catch { return value; }
     };
     return {
@@ -1123,7 +1123,7 @@ export class PrismaStore implements AppStore {
         userId,
         projectId: project.id,
         owner: user.githubAccount.login,
-        name: `nibras-${projectKey.replace("/", "-")}`,
+        name: `praxis-${projectKey.replace("/", "-")}`,
         defaultBranch: project.defaultBranch,
         visibility: RepoVisibility.private,
         installStatus: "provisioned"
@@ -1153,7 +1153,7 @@ export class PrismaStore implements AppStore {
     if (!account?.userAccessToken || !project) {
       throw new Error("GitHub account or project is not ready for provisioning.");
     }
-    const repoName = `nibras-${projectKey.replace("/", "-")}`;
+    const repoName = `praxis-${projectKey.replace("/", "-")}`;
     const generated = await generateRepositoryFromTemplate(
       githubConfig,
       account.userAccessToken,
@@ -1919,8 +1919,8 @@ export class PrismaStore implements AppStore {
         data: {
           userId,
           projectId: milestone.projectId,
-          owner: parsedRepo?.owner || account?.login || "nibras-user",
-          name: parsedRepo?.name || `nibras-${milestone.project.slug.replace("/", "-")}`,
+          owner: parsedRepo?.owner || account?.login || "praxis-user",
+          name: parsedRepo?.name || `praxis-${milestone.project.slug.replace("/", "-")}`,
           cloneUrl: payload.repoUrl || payload.submissionValue || null,
           defaultBranch: payload.branch || "main",
           visibility: RepoVisibility.private,

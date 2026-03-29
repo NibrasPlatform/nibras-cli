@@ -5,7 +5,7 @@ import {
   StudentProjectsDashboardResponseSchema,
   TrackingMilestone,
   TrackingProjectSummary
-} from "@nibras/contracts";
+} from "@praxis/contracts";
 import { MilestoneRecord, ProjectRecord, ReviewRecord, StudentDashboardRecord, SubmissionRecord } from "../../../store";
 
 function formatDateLabel(value: string | null): string {

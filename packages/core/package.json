@@ -1,5 +1,5 @@
 {
-  "name": "@nibras/core",
+  "name": "@praxis/core",
   "version": "0.1.0",
   "private": true,
   "type": "commonjs",
@@ -9,7 +9,7 @@
     "watch": "tsc -w -p tsconfig.json --preserveWatchOutput"
   },
   "dependencies": {
-    "@nibras/contracts": "file:../../packages/contracts",
+    "@praxis/contracts": "file:../../packages/contracts",
     "minimatch": "^10.0.1"
   }
 }

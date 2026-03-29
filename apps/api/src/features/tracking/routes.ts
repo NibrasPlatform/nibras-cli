@@ -17,7 +17,7 @@ import {
   UpdateMilestoneRequestSchema,
   UpdateTrackingProjectRequestSchema,
   UpdateTrackingSubmissionRequestSchema
-} from "@nibras/contracts";
+} from "@praxis/contracts";
 import { requireUser } from "../../lib/auth";
 import { requestBaseUrl } from "../../lib/request-base-url";
 import { AppStore } from "../../store";

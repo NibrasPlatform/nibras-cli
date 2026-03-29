@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { ProjectManifest } from "@nibras/contracts";
+import { ProjectManifest } from "@praxis/contracts";
 
 export type DeviceCodeRecord = {
   deviceCode: string;
@@ -401,11 +401,11 @@ function defaultTask(): string {
   return [
     "# CS161 / exam1",
     "",
-    "This is the first hosted-style Nibras task.",
+    "This is the first hosted-style Praxis task.",
     "",
-    "1. Run `nibras login` against the hosted API.",
-    "2. Run `nibras test` inside a provisioned project repo.",
-    "3. Run `nibras submit` to push and wait for verification."
+    "1. Run `praxis login` against the hosted API.",
+    "2. Run `praxis test` inside a provisioned project repo.",
+    "3. Run `praxis submit` to push and wait for verification."
   ].join("\n");
 }
 
@@ -423,7 +423,7 @@ export function defaultManifest(apiBaseUrl: string): ProjectManifest {
     },
     submission: {
       allowedPaths: [
-        ".nibras/**",
+        ".praxis/**",
         "src/**",
         "test/**",
         "README.md",
@@ -533,7 +533,7 @@ function seedData(apiBaseUrl: string): StoreData {
       {
         id: studentId,
         username: "demo",
-        email: "demo@nibras.dev",
+        email: "demo@praxis.dev",
         githubLogin: "demo-user",
         githubLinked: true,
         githubAppInstalled: true,
@@ -542,8 +542,8 @@ function seedData(apiBaseUrl: string): StoreData {
       {
         id: instructorId,
         username: "instructor",
-        email: "instructor@nibras.dev",
-        githubLogin: "nibras-instructor",
+        email: "instructor@praxis.dev",
+        githubLogin: "praxis-instructor",
         githubLinked: true,
         githubAppInstalled: true,
         systemRole: "admin"
@@ -844,7 +844,7 @@ export class FileStore implements AppStore {
     }
     const repo: RepoRecord = {
       owner: user.githubLogin,
-      name: `nibras-${projectKey.replace("/", "-")}`,
+      name: `praxis-${projectKey.replace("/", "-")}`,
       cloneUrl: null,
       defaultBranch: project.manifest.defaultBranch,
       visibility: "private"
@@ -1701,5 +1701,5 @@ export class FileStore implements AppStore {
 }
 
 export function getStorePath(): string {
-  return process.env.NIBRAS_API_STORE || path.join(process.cwd(), "tmp", "nibras-api-store.json");
+  return process.env.PRAXIS_API_STORE || path.join(process.cwd(), "tmp", "praxis-api-store.json");
 }

@@ -1,4 +1,4 @@
-# Nibras Operator Runbook
+# Praxis Operator Runbook
 
 For the canonical manual validation sequence, use `TEST_SCENARIO.md`.
 
@@ -42,12 +42,12 @@ LIMIT 5;
 
 ### Step 4 — Search API logs by request ID
 ```bash
-grep '"reqId":"req_abc123"' /var/log/nibras-api.log
+grep '"reqId":"req_abc123"' /var/log/praxis-api.log
 ```
 
 ### Step 5 — Search worker logs by job ID
 ```bash
-grep '"jobId":"<jobId>"' /var/log/nibras-worker.log
+grep '"jobId":"<jobId>"' /var/log/praxis-worker.log
 ```
 
 ---
@@ -113,7 +113,7 @@ UPDATE "CliSession" SET "revokedAt" = NOW()
 WHERE "userId" = '<userId>' AND "revokedAt" IS NULL;
 ```
 
-### NIBRAS_ENCRYPTION_KEY rotation
+### PRAXIS_ENCRYPTION_KEY rotation
 1. Generate a new key: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
 2. Write a one-time migration script that reads all `GithubAccount.userAccessToken` values, decrypts with the old key, re-encrypts with the new key, and updates the row.
 3. Update the key in `.env.prod` and restart all services.
@@ -166,9 +166,9 @@ GET https://api.yourdomain.com/metrics
 Key metrics:
 | Metric | Description |
 |--------|-------------|
-| `nibras_http_requests_total` | Request count by method and status |
-| `nibras_verification_queue_depth` | Queued `VerificationJob` count |
-| `nibras_verification_total` | Completed verifications by status |
+| `praxis_http_requests_total` | Request count by method and status |
+| `praxis_verification_queue_depth` | Queued `VerificationJob` count |
+| `praxis_verification_total` | Completed verifications by status |
 
 ---
 

@@ -12,7 +12,7 @@ import {
   ProjectTaskResponseSchema,
   SubmissionPrepareResponseSchema,
   SubmissionStatusResponseSchema
-} from "@nibras/contracts";
+} from "@praxis/contracts";
 import {
   ApiError,
   apiRequest,
@@ -29,7 +29,7 @@ import {
   writeCliConfig,
   writeProjectManifest,
   writeTaskText
-} from "@nibras/core";
+} from "@praxis/core";
 
 type CommandContext = {
   plain: boolean;
@@ -60,21 +60,21 @@ function printHelp(context: CommandContext): void {
   // eslint-disable-next-line no-console
   console.log(colorize(context, "accent", banner));
   // eslint-disable-next-line no-console
-  console.log("\nCLI to interact with Nibras\n");
+  console.log("\nCLI to interact with Praxis\n");
   // eslint-disable-next-line no-console
   console.log("USAGE");
   // eslint-disable-next-line no-console
-  console.log("  $ nibras [command]\n");
+  console.log("  $ praxis [command]\n");
   // eslint-disable-next-line no-console
   console.log("EXAMPLES");
   // eslint-disable-next-line no-console
-  console.log("  $ nibras login");
+  console.log("  $ praxis login");
   // eslint-disable-next-line no-console
-  console.log("  $ nibras test");
+  console.log("  $ praxis test");
   // eslint-disable-next-line no-console
-  console.log("  $ nibras test --previous");
+  console.log("  $ praxis test --previous");
   // eslint-disable-next-line no-console
-  console.log("  $ nibras submit\n");
+  console.log("  $ praxis submit\n");
   // eslint-disable-next-line no-console
   console.log("COMMANDS");
   // eslint-disable-next-line no-console
@@ -94,7 +94,7 @@ function printHelp(context: CommandContext): void {
   // eslint-disable-next-line no-console
   console.log("  ping:             Verify API, auth, GitHub linkage, and repo state");
   // eslint-disable-next-line no-console
-  console.log("  update-buildpack: Update Node version in .nibras/project.json");
+  console.log("  update-buildpack: Update Node version in .praxis/project.json");
   // eslint-disable-next-line no-console
   console.log("  legacy:           Run the existing subject/project CLI\n");
   // eslint-disable-next-line no-console
@@ -253,7 +253,7 @@ async function commandPing(): Promise<void> {
 
 async function commandTask(): Promise<void> {
   const { projectRoot, manifest } = loadProjectManifest(process.cwd());
-  const taskPath = path.join(projectRoot, ".nibras", "task.md");
+  const taskPath = path.join(projectRoot, ".praxis", "task.md");
   if (fs.existsSync(taskPath)) {
     // eslint-disable-next-line no-console
     console.log(fs.readFileSync(taskPath, "utf8"));
@@ -301,7 +301,7 @@ async function commandSetup(args: string[]): Promise<void> {
     method: "POST"
   }));
 
-  fs.mkdirSync(path.join(targetDir, ".nibras"), { recursive: true });
+  fs.mkdirSync(path.join(targetDir, ".praxis"), { recursive: true });
   writeProjectManifest(targetDir, response.manifest);
   writeTaskText(targetDir, response.task);
 
@@ -329,7 +329,7 @@ async function commandUpdateBuildpack(args: string[]): Promise<void> {
 async function commandSubmit(): Promise<void> {
   const config = readCliConfig();
   if (!config.accessToken) {
-    throw new Error("You are not logged in. Run `nibras login` first.");
+    throw new Error("You are not logged in. Run `praxis login` first.");
   }
 
   const me = MeResponseSchema.parse(await apiRequest("/v1/me"));
@@ -340,7 +340,7 @@ async function commandSubmit(): Promise<void> {
   const stagedFiles = await stageAllowedFiles(projectRoot, manifest.submission.allowedPaths);
   await ensureGitIdentity(projectRoot, me.user.username, me.user.email);
   const timestamp = new Date().toISOString();
-  const commitMessage = `nibras submit: ${manifest.projectKey} ${timestamp}`;
+  const commitMessage = `praxis submit: ${manifest.projectKey} ${timestamp}`;
   const commitSha = await createCommit(projectRoot, commitMessage);
   await pushBranch(projectRoot, manifest.defaultBranch);
 
@@ -432,7 +432,7 @@ export async function runCli(argv: string[]): Promise<void> {
   }
 
   if (normalizedArgs[0] === "legacy") {
-    await runLegacyCli(["node", "nibras", ...normalizedArgs.slice(1)]);
+    await runLegacyCli(["node", "praxis", ...normalizedArgs.slice(1)]);
     return;
   }
 
