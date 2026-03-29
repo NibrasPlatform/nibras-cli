@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 import { Prisma, PrismaClient, SubmissionStatus } from "@prisma/client";
 import { createServer } from "node:http";
 import * as Sentry from "@sentry/node";
-import { gradeSemanticAnswer, type AiConfig, type GradingQuestion, type AiGradeResult } from "@nibras/grading";
+import { gradeSemanticAnswer, type AiConfig, type GradingQuestion, type AiGradeResult } from "@praxis/grading";
 import { runSandboxed } from "./sandbox";
 
 const execFileAsync = promisify(execFile);
@@ -153,17 +153,17 @@ type AiRunResult = {
 };
 
 function loadAiConfig(): AiConfig | null {
-  const apiKey = process.env.NIBRAS_AI_API_KEY;
+  const apiKey = process.env.PRAXIS_AI_API_KEY;
   if (!apiKey) return null;
-  const model = process.env.NIBRAS_AI_MODEL;
+  const model = process.env.PRAXIS_AI_MODEL;
   if (!model) return null;
   return {
     apiKey,
     model,
-    baseUrl: process.env.NIBRAS_AI_BASE_URL,
-    timeoutMs: process.env.NIBRAS_AI_TIMEOUT_MS ? Number(process.env.NIBRAS_AI_TIMEOUT_MS) : undefined,
-    maxRetries: process.env.NIBRAS_AI_MAX_RETRIES ? Number(process.env.NIBRAS_AI_MAX_RETRIES) : undefined,
-    minConfidence: process.env.NIBRAS_AI_MIN_CONFIDENCE ? Number(process.env.NIBRAS_AI_MIN_CONFIDENCE) : undefined
+    baseUrl: process.env.PRAXIS_AI_BASE_URL,
+    timeoutMs: process.env.PRAXIS_AI_TIMEOUT_MS ? Number(process.env.PRAXIS_AI_TIMEOUT_MS) : undefined,
+    maxRetries: process.env.PRAXIS_AI_MAX_RETRIES ? Number(process.env.PRAXIS_AI_MAX_RETRIES) : undefined,
+    minConfidence: process.env.PRAXIS_AI_MIN_CONFIDENCE ? Number(process.env.PRAXIS_AI_MIN_CONFIDENCE) : undefined
   };
 }
 
@@ -212,7 +212,7 @@ async function runAiGrading(
   const cloneUrl = attempt.userProjectRepo.cloneUrl;
   if (!cloneUrl) return null;
 
-  const tmpDir = await mkdtemp(join(tmpdir(), "nibras-ai-"));
+  const tmpDir = await mkdtemp(join(tmpdir(), "praxis-ai-"));
   try {
     await execFileAsync("git", ["clone", "--depth=1", "--branch", attempt.branch, cloneUrl, tmpDir], {
       timeout: 60_000

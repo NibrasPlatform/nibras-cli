@@ -10,8 +10,8 @@ import {
   SubmissionStatusResponseSchema,
   TokenRefreshRequestSchema,
   TokenRefreshResponseSchema
-} from "@nibras/contracts";
-import { GitHubAppConfig } from "@nibras/github";
+} from "@praxis/contracts";
+import { GitHubAppConfig } from "@praxis/github";
 import { PrismaStore } from "../../prisma-store";
 import { AppStore } from "../../store";
 import { getWebSessionToken, requireUser } from "../../lib/auth";

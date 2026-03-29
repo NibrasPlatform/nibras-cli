@@ -44,7 +44,7 @@ function parseDatabaseUrl(databaseUrl) {
     return {
       host: parsed.hostname || "127.0.0.1",
       port: parsed.port || "5432",
-      user: decodeURIComponent(parsed.username || "nibras"),
+      user: decodeURIComponent(parsed.username || "praxis"),
       password: decodeURIComponent(parsed.password || ""),
       database
     };

@@ -1,6 +1,6 @@
-# nibras CLI
+# Praxis CLI — πρᾶξις
 
-`nibras` is a course operations CLI and hosted validation stack for project
+`praxis` is a course operations CLI and hosted validation stack for project
 setup, testing, submission, and tracked verification.
 
 This repo includes:
@@ -23,8 +23,8 @@ implementation.
 
 Supported workflows include:
 
-- project-local commands with `nibras test`, `nibras submit`, `nibras task`, and `nibras setup`
-- device login with `nibras login`, `logout`, and `whoami`
+- project-local commands with `praxis test`, `praxis submit`, `praxis task`, and `praxis setup`
+- device login with `praxis login`, `logout`, and `whoami`
 - tracked submissions, verification status transitions, and admin overrides
 - strict private grading, semantic grading, manual score fallback, and optional `check50`
 - GitHub OAuth, GitHub App install linking, and signed webhook handling
@@ -135,10 +135,10 @@ The proxy fans requests out like this:
 
 Use the public ngrok URL in:
 
-- `NIBRAS_API_BASE_URL`
-- `NIBRAS_WEB_BASE_URL`
-- `NEXT_PUBLIC_NIBRAS_API_BASE_URL`
-- `NEXT_PUBLIC_NIBRAS_WEB_BASE_URL`
+- `PRAXIS_API_BASE_URL`
+- `PRAXIS_WEB_BASE_URL`
+- `NEXT_PUBLIC_PRAXIS_API_BASE_URL`
+- `NEXT_PUBLIC_PRAXIS_WEB_BASE_URL`
 
 GitHub cannot call `127.0.0.1`, so the public tunnel URL must also be used in
 the GitHub App settings.
@@ -194,6 +194,6 @@ For the full live end-to-end validation flow, use `TEST_SCENARIO.md`.
 Review the repo config, then run the core CS161 flow:
 
 ```bash
-sed -n '1,220p' .nibras.json
-nibras cs161 task exam1
+sed -n '1,220p' .praxis.json
+praxis cs161 task exam1
 ```

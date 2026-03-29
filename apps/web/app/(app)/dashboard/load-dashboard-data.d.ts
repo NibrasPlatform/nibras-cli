@@ -2,7 +2,7 @@ import type {
   GitHubConfigResponse,
   MeResponse,
   StudentProjectsDashboardResponse
-} from "@nibras/contracts";
+} from "@praxis/contracts";
 
 export type GitHubAppStatus = "configured" | "unconfigured" | "unavailable";
 

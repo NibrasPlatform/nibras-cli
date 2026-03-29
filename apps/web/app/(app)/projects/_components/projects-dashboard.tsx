@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { StudentProjectsDashboardResponse, TrackingMilestone, TrackingProjectSummary } from "@nibras/contracts";
+import type { StudentProjectsDashboardResponse, TrackingMilestone, TrackingProjectSummary } from "@praxis/contracts";
 import { apiFetch, discoverApiBaseUrl } from "../../../lib/session";
 import styles from "./projects.module.css";
 
