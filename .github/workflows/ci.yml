@@ -52,4 +52,9 @@ jobs:
         run: node --test test/*.js
 
       - name: Build web app
-        run: npm run web:build
+        env:
+          NEXT_PUBLIC_NIBRAS_API_BASE_URL: http://localhost:4848
+          NEXT_PUBLIC_NIBRAS_WEB_BASE_URL: http://localhost:3000
+        run: |
+          touch apps/web/.env.local
+          npm run web:build
