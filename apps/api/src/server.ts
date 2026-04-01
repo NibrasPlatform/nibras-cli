@@ -41,6 +41,14 @@ async function main(): Promise<void> {
   await app.listen({ port, host });
 
   console.log(JSON.stringify({ level: 'info', msg: 'Nibras API started', host, port }));
+
+  const shutdown = async (signal: string) => {
+    console.log(JSON.stringify({ level: 'info', msg: `${signal} received, shutting down` }));
+    await app.close();
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
 main().catch((err) => {

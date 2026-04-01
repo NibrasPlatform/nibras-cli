@@ -78,6 +78,8 @@ model User {
   submissionAttempts SubmissionAttempt[]
   auditLogs         AuditLog[]
   reviews           Review[]
+
+  @@index([systemRole])
 }
 
 model Course {
@@ -160,6 +162,8 @@ model CliSession {
   updatedAt     DateTime  @updatedAt
   revokedAt     DateTime?
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model WebSession {
@@ -171,6 +175,8 @@ model WebSession {
   updatedAt    DateTime @updatedAt
   revokedAt    DateTime?
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Subject {
@@ -284,6 +290,10 @@ model SubmissionAttempt {
   verificationJob   VerificationJob?
 
   @@unique([userId, projectId, commitSha])
+  @@index([userId])
+  @@index([projectId])
+  @@index([status])
+  @@index([milestoneId])
 }
 
 model Milestone {

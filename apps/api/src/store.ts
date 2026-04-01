@@ -3,6 +3,8 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ProjectManifest } from '@nibras/contracts';
 
+export type PaginationOpts = { limit?: number; offset?: number };
+
 export type DeviceCodeRecord = {
   deviceCode: string;
   userCode: string;
@@ -303,7 +305,8 @@ export interface AppStore {
     submissionId: string
   ): Promise<VerificationLogRecord[]>;
   listCourseMemberships(apiBaseUrl: string, userId: string): Promise<CourseMembershipRecord[]>;
-  listTrackingCourses(apiBaseUrl: string, userId: string): Promise<CourseRecord[]>;
+  listTrackingCourses(apiBaseUrl: string, userId: string, opts?: PaginationOpts): Promise<CourseRecord[]>;
+  countTrackingCourses(apiBaseUrl: string, userId: string): Promise<number>;
   createTrackingCourse(
     apiBaseUrl: string,
     userId: string,
@@ -335,7 +338,8 @@ export interface AppStore {
     code: string,
     userId: string
   ): Promise<CourseMembershipRecord>;
-  listTrackingProjects(apiBaseUrl: string, courseId: string): Promise<ProjectRecord[]>;
+  listTrackingProjects(apiBaseUrl: string, courseId: string, opts?: PaginationOpts): Promise<ProjectRecord[]>;
+  countTrackingProjects(apiBaseUrl: string, courseId: string): Promise<number>;
   getTrackingProjectById(apiBaseUrl: string, projectId: string): Promise<ProjectRecord | null>;
   createTrackingProject(
     apiBaseUrl: string,
@@ -404,8 +408,10 @@ export interface AppStore {
   ): Promise<boolean>;
   listTrackingMilestoneSubmissions(
     apiBaseUrl: string,
-    milestoneId: string
+    milestoneId: string,
+    opts?: PaginationOpts
   ): Promise<SubmissionRecord[]>;
+  countTrackingMilestoneSubmissions(apiBaseUrl: string, milestoneId: string): Promise<number>;
   createTrackingSubmission(
     apiBaseUrl: string,
     userId: string,
@@ -447,8 +453,13 @@ export interface AppStore {
   getSubmissionStudentEmail(apiBaseUrl: string, submissionId: string): Promise<{ email: string; username: string } | null>;
   listTrackingReviewQueue(
     apiBaseUrl: string,
-    filters?: { courseId?: string; projectId?: string; status?: SubmissionWorkflowStatus }
+    filters?: { courseId?: string; projectId?: string; status?: SubmissionWorkflowStatus },
+    opts?: PaginationOpts
   ): Promise<SubmissionRecord[]>;
+  countTrackingReviewQueue(
+    apiBaseUrl: string,
+    filters?: { courseId?: string; projectId?: string; status?: SubmissionWorkflowStatus }
+  ): Promise<number>;
   listTrackingActivity(apiBaseUrl: string, userId: string): Promise<ActivityRecord[]>;
   getStudentTrackingDashboard(
     apiBaseUrl: string,
@@ -1127,18 +1138,30 @@ export class FileStore implements AppStore {
     return data.courseMemberships.filter((entry) => entry.userId === userId);
   }
 
-  async listTrackingCourses(apiBaseUrl: string, userId: string): Promise<CourseRecord[]> {
+  async listTrackingCourses(
+    apiBaseUrl: string,
+    userId: string,
+    opts?: PaginationOpts
+  ): Promise<CourseRecord[]> {
     const data = this.read(apiBaseUrl);
     const user = data.users.find((entry) => entry.id === userId);
+    let results: CourseRecord[];
     if (user?.systemRole === 'admin') {
-      return data.courses.filter((entry) => entry.isActive);
+      results = data.courses.filter((entry) => entry.isActive);
+    } else {
+      const allowedCourseIds = new Set(
+        data.courseMemberships
+          .filter((entry) => entry.userId === userId)
+          .map((entry) => entry.courseId)
+      );
+      results = data.courses.filter((entry) => entry.isActive && allowedCourseIds.has(entry.id));
     }
-    const allowedCourseIds = new Set(
-      data.courseMemberships
-        .filter((entry) => entry.userId === userId)
-        .map((entry) => entry.courseId)
-    );
-    return data.courses.filter((entry) => entry.isActive && allowedCourseIds.has(entry.id));
+    const offset = opts?.offset ?? 0;
+    return opts?.limit !== undefined ? results.slice(offset, offset + opts.limit) : results;
+  }
+
+  async countTrackingCourses(apiBaseUrl: string, userId: string): Promise<number> {
+    return (await this.listTrackingCourses(apiBaseUrl, userId)).length;
   }
 
   async listCourseMembersForInstructor(
@@ -1308,11 +1331,22 @@ export class FileStore implements AppStore {
     return course;
   }
 
-  async listTrackingProjects(apiBaseUrl: string, courseId: string): Promise<ProjectRecord[]> {
+  async listTrackingProjects(
+    apiBaseUrl: string,
+    courseId: string,
+    opts?: PaginationOpts
+  ): Promise<ProjectRecord[]> {
     const data = this.read(apiBaseUrl);
-    return data.projects
+    const results = data.projects
       .filter((entry) => entry.courseId === courseId)
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    const offset = opts?.offset ?? 0;
+    return opts?.limit !== undefined ? results.slice(offset, offset + opts.limit) : results;
+  }
+
+  async countTrackingProjects(apiBaseUrl: string, courseId: string): Promise<number> {
+    const data = this.read(apiBaseUrl);
+    return data.projects.filter((entry) => entry.courseId === courseId).length;
   }
 
   async getTrackingProjectById(
@@ -1574,12 +1608,20 @@ export class FileStore implements AppStore {
 
   async listTrackingMilestoneSubmissions(
     apiBaseUrl: string,
-    milestoneId: string
+    milestoneId: string,
+    opts?: PaginationOpts
   ): Promise<SubmissionRecord[]> {
     const data = this.read(apiBaseUrl);
-    return data.submissions
+    const results = data.submissions
       .filter((entry) => entry.milestoneId === milestoneId)
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    const offset = opts?.offset ?? 0;
+    return opts?.limit !== undefined ? results.slice(offset, offset + opts.limit) : results;
+  }
+
+  async countTrackingMilestoneSubmissions(apiBaseUrl: string, milestoneId: string): Promise<number> {
+    const data = this.read(apiBaseUrl);
+    return data.submissions.filter((entry) => entry.milestoneId === milestoneId).length;
   }
 
   async createTrackingSubmission(
@@ -1766,10 +1808,11 @@ export class FileStore implements AppStore {
 
   async listTrackingReviewQueue(
     apiBaseUrl: string,
-    filters?: { courseId?: string; projectId?: string; status?: SubmissionWorkflowStatus }
+    filters?: { courseId?: string; projectId?: string; status?: SubmissionWorkflowStatus },
+    opts?: PaginationOpts
   ): Promise<SubmissionRecord[]> {
     const data = this.read(apiBaseUrl);
-    return data.submissions.filter((entry) => {
+    const results = data.submissions.filter((entry) => {
       if (filters?.projectId && entry.projectId !== filters.projectId) return false;
       if (filters?.courseId) {
         const project = data.projects.find((projectItem) => projectItem.id === entry.projectId);
@@ -1778,6 +1821,15 @@ export class FileStore implements AppStore {
       if (filters?.status && entry.status !== filters.status) return false;
       return entry.milestoneId !== null;
     });
+    const offset = opts?.offset ?? 0;
+    return opts?.limit !== undefined ? results.slice(offset, offset + opts.limit) : results;
+  }
+
+  async countTrackingReviewQueue(
+    apiBaseUrl: string,
+    filters?: { courseId?: string; projectId?: string; status?: SubmissionWorkflowStatus }
+  ): Promise<number> {
+    return (await this.listTrackingReviewQueue(apiBaseUrl, filters)).length;
   }
 
   async listTrackingActivity(apiBaseUrl: string, userId: string): Promise<ActivityRecord[]> {

@@ -20,7 +20,7 @@ import {
 } from '@nibras/contracts';
 import { requireUser } from '../../lib/auth';
 import { requestBaseUrl } from '../../lib/request-base-url';
-import { AppStore } from '../../store';
+import { AppStore, PaginationOpts } from '../../store';
 import {
   presentInstructorDashboard,
   presentMilestone,
@@ -39,11 +39,30 @@ function isReviewRecord<T>(value: T | null): value is T {
   return value !== null;
 }
 
+/**
+ * Parse optional `limit` and `offset` query string params into a PaginationOpts object.
+ * Returns undefined when neither is present (backward-compatible — no pagination applied).
+ * Clamps limit to [1, 200].
+ */
+function parsePaginationOpts(query: { limit?: string; offset?: string }): PaginationOpts | undefined {
+  if (query.limit === undefined && query.offset === undefined) return undefined;
+  const limit = query.limit !== undefined ? Math.min(200, Math.max(1, parseInt(query.limit, 10) || 50)) : 50;
+  const offset = query.offset !== undefined ? Math.max(0, parseInt(query.offset, 10) || 0) : 0;
+  return { limit, offset };
+}
+
 export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): void {
   app.get('/v1/tracking/courses', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
-    return await store.listTrackingCourses(requestBaseUrl(request), auth.user.id);
+    const query = request.query as { limit?: string; offset?: string };
+    const opts = parsePaginationOpts(query);
+    const [courses, total] = await Promise.all([
+      store.listTrackingCourses(requestBaseUrl(request), auth.user.id, opts),
+      opts ? store.countTrackingCourses(requestBaseUrl(request), auth.user.id) : Promise.resolve(undefined),
+    ]);
+    if (total !== undefined) void reply.header('X-Total-Count', String(total));
+    return courses;
   });
 
   app.get('/v1/tracking/courses/:courseId/members', async (request, reply) => {
@@ -120,9 +139,14 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
-    return (await store.listTrackingProjects(requestBaseUrl(request), params.courseId)).map(
-      presentProject
-    );
+    const query = request.query as { limit?: string; offset?: string };
+    const opts = parsePaginationOpts(query);
+    const [projects, total] = await Promise.all([
+      store.listTrackingProjects(requestBaseUrl(request), params.courseId, opts),
+      opts ? store.countTrackingProjects(requestBaseUrl(request), params.courseId) : Promise.resolve(undefined),
+    ]);
+    if (total !== undefined) void reply.header('X-Total-Count', String(total));
+    return projects.map(presentProject);
   });
 
   app.post('/v1/tracking/projects', async (request, reply) => {
@@ -356,10 +380,15 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       return;
     }
     const canManage = canManageProject(auth, project);
-    const submissions = await store.listTrackingMilestoneSubmissions(
-      requestBaseUrl(request),
-      params.milestoneId
-    );
+    const query = request.query as { limit?: string; offset?: string };
+    const opts = parsePaginationOpts(query);
+    const [submissions, total] = await Promise.all([
+      store.listTrackingMilestoneSubmissions(requestBaseUrl(request), params.milestoneId, opts),
+      opts
+        ? store.countTrackingMilestoneSubmissions(requestBaseUrl(request), params.milestoneId)
+        : Promise.resolve(undefined),
+    ]);
+    if (total !== undefined) void reply.header('X-Total-Count', String(total));
     return submissions
       .filter(
         (entry) => auth.user.systemRole === 'admin' || canManage || entry.userId === auth.user.id
@@ -515,12 +544,22 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       courseId?: string;
       projectId?: string;
       status?: 'queued' | 'running' | 'passed' | 'failed' | 'needs_review';
+      limit?: string;
+      offset?: string;
     };
     if (query.courseId && !canManageCourse(auth, query.courseId)) {
       reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
-    const results = await store.listTrackingReviewQueue(requestBaseUrl(request), query);
+    const filters = { courseId: query.courseId, projectId: query.projectId, status: query.status };
+    const opts = parsePaginationOpts(query);
+    const [results, total] = await Promise.all([
+      store.listTrackingReviewQueue(requestBaseUrl(request), filters, opts),
+      opts
+        ? store.countTrackingReviewQueue(requestBaseUrl(request), filters)
+        : Promise.resolve(undefined),
+    ]);
+    if (total !== undefined) void reply.header('X-Total-Count', String(total));
     const filtered =
       auth.user.systemRole === 'admin'
         ? results

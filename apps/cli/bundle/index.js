@@ -141,84 +141,62 @@ const picocolors_1 = __importDefault(__nccwpck_require__(596));
 const contracts_1 = __nccwpck_require__(16);
 const core_1 = __nccwpck_require__(4);
 const banner = [
-    "███╗   ██╗██╗██████╗ ██████╗  █████╗ ███████╗",
-    "████╗  ██║██║██╔══██╗██╔══██╗██╔══██╗██╔════╝",
-    "██╔██╗ ██║██║██████╔╝██████╔╝███████║███████╗",
-    "██║╚██╗██║██║██╔══██╗██╔══██╗██╔══██║╚════██║",
-    "██║ ╚████║██║██████╔╝██║  ██║██║  ██║███████║",
-    "╚═╝  ╚═══╝╚═╝╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝"
-].join("\n");
+    '███╗   ██╗██╗██████╗ ██████╗  █████╗ ███████╗',
+    '████╗  ██║██║██╔══██╗██╔══██╗██╔══██╗██╔════╝',
+    '██╔██╗ ██║██║██████╔╝██████╔╝███████║███████╗',
+    '██║╚██╗██║██║██╔══██╗██╔══██╗██╔══██║╚════██║',
+    '██║ ╚████║██║██████╔╝██║  ██║██║  ██║███████║',
+    '╚═╝  ╚═══╝╚═╝╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝',
+].join('\n');
 function isPlainMode(args) {
-    return args.includes("--plain") || process.env.NO_COLOR === "1" || !process.stdout.isTTY;
+    return args.includes('--plain') || process.env.NO_COLOR === '1' || !process.stdout.isTTY;
 }
 function colorize(context, kind, value) {
     if (context.plain)
         return value;
-    if (kind === "accent")
+    if (kind === 'accent')
         return picocolors_1.default.cyan(value);
-    if (kind === "error")
+    if (kind === 'error')
         return picocolors_1.default.red(value);
-    if (kind === "success")
+    if (kind === 'success')
         return picocolors_1.default.green(value);
     return picocolors_1.default.dim(value);
 }
 function printHelp(context) {
-    // eslint-disable-next-line no-console
-    console.log(colorize(context, "accent", banner));
-    // eslint-disable-next-line no-console
-    console.log("\nCLI to interact with Nibras\n");
-    // eslint-disable-next-line no-console
-    console.log("USAGE");
-    // eslint-disable-next-line no-console
-    console.log("  $ nibras [command]\n");
-    // eslint-disable-next-line no-console
-    console.log("EXAMPLES");
-    // eslint-disable-next-line no-console
-    console.log("  $ nibras login");
-    // eslint-disable-next-line no-console
-    console.log("  $ nibras test");
-    // eslint-disable-next-line no-console
-    console.log("  $ nibras test --previous");
-    // eslint-disable-next-line no-console
-    console.log("  $ nibras submit\n");
-    // eslint-disable-next-line no-console
-    console.log("COMMANDS");
-    // eslint-disable-next-line no-console
-    console.log("  login:            Start device login against the hosted API");
-    // eslint-disable-next-line no-console
-    console.log("  logout:           Clear the local CLI session");
-    // eslint-disable-next-line no-console
-    console.log("  whoami:           Show the signed-in user and linked GitHub account");
-    // eslint-disable-next-line no-console
-    console.log("  test:             Run project-local public tests");
-    // eslint-disable-next-line no-console
-    console.log("  submit:           Commit tracked solution files, push, and wait for verification");
-    // eslint-disable-next-line no-console
-    console.log("  task:             View current task instructions");
-    // eslint-disable-next-line no-console
-    console.log("  setup:            Bootstrap a local project manifest from the API");
-    // eslint-disable-next-line no-console
-    console.log("  ping:             Verify API, auth, GitHub linkage, and repo state");
-    // eslint-disable-next-line no-console
-    console.log("  update-buildpack: Update Node version in .nibras/project.json");
-    // eslint-disable-next-line no-console
-    console.log("  legacy:           Run the existing subject/project CLI\n");
-    // eslint-disable-next-line no-console
-    console.log("VERSION");
-    // eslint-disable-next-line no-console
+    console.log(colorize(context, 'accent', banner));
+    console.log('\nCLI to interact with Nibras\n');
+    console.log('USAGE');
+    console.log('  $ nibras [command]\n');
+    console.log('EXAMPLES');
+    console.log('  $ nibras login');
+    console.log('  $ nibras test');
+    console.log('  $ nibras test --previous');
+    console.log('  $ nibras submit\n');
+    console.log('COMMANDS');
+    console.log('  login:            Start device login against the hosted API');
+    console.log('  logout:           Clear the local CLI session');
+    console.log('  whoami:           Show the signed-in user and linked GitHub account');
+    console.log('  test:             Run project-local public tests');
+    console.log('  submit:           Commit tracked solution files, push, and wait for verification');
+    console.log('  task:             View current task instructions');
+    console.log('  setup:            Bootstrap a local project manifest from the API');
+    console.log('  ping:             Verify API, auth, GitHub linkage, and repo state');
+    console.log('  update-buildpack: Update Node version in .nibras/project.json');
+    console.log('  legacy:           Run the existing subject/project CLI\n');
+    console.log('VERSION');
     console.log(`  ${getVersion()}`);
 }
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 function getRootPackageJsonPath() {
-    return node_path_1.default.resolve(__dirname, "../../../package.json");
+    return node_path_1.default.resolve(__dirname, '../../../package.json');
 }
 function getVersion() {
-    const pkg = JSON.parse(node_fs_1.default.readFileSync(getRootPackageJsonPath(), "utf8"));
-    const gitSha = (0, node_child_process_1.spawnSync)("git", ["rev-parse", "--short", "HEAD"], {
-        cwd: node_path_1.default.resolve(__dirname, "../../.."),
-        encoding: "utf8"
+    const pkg = JSON.parse(node_fs_1.default.readFileSync(getRootPackageJsonPath(), 'utf8'));
+    const gitSha = (0, node_child_process_1.spawnSync)('git', ['rev-parse', '--short', 'HEAD'], {
+        cwd: node_path_1.default.resolve(__dirname, '../../..'),
+        encoding: 'utf8',
     });
     if (gitSha.status === 0 && gitSha.stdout.trim()) {
         return `v${pkg.version}-${gitSha.stdout.trim()}`;
@@ -227,16 +205,16 @@ function getVersion() {
 }
 function tryOpenBrowser(url) {
     const candidates = [
-        { command: "xdg-open", args: [url] },
-        { command: "open", args: [url] },
-        { command: "cmd", args: ["/c", "start", url], options: { shell: true } }
+        { command: 'xdg-open', args: [url] },
+        { command: 'open', args: [url] },
+        { command: 'cmd', args: ['/c', 'start', url], options: { shell: true } },
     ];
     for (const candidate of candidates) {
         try {
             const child = (0, node_child_process_1.spawn)(candidate.command, candidate.args, {
                 detached: true,
-                stdio: "ignore",
-                shell: candidate.options?.shell || false
+                stdio: 'ignore',
+                shell: candidate.options?.shell || false,
             });
             child.unref();
             return;
@@ -266,44 +244,41 @@ function parseError(err) {
 }
 async function commandLogin(args, context) {
     const config = (0, core_1.readCliConfig)();
-    const apiBaseUrl = parseOption(args, "--api-base-url") || config.apiBaseUrl;
-    const start = contracts_1.DeviceStartResponseSchema.parse(await (0, core_1.apiRequest)("/v1/device/start", {
-        method: "POST"
+    const apiBaseUrl = parseOption(args, '--api-base-url') || config.apiBaseUrl;
+    const start = contracts_1.DeviceStartResponseSchema.parse(await (0, core_1.apiRequest)('/v1/device/start', {
+        method: 'POST',
     }, apiBaseUrl));
-    // eslint-disable-next-line no-console
-    console.log(`${colorize(context, "accent", "Open")} ${start.verificationUriComplete}`);
-    // eslint-disable-next-line no-console
-    console.log(`${colorize(context, "accent", "Code")} ${start.userCode}`);
-    if (!hasFlag(args, "--no-open")) {
+    console.log(`${colorize(context, 'accent', 'Open')} ${start.verificationUriComplete}`);
+    console.log(`${colorize(context, 'accent', 'Code')} ${start.userCode}`);
+    if (!hasFlag(args, '--no-open')) {
         tryOpenBrowser(start.verificationUriComplete);
     }
-    const deadline = Date.now() + (start.expiresInSeconds * 1000);
+    const deadline = Date.now() + start.expiresInSeconds * 1000;
     while (Date.now() < deadline) {
         await sleep(start.intervalSeconds * 1000);
-        const polled = contracts_1.DevicePollResponseSchema.parse(await (0, core_1.apiRequest)("/v1/device/poll", {
-            method: "POST",
-            body: JSON.stringify({ deviceCode: start.deviceCode })
+        const polled = contracts_1.DevicePollResponseSchema.parse(await (0, core_1.apiRequest)('/v1/device/poll', {
+            method: 'POST',
+            body: JSON.stringify({ deviceCode: start.deviceCode }),
         }, apiBaseUrl));
-        if (polled.status === "authorized") {
+        if (polled.status === 'authorized') {
             (0, core_1.writeCliConfig)({
                 apiBaseUrl,
                 activeUserId: polled.user.id,
                 accessToken: polled.accessToken,
                 refreshToken: polled.refreshToken,
-                tokenCreatedAt: new Date().toISOString()
+                tokenCreatedAt: new Date().toISOString(),
             });
-            // eslint-disable-next-line no-console
-            console.log(`${colorize(context, "success", "Authenticated")} as ${polled.user.username} (${polled.user.githubLogin})`);
+            console.log(`${colorize(context, 'success', 'Authenticated')} as ${polled.user.username} (${polled.user.githubLogin})`);
             return;
         }
     }
-    throw new Error("Device login timed out before approval.");
+    throw new Error('Device login timed out before approval.');
 }
 async function commandLogout() {
     const config = (0, core_1.readCliConfig)();
     if (config.accessToken) {
         try {
-            await (0, core_1.apiRequest)("/v1/logout", { method: "POST" });
+            await (0, core_1.apiRequest)('/v1/logout', { method: 'POST' });
         }
         catch {
             // Best effort only. The local session still needs to be cleared.
@@ -312,109 +287,96 @@ async function commandLogout() {
     (0, core_1.clearCliSession)();
 }
 async function commandWhoami() {
-    const response = contracts_1.MeResponseSchema.parse(await (0, core_1.apiRequest)("/v1/me"));
-    // eslint-disable-next-line no-console
+    const response = contracts_1.MeResponseSchema.parse(await (0, core_1.apiRequest)('/v1/me'));
     console.log(`User: ${response.user.username}`);
-    // eslint-disable-next-line no-console
     console.log(`GitHub: ${response.user.githubLogin}`);
-    // eslint-disable-next-line no-console
     console.log(`API: ${response.apiBaseUrl}`);
 }
 async function commandPing() {
-    const response = contracts_1.PingResponseSchema.parse(await (0, core_1.apiRequest)("/v1/ping"));
-    // eslint-disable-next-line no-console
+    const response = contracts_1.PingResponseSchema.parse(await (0, core_1.apiRequest)('/v1/ping'));
     console.log(`API: ${response.api}`);
-    // eslint-disable-next-line no-console
     console.log(`Auth: ${response.auth}`);
-    // eslint-disable-next-line no-console
     console.log(`GitHub: ${response.github}`);
-    // eslint-disable-next-line no-console
     console.log(`GitHub App: ${response.githubApp}`);
     try {
         const { projectRoot, manifest } = (0, core_1.loadProjectManifest)(process.cwd());
         const origin = await (0, core_1.getOriginUrl)(projectRoot);
-        // eslint-disable-next-line no-console
         console.log(`Project: ${manifest.projectKey}`);
-        // eslint-disable-next-line no-console
         console.log(`Origin: ${origin}`);
     }
     catch (err) {
-        // eslint-disable-next-line no-console
         console.log(`Project: ${parseError(err)}`);
     }
 }
 async function commandTask() {
     const { projectRoot, manifest } = (0, core_1.loadProjectManifest)(process.cwd());
-    const taskPath = node_path_1.default.join(projectRoot, ".nibras", "task.md");
+    const taskPath = node_path_1.default.join(projectRoot, '.nibras', 'task.md');
     if (node_fs_1.default.existsSync(taskPath)) {
-        // eslint-disable-next-line no-console
-        console.log(node_fs_1.default.readFileSync(taskPath, "utf8"));
+        console.log(node_fs_1.default.readFileSync(taskPath, 'utf8'));
         return;
     }
     const task = contracts_1.ProjectTaskResponseSchema.parse(await (0, core_1.apiRequest)(`/v1/projects/${encodeURIComponent(manifest.projectKey)}/task`));
     (0, core_1.writeTaskText)(projectRoot, task.task);
-    // eslint-disable-next-line no-console
     console.log(task.task);
 }
 async function runShellCommand(command, cwd, extraArgs) {
-    const fullCommand = extraArgs.length > 0 ? `${command} ${extraArgs.join(" ")}` : command;
+    const fullCommand = extraArgs.length > 0 ? `${command} ${extraArgs.join(' ')}` : command;
     return new Promise((resolve, reject) => {
         const child = (0, node_child_process_1.spawn)(fullCommand, {
             cwd,
             shell: true,
-            stdio: "inherit"
+            stdio: 'inherit',
         });
-        child.on("error", reject);
-        child.on("close", (code) => resolve(code || 0));
+        child.on('error', reject);
+        child.on('close', (code) => resolve(code || 0));
     });
 }
 async function commandTest(args) {
     const { projectRoot, manifest } = (0, core_1.loadProjectManifest)(process.cwd());
-    const wantsPrevious = hasFlag(args, "--previous");
+    const wantsPrevious = hasFlag(args, '--previous');
     if (wantsPrevious && !manifest.test.supportsPrevious) {
-        throw new Error("This project does not support --previous.");
+        throw new Error('This project does not support --previous.');
     }
-    const exitCode = await runShellCommand(manifest.test.command, projectRoot, wantsPrevious ? ["--previous"] : []);
+    const exitCode = await runShellCommand(manifest.test.command, projectRoot, wantsPrevious ? ['--previous'] : []);
     if (exitCode !== 0) {
         process.exitCode = exitCode;
     }
 }
 async function commandSetup(args) {
-    const projectKey = parseOption(args, "--project");
+    const projectKey = parseOption(args, '--project');
     if (!projectKey) {
-        throw new Error("setup requires --project <subject/project>.");
+        throw new Error('setup requires --project <subject/project>.');
     }
-    const targetDir = node_path_1.default.resolve(parseOption(args, "--dir") || process.cwd());
+    const targetDir = node_path_1.default.resolve(parseOption(args, '--dir') || process.cwd());
     const response = contracts_1.ProjectSetupResponseSchema.parse(await (0, core_1.apiRequest)(`/v1/projects/${encodeURIComponent(projectKey)}/setup`, {
-        method: "POST"
+        method: 'POST',
     }));
-    node_fs_1.default.mkdirSync(node_path_1.default.join(targetDir, ".nibras"), { recursive: true });
+    node_fs_1.default.mkdirSync(node_path_1.default.join(targetDir, '.nibras'), { recursive: true });
     (0, core_1.writeProjectManifest)(targetDir, response.manifest);
     (0, core_1.writeTaskText)(targetDir, response.task);
-    if (!node_fs_1.default.existsSync(node_path_1.default.join(targetDir, ".git"))) {
-        (0, node_child_process_1.spawnSync)("git", ["init", "-b", response.repo.defaultBranch], { cwd: targetDir, stdio: "ignore" });
+    if (!node_fs_1.default.existsSync(node_path_1.default.join(targetDir, '.git'))) {
+        (0, node_child_process_1.spawnSync)('git', ['init', '-b', response.repo.defaultBranch], {
+            cwd: targetDir,
+            stdio: 'ignore',
+        });
     }
-    // eslint-disable-next-line no-console
     console.log(`Project: ${response.projectKey}`);
-    // eslint-disable-next-line no-console
     console.log(`Repo: ${response.repo.owner}/${response.repo.name}`);
-    // eslint-disable-next-line no-console
     console.log(`Directory: ${targetDir}`);
 }
 async function commandUpdateBuildpack(args) {
-    const version = parseOption(args, "--node") || "20";
+    const version = parseOption(args, '--node') || '20';
     const { projectRoot, manifest } = (0, core_1.loadProjectManifest)(process.cwd());
     manifest.buildpack.node = version;
     (0, core_1.writeProjectManifest)(projectRoot, manifest);
-    // eslint-disable-next-line no-console
     console.log(`Buildpack Node version set to ${version}`);
 }
 async function commandSubmit() {
     const config = (0, core_1.readCliConfig)();
     if (!config.accessToken) {
-        throw new Error("You are not logged in. Run `nibras login` first.");
+        throw new Error('You are not logged in. Run `nibras login` first.');
     }
-    const me = contracts_1.MeResponseSchema.parse(await (0, core_1.apiRequest)("/v1/me"));
+    const me = contracts_1.MeResponseSchema.parse(await (0, core_1.apiRequest)('/v1/me'));
     const { projectRoot, manifest } = (0, core_1.loadProjectManifest)(process.cwd());
     await (0, core_1.ensureGitRepo)(projectRoot);
     const repoUrl = await (0, core_1.getOriginUrl)(projectRoot);
@@ -425,41 +387,39 @@ async function commandSubmit() {
     const commitMessage = `nibras submit: ${manifest.projectKey} ${timestamp}`;
     const commitSha = await (0, core_1.createCommit)(projectRoot, commitMessage);
     await (0, core_1.pushBranch)(projectRoot, manifest.defaultBranch);
-    const prepared = contracts_1.SubmissionPrepareResponseSchema.parse(await (0, core_1.apiRequest)("/v1/submissions/prepare", {
-        method: "POST",
+    const prepared = contracts_1.SubmissionPrepareResponseSchema.parse(await (0, core_1.apiRequest)('/v1/submissions/prepare', {
+        method: 'POST',
         body: JSON.stringify({
             projectKey: manifest.projectKey,
             commitSha,
             repoUrl,
-            branch
-        })
+            branch,
+        }),
     }));
     await (0, core_1.apiRequest)(`/v1/submissions/${prepared.submissionId}/local-test-result`, {
-        method: "POST",
+        method: 'POST',
         body: JSON.stringify({
             exitCode: 0,
             summary: `Submitted ${stagedFiles.length} file(s).`,
-            ranPrevious: false
-        })
+            ranPrevious: false,
+        }),
     });
     const deadline = Date.now() + manifest.submission.waitForVerificationSeconds * 1000;
     while (Date.now() < deadline) {
         await sleep(1200);
         const status = contracts_1.SubmissionStatusResponseSchema.parse(await (0, core_1.apiRequest)(`/v1/submissions/${prepared.submissionId}`));
-        // eslint-disable-next-line no-console
         console.log(`${status.status}: ${status.summary}`);
-        if (["passed", "failed", "needs_review"].includes(status.status)) {
-            if (status.status !== "passed") {
+        if (['passed', 'failed', 'needs_review'].includes(status.status)) {
+            if (status.status !== 'passed') {
                 process.exitCode = 1;
             }
             return;
         }
     }
-    throw new Error("Timed out waiting for verification.");
+    throw new Error('Timed out waiting for verification.');
 }
 async function runLegacyCli(argv) {
-    const legacyPath = node_path_1.default.resolve(__dirname, "../../../src/cli.js");
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+    const legacyPath = node_path_1.default.resolve(__dirname, '../../../src/cli.js');
     const legacy = require(legacyPath);
     await legacy.run(argv);
 }
@@ -467,43 +427,44 @@ function isLegacyInvocation(args) {
     if (args.length === 0)
         return false;
     const knownCommands = new Set([
-        "login",
-        "logout",
-        "whoami",
-        "test",
-        "submit",
-        "task",
-        "setup",
-        "ping",
-        "update-buildpack",
-        "help",
-        "legacy",
-        "--help",
-        "-h",
-        "--version",
-        "-v",
-        "version"
+        'login',
+        'logout',
+        'whoami',
+        'test',
+        'submit',
+        'task',
+        'setup',
+        'ping',
+        'update-buildpack',
+        'help',
+        'legacy',
+        '--help',
+        '-h',
+        '--version',
+        '-v',
+        'version',
     ]);
     return !knownCommands.has(args[0]) && args.length >= 3;
 }
 async function runCli(argv) {
     const args = argv.slice(2);
     const context = { plain: isPlainMode(args) };
-    const normalizedArgs = args.filter((arg) => arg !== "--plain");
+    const normalizedArgs = args.filter((arg) => arg !== '--plain');
     if (normalizedArgs.length === 0 ||
-        normalizedArgs[0] === "help" ||
-        normalizedArgs[0] === "--help" ||
-        normalizedArgs[0] === "-h") {
+        normalizedArgs[0] === 'help' ||
+        normalizedArgs[0] === '--help' ||
+        normalizedArgs[0] === '-h') {
         printHelp(context);
         return;
     }
-    if (normalizedArgs[0] === "--version" || normalizedArgs[0] === "-v" || normalizedArgs[0] === "version") {
-        // eslint-disable-next-line no-console
+    if (normalizedArgs[0] === '--version' ||
+        normalizedArgs[0] === '-v' ||
+        normalizedArgs[0] === 'version') {
         console.log(getVersion());
         return;
     }
-    if (normalizedArgs[0] === "legacy") {
-        await runLegacyCli(["node", "nibras", ...normalizedArgs.slice(1)]);
+    if (normalizedArgs[0] === 'legacy') {
+        await runLegacyCli(['node', 'nibras', ...normalizedArgs.slice(1)]);
         return;
     }
     if (isLegacyInvocation(normalizedArgs)) {
@@ -513,47 +474,46 @@ async function runCli(argv) {
     const command = normalizedArgs[0];
     const rest = normalizedArgs.slice(1);
     try {
-        if (command === "login") {
+        if (command === 'login') {
             await commandLogin(rest, context);
             return;
         }
-        if (command === "logout") {
+        if (command === 'logout') {
             await commandLogout();
             return;
         }
-        if (command === "whoami") {
+        if (command === 'whoami') {
             await commandWhoami();
             return;
         }
-        if (command === "ping") {
+        if (command === 'ping') {
             await commandPing();
             return;
         }
-        if (command === "task") {
+        if (command === 'task') {
             await commandTask();
             return;
         }
-        if (command === "test") {
+        if (command === 'test') {
             await commandTest(rest);
             return;
         }
-        if (command === "setup") {
+        if (command === 'setup') {
             await commandSetup(rest);
             return;
         }
-        if (command === "update-buildpack") {
+        if (command === 'update-buildpack') {
             await commandUpdateBuildpack(rest);
             return;
         }
-        if (command === "submit") {
+        if (command === 'submit') {
             await commandSubmit();
             return;
         }
         throw new Error(`Unknown command "${command}".`);
     }
     catch (err) {
-        // eslint-disable-next-line no-console
-        console.error(colorize(context, "error", parseError(err)));
+        console.error(colorize(context, 'error', parseError(err)));
         process.exitCode = process.exitCode || 1;
     }
 }
@@ -3100,27 +3060,27 @@ exports.GitHubInstallationCompleteResponseSchema = exports.GitHubInstallationCom
 const zod_1 = __nccwpck_require__(704);
 __exportStar(__nccwpck_require__(603), exports);
 exports.BuildpackSchema = zod_1.z.object({
-    node: zod_1.z.string().min(1)
+    node: zod_1.z.string().min(1),
 });
 const GradingRubricItemSchema = zod_1.z.object({
     id: zod_1.z.string().min(1),
     description: zod_1.z.string().min(1),
-    points: zod_1.z.number().nonnegative()
+    points: zod_1.z.number().nonnegative(),
 });
 const GradingExampleSchema = zod_1.z.object({
     label: zod_1.z.string().min(1),
-    answer: zod_1.z.string().min(1)
+    answer: zod_1.z.string().min(1),
 });
 const GradingQuestionSchema = zod_1.z.object({
     id: zod_1.z.string().min(1),
-    mode: zod_1.z.enum(["exact", "semantic"]),
+    mode: zod_1.z.enum(['exact', 'semantic']),
     prompt: zod_1.z.string().optional(),
     points: zod_1.z.number().nonnegative(),
     answerFile: zod_1.z.string().min(1),
     rubric: zod_1.z.array(GradingRubricItemSchema).optional(),
     examples: zod_1.z.array(GradingExampleSchema).optional(),
     solutions: zod_1.z.array(zod_1.z.string().min(1)).optional(),
-    minConfidence: zod_1.z.number().min(0).max(1).optional()
+    minConfidence: zod_1.z.number().min(0).max(1).optional(),
 });
 exports.ProjectManifestSchema = zod_1.z.object({
     projectKey: zod_1.z.string().min(1),
@@ -3129,18 +3089,20 @@ exports.ProjectManifestSchema = zod_1.z.object({
     defaultBranch: zod_1.z.string().min(1),
     buildpack: exports.BuildpackSchema,
     test: zod_1.z.object({
-        mode: zod_1.z.enum(["public-grading", "command"]),
+        mode: zod_1.z.enum(['public-grading', 'command']),
         command: zod_1.z.string().min(1),
-        supportsPrevious: zod_1.z.boolean().default(false)
+        supportsPrevious: zod_1.z.boolean().default(false),
     }),
     submission: zod_1.z.object({
         allowedPaths: zod_1.z.array(zod_1.z.string().min(1)).min(1),
-        waitForVerificationSeconds: zod_1.z.number().int().positive().default(120)
+        waitForVerificationSeconds: zod_1.z.number().int().positive().default(120),
     }),
-    grading: zod_1.z.object({
+    grading: zod_1.z
+        .object({
         questions: zod_1.z.array(GradingQuestionSchema),
-        totalPoints: zod_1.z.number().nonnegative()
-    }).optional()
+        totalPoints: zod_1.z.number().nonnegative(),
+    })
+        .optional(),
 });
 exports.CliConfigSchema = zod_1.z.object({
     apiBaseUrl: zod_1.z.string().url(),
@@ -3149,7 +3111,7 @@ exports.CliConfigSchema = zod_1.z.object({
     refreshToken: zod_1.z.string().optional(),
     tokenCreatedAt: zod_1.z.string().datetime().optional(),
     defaultOrg: zod_1.z.string().optional(),
-    telemetryOptIn: zod_1.z.boolean().optional()
+    telemetryOptIn: zod_1.z.boolean().optional(),
 });
 exports.DeviceStartResponseSchema = zod_1.z.object({
     deviceCode: zod_1.z.string().min(1),
@@ -3157,10 +3119,10 @@ exports.DeviceStartResponseSchema = zod_1.z.object({
     verificationUri: zod_1.z.string().url(),
     verificationUriComplete: zod_1.z.string().url(),
     intervalSeconds: zod_1.z.number().int().positive(),
-    expiresInSeconds: zod_1.z.number().int().positive()
+    expiresInSeconds: zod_1.z.number().int().positive(),
 });
 exports.DevicePollPendingSchema = zod_1.z.object({
-    status: zod_1.z.literal("pending")
+    status: zod_1.z.literal('pending'),
 });
 exports.UserSchema = zod_1.z.object({
     id: zod_1.z.string().min(1),
@@ -3168,25 +3130,22 @@ exports.UserSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
     githubLogin: zod_1.z.string().min(1),
     githubLinked: zod_1.z.boolean(),
-    githubAppInstalled: zod_1.z.boolean()
+    githubAppInstalled: zod_1.z.boolean(),
 });
 exports.DevicePollSuccessSchema = zod_1.z.object({
-    status: zod_1.z.literal("authorized"),
+    status: zod_1.z.literal('authorized'),
     accessToken: zod_1.z.string().min(1),
     refreshToken: zod_1.z.string().min(1),
-    user: exports.UserSchema
+    user: exports.UserSchema,
 });
-exports.DevicePollResponseSchema = zod_1.z.union([
-    exports.DevicePollPendingSchema,
-    exports.DevicePollSuccessSchema
-]);
+exports.DevicePollResponseSchema = zod_1.z.union([exports.DevicePollPendingSchema, exports.DevicePollSuccessSchema]);
 exports.MeResponseSchema = zod_1.z.object({
     user: exports.UserSchema,
-    apiBaseUrl: zod_1.z.string().url()
+    apiBaseUrl: zod_1.z.string().url(),
 });
 exports.ProjectTaskResponseSchema = zod_1.z.object({
     projectKey: zod_1.z.string().min(1),
-    task: zod_1.z.string().min(1)
+    task: zod_1.z.string().min(1),
 });
 exports.ProjectSetupResponseSchema = zod_1.z.object({
     projectKey: zod_1.z.string().min(1),
@@ -3195,65 +3154,65 @@ exports.ProjectSetupResponseSchema = zod_1.z.object({
         name: zod_1.z.string().min(1),
         cloneUrl: zod_1.z.string().nullable(),
         defaultBranch: zod_1.z.string().min(1),
-        visibility: zod_1.z.enum(["private", "public"])
+        visibility: zod_1.z.enum(['private', 'public']),
     }),
     manifest: exports.ProjectManifestSchema,
-    task: zod_1.z.string().min(1)
+    task: zod_1.z.string().min(1),
 });
 exports.SubmissionPrepareRequestSchema = zod_1.z.object({
     projectKey: zod_1.z.string().min(1),
     commitSha: zod_1.z.string().min(1),
     repoUrl: zod_1.z.string().min(1),
-    branch: zod_1.z.string().min(1)
+    branch: zod_1.z.string().min(1),
 });
 exports.SubmissionPrepareResponseSchema = zod_1.z.object({
     submissionId: zod_1.z.string().min(1),
-    status: zod_1.z.enum(["queued", "running", "passed", "failed", "needs_review"])
+    status: zod_1.z.enum(['queued', 'running', 'passed', 'failed', 'needs_review']),
 });
 exports.LocalTestResultRequestSchema = zod_1.z.object({
     exitCode: zod_1.z.number().int(),
     summary: zod_1.z.string().min(1),
-    ranPrevious: zod_1.z.boolean().default(false)
+    ranPrevious: zod_1.z.boolean().default(false),
 });
 exports.SubmissionStatusResponseSchema = zod_1.z.object({
     submissionId: zod_1.z.string().min(1),
     projectKey: zod_1.z.string().min(1),
-    status: zod_1.z.enum(["queued", "running", "passed", "failed", "needs_review"]),
+    status: zod_1.z.enum(['queued', 'running', 'passed', 'failed', 'needs_review']),
     commitSha: zod_1.z.string().min(1),
     summary: zod_1.z.string().min(1),
     createdAt: zod_1.z.string().datetime(),
-    updatedAt: zod_1.z.string().datetime()
+    updatedAt: zod_1.z.string().datetime(),
 });
 exports.PingResponseSchema = zod_1.z.object({
     ok: zod_1.z.boolean(),
-    api: zod_1.z.enum(["reachable", "unreachable"]),
-    auth: zod_1.z.enum(["valid", "missing", "invalid"]),
-    github: zod_1.z.enum(["linked", "missing"]),
-    githubApp: zod_1.z.enum(["installed", "missing"])
+    api: zod_1.z.enum(['reachable', 'unreachable']),
+    auth: zod_1.z.enum(['valid', 'missing', 'invalid']),
+    github: zod_1.z.enum(['linked', 'missing']),
+    githubApp: zod_1.z.enum(['installed', 'missing']),
 });
 exports.TokenRefreshRequestSchema = zod_1.z.object({
-    refreshToken: zod_1.z.string().min(1)
+    refreshToken: zod_1.z.string().min(1),
 });
 exports.TokenRefreshResponseSchema = zod_1.z.object({
     accessToken: zod_1.z.string().min(1),
-    refreshToken: zod_1.z.string().min(1)
+    refreshToken: zod_1.z.string().min(1),
 });
 exports.GitHubInstallUrlResponseSchema = zod_1.z.object({
-    installUrl: zod_1.z.string().url()
+    installUrl: zod_1.z.string().url(),
 });
 exports.GitHubConfigResponseSchema = zod_1.z.object({
     configured: zod_1.z.boolean(),
     appName: zod_1.z.string().optional(),
-    webBaseUrl: zod_1.z.string().optional()
+    webBaseUrl: zod_1.z.string().optional(),
 });
 exports.GitHubInstallationCompleteRequestSchema = zod_1.z.object({
     installationId: zod_1.z.string().min(1),
-    state: zod_1.z.string().min(1).optional()
+    state: zod_1.z.string().min(1).optional(),
 });
 exports.GitHubInstallationCompleteResponseSchema = zod_1.z.object({
     githubAppInstalled: zod_1.z.boolean(),
     installationId: zod_1.z.string().min(1),
-    redirectTo: zod_1.z.string().url().optional()
+    redirectTo: zod_1.z.string().url().optional(),
 });
 
 
@@ -3265,32 +3224,32 @@ exports.GitHubInstallationCompleteResponseSchema = zod_1.z.object({
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CreateCourseInviteResponseSchema = exports.CourseInvitePreviewSchema = exports.ReviewQueueResponseSchema = exports.CreateReviewRequestSchema = exports.UpdateTrackingSubmissionRequestSchema = exports.CreateTrackingSubmissionRequestSchema = exports.UpdateMilestoneRequestSchema = exports.CreateMilestoneRequestSchema = exports.UpdateTrackingProjectRequestSchema = exports.CreateTrackingProjectRequestSchema = exports.CreateTrackingCourseRequestSchema = exports.CourseMemberSchema = exports.AddCourseMemberRequestSchema = exports.InstructorDashboardResponseSchema = exports.StudentProjectsDashboardResponseSchema = exports.TrackingDashboardStatsSchema = exports.TrackingActivityEventSchema = exports.TrackingReviewSchema = exports.TrackingSubmissionSchema = exports.TrackingProjectDetailSchema = exports.TrackingMilestoneSchema = exports.MilestoneSubmissionSummarySchema = exports.MilestoneReviewSummarySchema = exports.AiCriterionScoreSchema = exports.TrackingProjectSummarySchema = exports.TrackingMembershipSchema = exports.TrackingCourseSummarySchema = exports.TrackingRubricItemSchema = exports.TrackingResourceSchema = exports.TrackingReviewStatusSchema = exports.TrackingSubmissionStatusSchema = exports.TrackingSubmissionTypeSchema = exports.TrackingDeliveryModeSchema = exports.TrackingProjectStatusSchema = exports.TrackingMembershipRoleSchema = void 0;
+exports.CreateCourseInviteResponseSchema = exports.CourseInvitePreviewSchema = exports.ReviewQueueResponseSchema = exports.CreateReviewRequestSchema = exports.UpdateTrackingSubmissionRequestSchema = exports.CreateTrackingSubmissionRequestSchema = exports.UpdateMilestoneRequestSchema = exports.CreateMilestoneRequestSchema = exports.UpdateTrackingProjectRequestSchema = exports.CreateTrackingProjectRequestSchema = exports.CreateTrackingCourseRequestSchema = exports.CourseMemberSchema = exports.AddCourseMemberRequestSchema = exports.InstructorDashboardResponseSchema = exports.StudentProjectsDashboardResponseSchema = exports.TrackingDashboardStatsSchema = exports.TrackingActivityEventSchema = exports.TrackingReviewSchema = exports.AiCriterionScoreSchema = exports.TrackingSubmissionSchema = exports.TrackingProjectDetailSchema = exports.TrackingMilestoneSchema = exports.TrackingProjectSummarySchema = exports.TrackingMembershipSchema = exports.TrackingCourseSummarySchema = exports.TrackingRubricItemSchema = exports.TrackingResourceSchema = exports.TrackingReviewStatusSchema = exports.TrackingSubmissionStatusSchema = exports.TrackingSubmissionTypeSchema = exports.TrackingDeliveryModeSchema = exports.TrackingProjectStatusSchema = exports.TrackingMembershipRoleSchema = void 0;
 const zod_1 = __nccwpck_require__(704);
-exports.TrackingMembershipRoleSchema = zod_1.z.enum(["student", "instructor", "ta"]);
-exports.TrackingProjectStatusSchema = zod_1.z.enum(["draft", "published", "archived"]);
-exports.TrackingDeliveryModeSchema = zod_1.z.enum(["individual", "team"]);
-exports.TrackingSubmissionTypeSchema = zod_1.z.enum(["github", "link", "text"]);
+exports.TrackingMembershipRoleSchema = zod_1.z.enum(['student', 'instructor', 'ta']);
+exports.TrackingProjectStatusSchema = zod_1.z.enum(['draft', 'published', 'archived']);
+exports.TrackingDeliveryModeSchema = zod_1.z.enum(['individual', 'team']);
+exports.TrackingSubmissionTypeSchema = zod_1.z.enum(['github', 'link', 'text']);
 exports.TrackingSubmissionStatusSchema = zod_1.z.enum([
-    "queued",
-    "running",
-    "passed",
-    "failed",
-    "needs_review"
+    'queued',
+    'running',
+    'passed',
+    'failed',
+    'needs_review',
 ]);
 exports.TrackingReviewStatusSchema = zod_1.z.enum([
-    "pending",
-    "approved",
-    "changes_requested",
-    "graded"
+    'pending',
+    'approved',
+    'changes_requested',
+    'graded',
 ]);
 exports.TrackingResourceSchema = zod_1.z.object({
     label: zod_1.z.string().min(1),
-    url: zod_1.z.string().url()
+    url: zod_1.z.string().url(),
 });
 exports.TrackingRubricItemSchema = zod_1.z.object({
     criterion: zod_1.z.string().min(1),
-    maxScore: zod_1.z.number().nonnegative()
+    maxScore: zod_1.z.number().nonnegative(),
 });
 exports.TrackingCourseSummarySchema = zod_1.z.object({
     id: zod_1.z.string().min(1),
@@ -3298,19 +3257,19 @@ exports.TrackingCourseSummarySchema = zod_1.z.object({
     title: zod_1.z.string().min(1),
     termLabel: zod_1.z.string().min(1),
     courseCode: zod_1.z.string().min(1),
-    isActive: zod_1.z.boolean()
+    isActive: zod_1.z.boolean(),
 });
 exports.TrackingMembershipSchema = zod_1.z.object({
     courseId: zod_1.z.string().min(1),
     userId: zod_1.z.string().min(1),
-    role: exports.TrackingMembershipRoleSchema
+    role: exports.TrackingMembershipRoleSchema,
 });
 exports.TrackingProjectSummarySchema = zod_1.z.object({
     id: zod_1.z.string().min(1),
     projectKey: zod_1.z.string().min(1),
     courseId: zod_1.z.string().min(1),
     title: zod_1.z.string().min(1),
-    description: zod_1.z.string().default(""),
+    description: zod_1.z.string().default(''),
     status: exports.TrackingProjectStatusSchema,
     deliveryMode: exports.TrackingDeliveryModeSchema,
     gradeWeight: zod_1.z.string().nullable(),
@@ -3323,45 +3282,23 @@ exports.TrackingProjectSummarySchema = zod_1.z.object({
     team: zod_1.z.array(zod_1.z.object({
         name: zod_1.z.string().min(1),
         initials: zod_1.z.string().min(1),
-        color: zod_1.z.string().min(1)
-    }))
-});
-exports.AiCriterionScoreSchema = zod_1.z.object({
-    id: zod_1.z.string().min(1),
-    points: zod_1.z.number(),
-    earned: zod_1.z.number(),
-    justification: zod_1.z.string()
-});
-exports.MilestoneReviewSummarySchema = zod_1.z.object({
-    status: exports.TrackingReviewStatusSchema,
-    score: zod_1.z.number().nullable(),
-    feedback: zod_1.z.string().default(""),
-    criterionScores: zod_1.z.array(exports.AiCriterionScoreSchema).nullable(),
-    evidenceQuotes: zod_1.z.array(zod_1.z.string()).nullable()
-});
-exports.MilestoneSubmissionSummarySchema = zod_1.z.object({
-    id: zod_1.z.string().min(1),
-    status: exports.TrackingSubmissionStatusSchema,
-    commitSha: zod_1.z.string(),
-    branch: zod_1.z.string(),
-    createdAt: zod_1.z.string().datetime()
+        color: zod_1.z.string().min(1),
+    })),
 });
 exports.TrackingMilestoneSchema = zod_1.z.object({
     id: zod_1.z.string().min(1),
     projectId: zod_1.z.string().min(1),
     title: zod_1.z.string().min(1),
-    description: zod_1.z.string().default(""),
+    description: zod_1.z.string().default(''),
     order: zod_1.z.number().int().nonnegative(),
     dueAt: zod_1.z.string().datetime().nullable(),
     dueDateLabel: zod_1.z.string().min(1),
     status: zod_1.z.string().min(1),
     statusLabel: zod_1.z.string().min(1),
     isFinal: zod_1.z.boolean(),
-    latestReview: exports.MilestoneReviewSummarySchema.nullable().default(null),
-    submissionHistory: zod_1.z.array(exports.MilestoneSubmissionSummarySchema).default([])
 });
 exports.TrackingProjectDetailSchema = exports.TrackingProjectSummarySchema.extend({
-    milestones: zod_1.z.array(exports.TrackingMilestoneSchema)
+    milestones: zod_1.z.array(exports.TrackingMilestoneSchema),
 });
 exports.TrackingSubmissionSchema = zod_1.z.object({
     id: zod_1.z.string().min(1),
@@ -3380,7 +3317,13 @@ exports.TrackingSubmissionSchema = zod_1.z.object({
     createdAt: zod_1.z.string().datetime(),
     updatedAt: zod_1.z.string().datetime(),
     submittedAt: zod_1.z.string().datetime().nullable(),
-    localTestExitCode: zod_1.z.number().int().nullable()
+    localTestExitCode: zod_1.z.number().int().nullable(),
+});
+exports.AiCriterionScoreSchema = zod_1.z.object({
+    id: zod_1.z.string().min(1),
+    points: zod_1.z.number(),
+    earned: zod_1.z.number(),
+    justification: zod_1.z.string(),
 });
 exports.TrackingReviewSchema = zod_1.z.object({
     id: zod_1.z.string().min(1),
@@ -3388,7 +3331,7 @@ exports.TrackingReviewSchema = zod_1.z.object({
     reviewerUserId: zod_1.z.string().min(1),
     status: exports.TrackingReviewStatusSchema,
     score: zod_1.z.number().nullable(),
-    feedback: zod_1.z.string().default(""),
+    feedback: zod_1.z.string().default(''),
     rubric: zod_1.z.array(exports.TrackingRubricItemSchema),
     reviewedAt: zod_1.z.string().datetime().nullable(),
     createdAt: zod_1.z.string().datetime(),
@@ -3400,7 +3343,7 @@ exports.TrackingReviewSchema = zod_1.z.object({
     aiCriterionScores: zod_1.z.array(exports.AiCriterionScoreSchema).nullable(),
     aiEvidenceQuotes: zod_1.z.array(zod_1.z.string()).nullable(),
     aiModel: zod_1.z.string().nullable(),
-    aiGradedAt: zod_1.z.string().datetime().nullable()
+    aiGradedAt: zod_1.z.string().datetime().nullable(),
 });
 exports.TrackingActivityEventSchema = zod_1.z.object({
     id: zod_1.z.string().min(1),
@@ -3411,14 +3354,14 @@ exports.TrackingActivityEventSchema = zod_1.z.object({
     submissionId: zod_1.z.string().nullable(),
     action: zod_1.z.string().min(1),
     summary: zod_1.z.string().min(1),
-    createdAt: zod_1.z.string().datetime()
+    createdAt: zod_1.z.string().datetime(),
 });
 exports.TrackingDashboardStatsSchema = zod_1.z.object({
     approved: zod_1.z.number().int().nonnegative(),
     underReview: zod_1.z.number().int().nonnegative(),
     completion: zod_1.z.number().int().nonnegative(),
     total: zod_1.z.number().int().nonnegative(),
-    daysRemaining: zod_1.z.number().int()
+    daysRemaining: zod_1.z.number().int(),
 });
 exports.StudentProjectsDashboardResponseSchema = zod_1.z.object({
     course: exports.TrackingCourseSummarySchema.nullable(),
@@ -3428,16 +3371,16 @@ exports.StudentProjectsDashboardResponseSchema = zod_1.z.object({
     activeProjectId: zod_1.z.string().nullable(),
     activity: zod_1.z.array(exports.TrackingActivityEventSchema),
     statsByProject: zod_1.z.record(zod_1.z.string(), exports.TrackingDashboardStatsSchema),
-    pageError: zod_1.z.string().nullable()
+    pageError: zod_1.z.string().nullable(),
 });
 exports.InstructorDashboardResponseSchema = zod_1.z.object({
     courses: zod_1.z.array(exports.TrackingCourseSummarySchema),
     reviewQueue: zod_1.z.array(exports.TrackingSubmissionSchema),
-    activity: zod_1.z.array(exports.TrackingActivityEventSchema)
+    activity: zod_1.z.array(exports.TrackingActivityEventSchema),
 });
 exports.AddCourseMemberRequestSchema = zod_1.z.object({
     githubLogin: zod_1.z.string().min(1),
-    role: exports.TrackingMembershipRoleSchema
+    role: exports.TrackingMembershipRoleSchema,
 });
 exports.CourseMemberSchema = zod_1.z.object({
     id: zod_1.z.string().min(1),
@@ -3446,52 +3389,55 @@ exports.CourseMemberSchema = zod_1.z.object({
     username: zod_1.z.string().min(1),
     githubLogin: zod_1.z.string().min(1),
     role: exports.TrackingMembershipRoleSchema,
-    createdAt: zod_1.z.string().datetime()
+    createdAt: zod_1.z.string().datetime(),
 });
 exports.CreateTrackingCourseRequestSchema = zod_1.z.object({
-    slug: zod_1.z.string().min(1).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
+    slug: zod_1.z
+        .string()
+        .min(1)
+        .regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
     title: zod_1.z.string().min(1),
     termLabel: zod_1.z.string().min(1),
-    courseCode: zod_1.z.string().min(1)
+    courseCode: zod_1.z.string().min(1),
 });
 exports.CreateTrackingProjectRequestSchema = zod_1.z.object({
     courseId: zod_1.z.string().min(1),
     slug: zod_1.z.string().min(1),
     title: zod_1.z.string().min(1),
-    description: zod_1.z.string().default(""),
-    status: exports.TrackingProjectStatusSchema.default("draft"),
-    deliveryMode: exports.TrackingDeliveryModeSchema.default("individual"),
+    description: zod_1.z.string().default(''),
+    status: exports.TrackingProjectStatusSchema.default('draft'),
+    deliveryMode: exports.TrackingDeliveryModeSchema.default('individual'),
     rubric: zod_1.z.array(exports.TrackingRubricItemSchema).default([]),
-    resources: zod_1.z.array(exports.TrackingResourceSchema).default([])
+    resources: zod_1.z.array(exports.TrackingResourceSchema).default([]),
 });
 exports.UpdateTrackingProjectRequestSchema = exports.CreateTrackingProjectRequestSchema.partial().omit({
-    courseId: true
+    courseId: true,
 });
 exports.CreateMilestoneRequestSchema = zod_1.z.object({
     title: zod_1.z.string().min(1),
-    description: zod_1.z.string().default(""),
+    description: zod_1.z.string().default(''),
     order: zod_1.z.number().int().nonnegative(),
     dueAt: zod_1.z.string().datetime().nullable().default(null),
-    isFinal: zod_1.z.boolean().default(false)
+    isFinal: zod_1.z.boolean().default(false),
 });
 exports.UpdateMilestoneRequestSchema = exports.CreateMilestoneRequestSchema.partial();
 exports.CreateTrackingSubmissionRequestSchema = zod_1.z.object({
     submissionType: exports.TrackingSubmissionTypeSchema,
     submissionValue: zod_1.z.string().min(1),
-    notes: zod_1.z.string().default(""),
-    repoUrl: zod_1.z.string().default(""),
-    branch: zod_1.z.string().default("main"),
-    commitSha: zod_1.z.string().default("")
+    notes: zod_1.z.string().default(''),
+    repoUrl: zod_1.z.string().default(''),
+    branch: zod_1.z.string().default('main'),
+    commitSha: zod_1.z.string().default(''),
 });
 exports.UpdateTrackingSubmissionRequestSchema = exports.CreateTrackingSubmissionRequestSchema.partial();
 exports.CreateReviewRequestSchema = zod_1.z.object({
     status: exports.TrackingReviewStatusSchema,
     score: zod_1.z.number().nullable().default(null),
-    feedback: zod_1.z.string().default(""),
-    rubric: zod_1.z.array(exports.TrackingRubricItemSchema).default([])
+    feedback: zod_1.z.string().default(''),
+    rubric: zod_1.z.array(exports.TrackingRubricItemSchema).default([]),
 });
 exports.ReviewQueueResponseSchema = zod_1.z.object({
-    submissions: zod_1.z.array(exports.TrackingSubmissionSchema)
+    submissions: zod_1.z.array(exports.TrackingSubmissionSchema),
 });
 exports.CourseInvitePreviewSchema = zod_1.z.object({
     code: zod_1.z.string().min(1),
@@ -3499,11 +3445,11 @@ exports.CourseInvitePreviewSchema = zod_1.z.object({
     courseCode: zod_1.z.string().min(1),
     termLabel: zod_1.z.string().min(1),
     role: exports.TrackingMembershipRoleSchema,
-    expiresAt: zod_1.z.string().datetime().nullable()
+    expiresAt: zod_1.z.string().datetime().nullable(),
 });
 exports.CreateCourseInviteResponseSchema = zod_1.z.object({
     code: zod_1.z.string().min(1),
-    inviteUrl: zod_1.z.string().min(1)
+    inviteUrl: zod_1.z.string().min(1),
 });
 
 
@@ -3523,7 +3469,7 @@ class ApiError extends Error {
     bodyText;
     constructor(message, statusCode, bodyText) {
         super(message);
-        this.name = "ApiError";
+        this.name = 'ApiError';
         this.statusCode = statusCode;
         this.bodyText = bodyText;
     }
@@ -3540,20 +3486,20 @@ async function maybeRefreshToken(baseUrl) {
         return;
     }
     try {
-        const response = await fetch(`${baseUrl.replace(/\/$/, "")}/v1/auth/refresh`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ refreshToken: config.refreshToken })
+        const response = await fetch(`${baseUrl.replace(/\/$/, '')}/v1/auth/refresh`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ refreshToken: config.refreshToken }),
         });
         if (!response.ok) {
             return; // Silently skip; the original token may still be valid
         }
-        const data = await response.json();
+        const data = (await response.json());
         (0, config_1.writeCliConfig)({
             ...config,
             accessToken: data.accessToken,
             refreshToken: data.refreshToken,
-            tokenCreatedAt: new Date().toISOString()
+            tokenCreatedAt: new Date().toISOString(),
         });
     }
     catch {
@@ -3567,15 +3513,15 @@ async function apiRequest(pathName, options = {}, overrideBaseUrl) {
     // Re-read config after potential refresh
     const refreshedConfig = (0, config_1.readCliConfig)();
     const headers = new Headers(options.headers || {});
-    if (!headers.has("content-type") && options.body) {
-        headers.set("content-type", "application/json");
+    if (!headers.has('content-type') && options.body) {
+        headers.set('content-type', 'application/json');
     }
     if (refreshedConfig.accessToken) {
-        headers.set("authorization", `Bearer ${refreshedConfig.accessToken}`);
+        headers.set('authorization', `Bearer ${refreshedConfig.accessToken}`);
     }
-    const response = await fetch(`${baseUrl.replace(/\/$/, "")}${pathName}`, {
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}${pathName}`, {
         ...options,
-        headers
+        headers,
     });
     const bodyText = await response.text();
     if (!response.ok) {
@@ -3606,11 +3552,11 @@ const paths_1 = __nccwpck_require__(992);
 function readCliConfig() {
     const configPath = (0, paths_1.getGlobalConfigPath)();
     try {
-        const raw = node_fs_1.default.readFileSync(configPath, "utf8");
+        const raw = node_fs_1.default.readFileSync(configPath, 'utf8');
         return contracts_1.CliConfigSchema.parse(JSON.parse(raw));
     }
     catch (err) {
-        if (err.code === "ENOENT") {
+        if (err.code === 'ENOENT') {
             return { apiBaseUrl: (0, paths_1.getDefaultApiBaseUrl)() };
         }
         throw err;
@@ -3619,7 +3565,9 @@ function readCliConfig() {
 function writeCliConfig(config) {
     const configPath = (0, paths_1.getGlobalConfigPath)();
     node_fs_1.default.mkdirSync(node_path_1.default.dirname(configPath), { recursive: true });
-    node_fs_1.default.writeFileSync(configPath, `${JSON.stringify(contracts_1.CliConfigSchema.parse(config), null, 2)}\n`, { mode: 0o600 });
+    node_fs_1.default.writeFileSync(configPath, `${JSON.stringify(contracts_1.CliConfigSchema.parse(config), null, 2)}\n`, {
+        mode: 0o600,
+    });
     return configPath;
 }
 function clearCliSession() {
@@ -3627,7 +3575,7 @@ function clearCliSession() {
     const nextConfig = {
         apiBaseUrl: current.apiBaseUrl,
         defaultOrg: current.defaultOrg,
-        telemetryOptIn: current.telemetryOptIn
+        telemetryOptIn: current.telemetryOptIn,
     };
     writeCliConfig(nextConfig);
     return nextConfig;
@@ -3645,17 +3593,17 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.encrypt = encrypt;
 exports.decrypt = decrypt;
 const node_crypto_1 = __nccwpck_require__(598);
-const ALGORITHM = "aes-256-gcm";
+const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 const AUTH_TAG_LENGTH = 16;
 function getKey() {
     const raw = process.env.NIBRAS_ENCRYPTION_KEY;
     if (!raw) {
-        throw new Error("NIBRAS_ENCRYPTION_KEY is not set.");
+        throw new Error('NIBRAS_ENCRYPTION_KEY is not set.');
     }
-    const key = Buffer.from(raw, "hex");
+    const key = Buffer.from(raw, 'hex');
     if (key.length !== 32) {
-        throw new Error("NIBRAS_ENCRYPTION_KEY must be a 32-byte (64 hex character) value.");
+        throw new Error('NIBRAS_ENCRYPTION_KEY must be a 32-byte (64 hex character) value.');
     }
     return key;
 }
@@ -3667,22 +3615,22 @@ function encrypt(plaintext) {
     const key = getKey();
     const iv = (0, node_crypto_1.randomBytes)(IV_LENGTH);
     const cipher = (0, node_crypto_1.createCipheriv)(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
-    const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+    const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
     const authTag = cipher.getAuthTag();
-    return Buffer.concat([iv, authTag, encrypted]).toString("base64");
+    return Buffer.concat([iv, authTag, encrypted]).toString('base64');
 }
 /**
  * Decrypt a base64-encoded value produced by `encrypt`.
  */
 function decrypt(ciphertext) {
     const key = getKey();
-    const buf = Buffer.from(ciphertext, "base64");
+    const buf = Buffer.from(ciphertext, 'base64');
     const iv = buf.subarray(0, IV_LENGTH);
     const authTag = buf.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
     const encrypted = buf.subarray(IV_LENGTH + AUTH_TAG_LENGTH);
     const decipher = (0, node_crypto_1.createDecipheriv)(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
     decipher.setAuthTag(authTag);
-    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
 }
 
 
@@ -3708,50 +3656,50 @@ function runCommand(command, args, cwd) {
     return new Promise((resolve, reject) => {
         const child = (0, node_child_process_1.spawn)(command, args, {
             cwd,
-            stdio: ["ignore", "pipe", "pipe"]
+            stdio: ['ignore', 'pipe', 'pipe'],
         });
-        let stdout = "";
-        let stderr = "";
-        child.stdout.on("data", (chunk) => {
+        let stdout = '';
+        let stderr = '';
+        child.stdout.on('data', (chunk) => {
             stdout += chunk.toString();
         });
-        child.stderr.on("data", (chunk) => {
+        child.stderr.on('data', (chunk) => {
             stderr += chunk.toString();
         });
-        child.on("error", reject);
-        child.on("close", (code) => resolve({ code, stdout, stderr }));
+        child.on('error', reject);
+        child.on('close', (code) => resolve({ code, stdout, stderr }));
     });
 }
 async function runGit(cwd, args) {
-    const result = await runCommand("git", args, cwd);
+    const result = await runCommand('git', args, cwd);
     if (result.code !== 0) {
-        throw new Error(result.stderr.trim() || `git ${args.join(" ")} failed.`);
+        throw new Error(result.stderr.trim() || `git ${args.join(' ')} failed.`);
     }
     return result;
 }
 async function ensureGitRepo(cwd) {
-    await runGit(cwd, ["rev-parse", "--is-inside-work-tree"]);
+    await runGit(cwd, ['rev-parse', '--is-inside-work-tree']);
 }
 async function getCurrentBranch(cwd) {
-    const result = await runGit(cwd, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
+    const result = await runGit(cwd, ['symbolic-ref', '--quiet', '--short', 'HEAD']);
     return result.stdout.trim();
 }
 async function getOriginUrl(cwd) {
-    const result = await runGit(cwd, ["remote", "get-url", "origin"]);
+    const result = await runGit(cwd, ['remote', 'get-url', 'origin']);
     return result.stdout.trim();
 }
 async function getHeadSha(cwd) {
-    const result = await runGit(cwd, ["rev-parse", "HEAD"]);
+    const result = await runGit(cwd, ['rev-parse', 'HEAD']);
     return result.stdout.trim();
 }
 async function ensureGitIdentity(cwd, fallbackName, fallbackEmail) {
-    const nameResult = await runCommand("git", ["config", "user.name"], cwd);
+    const nameResult = await runCommand('git', ['config', 'user.name'], cwd);
     if (nameResult.code !== 0 || !nameResult.stdout.trim()) {
-        await runGit(cwd, ["config", "user.name", fallbackName]);
+        await runGit(cwd, ['config', 'user.name', fallbackName]);
     }
-    const emailResult = await runCommand("git", ["config", "user.email"], cwd);
+    const emailResult = await runCommand('git', ['config', 'user.email'], cwd);
     if (emailResult.code !== 0 || !emailResult.stdout.trim()) {
-        await runGit(cwd, ["config", "user.email", fallbackEmail]);
+        await runGit(cwd, ['config', 'user.email', fallbackEmail]);
     }
 }
 function parseStatusLine(line) {
@@ -3760,34 +3708,34 @@ function parseStatusLine(line) {
     const rawPath = line.slice(3).trim();
     if (!rawPath)
         return null;
-    if (rawPath.includes(" -> ")) {
-        return rawPath.split(" -> ").at(-1) || null;
+    if (rawPath.includes(' -> ')) {
+        return rawPath.split(' -> ').at(-1) || null;
     }
     return rawPath;
 }
 async function stageAllowedFiles(cwd, allowedPatterns) {
-    const status = await runGit(cwd, ["status", "--porcelain=v1", "--untracked-files=all"]);
+    const status = await runGit(cwd, ['status', '--porcelain=v1', '--untracked-files=all']);
     const changedFiles = status.stdout
-        .split("\n")
+        .split('\n')
         .map(parseStatusLine)
         .filter((value) => Boolean(value));
     if (changedFiles.length === 0) {
-        throw new Error("No file changes detected. Nothing to submit.");
+        throw new Error('No file changes detected. Nothing to submit.');
     }
     const allowedFiles = changedFiles.filter((filePath) => allowedPatterns.some((pattern) => (0, minimatch_1.minimatch)(filePath, pattern, { dot: true })));
     const blockedFiles = changedFiles.filter((filePath) => !allowedFiles.includes(filePath));
     if (blockedFiles.length > 0) {
-        throw new Error(`Refusing to submit files outside manifest.allowedPaths: ${blockedFiles.join(", ")}`);
+        throw new Error(`Refusing to submit files outside manifest.allowedPaths: ${blockedFiles.join(', ')}`);
     }
-    await runGit(cwd, ["add", "--", ...allowedFiles]);
+    await runGit(cwd, ['add', '--', ...allowedFiles]);
     return allowedFiles;
 }
 async function createCommit(cwd, message) {
-    await runGit(cwd, ["commit", "-m", message]);
+    await runGit(cwd, ['commit', '-m', message]);
     return getHeadSha(cwd);
 }
 async function pushBranch(cwd, branch) {
-    await runGit(cwd, ["push", "origin", `HEAD:${branch}`]);
+    await runGit(cwd, ['push', 'origin', `HEAD:${branch}`]);
 }
 
 
@@ -3844,7 +3792,7 @@ const contracts_1 = __nccwpck_require__(16);
 function findProjectRoot(startCwd) {
     let current = node_path_1.default.resolve(startCwd);
     while (true) {
-        const manifestPath = node_path_1.default.join(current, ".nibras", "project.json");
+        const manifestPath = node_path_1.default.join(current, '.nibras', 'project.json');
         if (node_fs_1.default.existsSync(manifestPath)) {
             return current;
         }
@@ -3856,22 +3804,22 @@ function findProjectRoot(startCwd) {
     }
 }
 function getManifestPath(projectRoot) {
-    return node_path_1.default.join(projectRoot, ".nibras", "project.json");
+    return node_path_1.default.join(projectRoot, '.nibras', 'project.json');
 }
 function getTaskPath(projectRoot) {
-    return node_path_1.default.join(projectRoot, ".nibras", "task.md");
+    return node_path_1.default.join(projectRoot, '.nibras', 'task.md');
 }
 function loadProjectManifest(cwd) {
     const projectRoot = findProjectRoot(cwd);
     if (!projectRoot) {
-        throw new Error("No .nibras/project.json found in this directory or any parent directory.");
+        throw new Error('No .nibras/project.json found in this directory or any parent directory.');
     }
     const manifestPath = getManifestPath(projectRoot);
-    const raw = node_fs_1.default.readFileSync(manifestPath, "utf8");
+    const raw = node_fs_1.default.readFileSync(manifestPath, 'utf8');
     return {
         projectRoot,
         manifestPath,
-        manifest: contracts_1.ProjectManifestSchema.parse(JSON.parse(raw))
+        manifest: contracts_1.ProjectManifestSchema.parse(JSON.parse(raw)),
     };
 }
 function writeProjectManifest(projectRoot, manifest) {
@@ -3905,19 +3853,19 @@ exports.getGlobalConfigPath = getGlobalConfigPath;
 const node_os_1 = __importDefault(__nccwpck_require__(161));
 const node_path_1 = __importDefault(__nccwpck_require__(760));
 function getDefaultApiBaseUrl() {
-    return process.env.NIBRAS_API_BASE_URL || "http://127.0.0.1:4848";
+    return process.env.NIBRAS_API_BASE_URL || 'http://127.0.0.1:4848';
 }
 function getGlobalConfigDir() {
-    if (process.platform === "win32") {
-        return node_path_1.default.join(process.env.APPDATA || node_path_1.default.join(node_os_1.default.homedir(), "AppData", "Roaming"), "nibras");
+    if (process.platform === 'win32') {
+        return node_path_1.default.join(process.env.APPDATA || node_path_1.default.join(node_os_1.default.homedir(), 'AppData', 'Roaming'), 'nibras');
     }
-    if (process.platform === "darwin") {
-        return node_path_1.default.join(node_os_1.default.homedir(), "Library", "Application Support", "nibras");
+    if (process.platform === 'darwin') {
+        return node_path_1.default.join(node_os_1.default.homedir(), 'Library', 'Application Support', 'nibras');
     }
-    return node_path_1.default.join(process.env.XDG_CONFIG_HOME || node_path_1.default.join(node_os_1.default.homedir(), ".config"), "nibras");
+    return node_path_1.default.join(process.env.XDG_CONFIG_HOME || node_path_1.default.join(node_os_1.default.homedir(), '.config'), 'nibras');
 }
 function getGlobalConfigPath() {
-    return node_path_1.default.join(getGlobalConfigDir(), "config.json");
+    return node_path_1.default.join(getGlobalConfigDir(), 'config.json');
 }
 
 

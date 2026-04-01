@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import * as Sentry from '@sentry/node';
 import rawBodyPlugin from 'fastify-raw-body';
@@ -57,10 +58,15 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
       level: process.env.LOG_LEVEL || 'info',
     },
     genReqId: () => `req_${Math.random().toString(36).slice(2, 10)}`,
+    connectionTimeout: Number(process.env.CONNECTION_TIMEOUT_MS ?? 10_000),
+    requestTimeout: Number(process.env.REQUEST_TIMEOUT_MS ?? 30_000),
   });
 
   const githubConfig = loadGitHubAppConfig();
   const allowedCorsOrigins = new Set(getAllowedCorsOrigins());
+
+  // Security headers — registered first so they apply to all routes
+  void app.register(helmet, { contentSecurityPolicy: false });
 
   // Propagate Request-Id to response for tracing
   app.addHook('onSend', async (request, reply) => {
@@ -72,6 +78,13 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
     global: true,
     max: globalRateMax,
     timeWindow: '1 minute',
+    // Use Bearer token as rate-limit key for authenticated requests so each
+    // user gets their own quota; fall back to IP for unauthenticated callers.
+    keyGenerator: (request) => {
+      const auth = request.headers.authorization;
+      if (auth?.startsWith('Bearer ')) return auth.slice(7);
+      return request.ip;
+    },
     errorResponseBuilder: (_request, context) => ({
       error: `Too many requests. Retry after ${Math.ceil(context.ttl / 1000)} seconds.`,
       statusCode: 429,
@@ -82,7 +95,7 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['authorization', 'content-type', 'x-request-id'],
-    exposedHeaders: ['x-request-id'],
+    exposedHeaders: ['x-request-id', 'x-total-count'],
     origin(origin, callback) {
       if (!origin) {
         callback(null, true);

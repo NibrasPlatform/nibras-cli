@@ -24,6 +24,7 @@ import {
   InstructorDashboardRecord,
   MembershipRole,
   MilestoneRecord,
+  PaginationOpts,
   ProjectRecord,
   ProjectStatus,
   RepoRecord,
@@ -1489,13 +1490,21 @@ export class PrismaStore implements AppStore {
     return memberships.map(toMembershipRecord);
   }
 
-  async listTrackingCourses(apiBaseUrl: string, userId: string): Promise<CourseRecord[]> {
+  async listTrackingCourses(
+    apiBaseUrl: string,
+    userId: string,
+    opts?: PaginationOpts
+  ): Promise<CourseRecord[]> {
     await this.seed(apiBaseUrl);
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    const take = opts?.limit;
+    const skip = take !== undefined ? (opts?.offset ?? 0) : undefined;
     if (user.systemRole === SystemRole.admin) {
       const courses = await this.prisma.course.findMany({
         where: { isActive: true },
         orderBy: { createdAt: 'desc' },
+        take,
+        skip,
       });
       return courses.map(toCourseRecord);
     }
@@ -1503,8 +1512,19 @@ export class PrismaStore implements AppStore {
       where: { userId },
       include: { course: true },
       orderBy: { createdAt: 'desc' },
+      take,
+      skip,
     });
     return memberships.map((entry) => toCourseRecord(entry.course));
+  }
+
+  async countTrackingCourses(apiBaseUrl: string, userId: string): Promise<number> {
+    await this.seed(apiBaseUrl);
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    if (user.systemRole === SystemRole.admin) {
+      return this.prisma.course.count({ where: { isActive: true } });
+    }
+    return this.prisma.courseMembership.count({ where: { userId } });
   }
 
   async createTrackingCourse(
@@ -1715,16 +1735,29 @@ export class PrismaStore implements AppStore {
     };
   }
 
-  async listTrackingProjects(apiBaseUrl: string, courseId: string): Promise<ProjectRecord[]> {
+  async listTrackingProjects(
+    apiBaseUrl: string,
+    courseId: string,
+    opts?: PaginationOpts
+  ): Promise<ProjectRecord[]> {
     await this.seed(apiBaseUrl);
+    const take = opts?.limit;
+    const skip = take !== undefined ? (opts?.offset ?? 0) : undefined;
     const projects = await this.prisma.project.findMany({
       where: { courseId },
       include: {
         releases: { orderBy: { createdAt: 'desc' }, take: 1 },
       },
       orderBy: { createdAt: 'desc' },
+      take,
+      skip,
     });
     return projects.map(toProjectRecord);
+  }
+
+  async countTrackingProjects(apiBaseUrl: string, courseId: string): Promise<number> {
+    await this.seed(apiBaseUrl);
+    return this.prisma.project.count({ where: { courseId } });
   }
 
   async getTrackingProjectById(
@@ -2007,15 +2040,25 @@ export class PrismaStore implements AppStore {
 
   async listTrackingMilestoneSubmissions(
     apiBaseUrl: string,
-    milestoneId: string
+    milestoneId: string,
+    opts?: PaginationOpts
   ): Promise<SubmissionRecord[]> {
     await this.seed(apiBaseUrl);
+    const take = opts?.limit;
+    const skip = take !== undefined ? (opts?.offset ?? 0) : undefined;
     const submissions = await this.prisma.submissionAttempt.findMany({
       where: { milestoneId },
       include: { project: true },
       orderBy: { createdAt: 'desc' },
+      take,
+      skip,
     });
     return submissions.map(toSubmissionRecord);
+  }
+
+  async countTrackingMilestoneSubmissions(apiBaseUrl: string, milestoneId: string): Promise<number> {
+    await this.seed(apiBaseUrl);
+    return this.prisma.submissionAttempt.count({ where: { milestoneId } });
   }
 
   async createTrackingSubmission(
@@ -2218,20 +2261,41 @@ export class PrismaStore implements AppStore {
 
   async listTrackingReviewQueue(
     apiBaseUrl: string,
-    filters?: { courseId?: string; projectId?: string; status?: SubmissionRecord['status'] }
+    filters?: { courseId?: string; projectId?: string; status?: SubmissionRecord['status'] },
+    opts?: PaginationOpts
   ): Promise<SubmissionRecord[]> {
     await this.seed(apiBaseUrl);
+    const where = {
+      milestoneId: { not: null },
+      status: filters?.status as SubmissionStatus | undefined,
+      projectId: filters?.projectId,
+      project: filters?.courseId ? { courseId: filters.courseId } : undefined,
+    };
+    const take = opts?.limit;
+    const skip = take !== undefined ? (opts?.offset ?? 0) : undefined;
     const submissions = await this.prisma.submissionAttempt.findMany({
+      where,
+      include: { project: true },
+      orderBy: { createdAt: 'desc' },
+      take,
+      skip,
+    });
+    return submissions.map(toSubmissionRecord);
+  }
+
+  async countTrackingReviewQueue(
+    apiBaseUrl: string,
+    filters?: { courseId?: string; projectId?: string; status?: SubmissionRecord['status'] }
+  ): Promise<number> {
+    await this.seed(apiBaseUrl);
+    return this.prisma.submissionAttempt.count({
       where: {
         milestoneId: { not: null },
         status: filters?.status as SubmissionStatus | undefined,
         projectId: filters?.projectId,
         project: filters?.courseId ? { courseId: filters.courseId } : undefined,
       },
-      include: { project: true },
-      orderBy: { createdAt: 'desc' },
     });
-    return submissions.map(toSubmissionRecord);
   }
 
   async listTrackingActivity(apiBaseUrl: string, userId: string): Promise<ActivityRecord[]> {
