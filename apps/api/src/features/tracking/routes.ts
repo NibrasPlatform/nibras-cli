@@ -431,6 +431,14 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       reply.code(403).send(Errors.forbidden());
       return;
     }
+    // Enforce deadline: reject submissions past dueAt unless user is admin or instructor
+    if (milestone.dueAt && new Date(milestone.dueAt) < new Date()) {
+      const canManage = canManageProject(auth, project!);
+      if (!canManage && auth.user.systemRole !== 'admin') {
+        reply.code(422).send(apiError('VALIDATION_ERROR', 'The submission deadline has passed.'));
+        return;
+      }
+    }
     const payload = CreateTrackingSubmissionRequestSchema.parse(request.body);
     const created = await store.createTrackingSubmission(
       requestBaseUrl(request),
@@ -555,7 +563,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingReviewSchema.parse(review);
   });
 
-  app.get('/v1/tracking/review-queue', async (request, reply) => {
+  app.get('/v1/tracking/review-queue', { schema: { tags: ['tracking'], summary: 'Get instructor review queue' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (!hasAnyInstructorAccess(auth)) {
@@ -599,13 +607,13 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return ReviewQueueResponseSchema.parse({ submissions: filtered });
   });
 
-  app.get('/v1/tracking/activity', async (request, reply) => {
+  app.get('/v1/tracking/activity', { schema: { tags: ['tracking'], summary: 'Get activity feed for current user' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     return await store.listTrackingActivity(requestBaseUrl(request), auth.user.id);
   });
 
-  app.get('/v1/tracking/dashboard/student', async (request, reply) => {
+  app.get('/v1/tracking/dashboard/student', { schema: { tags: ['tracking'], summary: 'Get student dashboard' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const query = request.query as { courseId?: string };
@@ -643,7 +651,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     });
   });
 
-  app.get('/v1/tracking/dashboard/instructor', async (request, reply) => {
+  app.get('/v1/tracking/dashboard/instructor', { schema: { tags: ['tracking'], summary: 'Get instructor dashboard' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (!hasAnyInstructorAccess(auth)) {
@@ -655,7 +663,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     );
   });
 
-  app.get('/v1/tracking/dashboard/course/:courseId', async (request, reply) => {
+  app.get('/v1/tracking/dashboard/course/:courseId', { schema: { tags: ['tracking'], summary: 'Get course-level dashboard' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
@@ -669,7 +677,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     );
   });
 
-  app.post('/v1/tracking/courses/:courseId/invites', async (request, reply) => {
+  app.post('/v1/tracking/courses/:courseId/invites', { schema: { tags: ['tracking'], summary: 'Create a course invite link' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
@@ -689,7 +697,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return { code: invite.code, inviteUrl };
   });
 
-  app.get('/v1/tracking/invites/:code', async (request, reply) => {
+  app.get('/v1/tracking/invites/:code', { schema: { tags: ['tracking'], summary: 'Look up a course invite' } }, async (request, reply) => {
     const params = request.params as { code: string };
     const invite = await store.getCourseInviteByCode(requestBaseUrl(request), params.code);
     if (!invite) {
@@ -710,7 +718,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     };
   });
 
-  app.post('/v1/tracking/invites/:code/join', async (request, reply) => {
+  app.post('/v1/tracking/invites/:code/join', { schema: { tags: ['tracking'], summary: 'Join a course via invite link' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { code: string };
@@ -728,7 +736,66 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     }
   });
 
-  app.get('/v1/tracking/submissions/:submissionId/commits', async (request, reply) => {
+  app.get(
+    '/v1/tracking/analytics/student',
+    { schema: { tags: ['tracking'], summary: 'Get student submission analytics' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const query = request.query as { courseId?: string };
+
+      const courses = await store.listTrackingCourses(requestBaseUrl(request), auth.user.id);
+      const filteredCourses = query.courseId
+        ? courses.filter((c) => c.id === query.courseId)
+        : courses;
+
+      const analytics = await Promise.all(
+        filteredCourses.map(async (course) => {
+          const projects = await store.listTrackingProjects(requestBaseUrl(request), course.id);
+          const projectStats = await Promise.all(
+            projects.map(async (project) => {
+              const milestones = await store.listTrackingMilestones(requestBaseUrl(request), project.id);
+              const milestoneStats = await Promise.all(
+                milestones.map(async (milestone) => {
+                  const submissions = (
+                    await store.listTrackingMilestoneSubmissions(requestBaseUrl(request), milestone.id)
+                  ).filter((s) => s.userId === auth.user.id);
+                  const latest = submissions[0] || null;
+                  return {
+                    milestoneId: milestone.id,
+                    milestoneTitle: milestone.title,
+                    dueAt: milestone.dueAt,
+                    submissionCount: submissions.length,
+                    latestStatus: latest?.status ?? null,
+                    latestSubmittedAt: latest?.createdAt ?? null,
+                  };
+                })
+              );
+              const submitted = milestoneStats.filter((m) => m.submissionCount > 0).length;
+              const passed = milestoneStats.filter((m) => m.latestStatus === 'passed').length;
+              return {
+                projectId: project.id,
+                projectTitle: project.title,
+                totalMilestones: milestones.length,
+                submittedMilestones: submitted,
+                passedMilestones: passed,
+                milestones: milestoneStats,
+              };
+            })
+          );
+          return {
+            courseId: course.id,
+            courseTitle: course.title,
+            projects: projectStats,
+          };
+        })
+      );
+
+      return { userId: auth.user.id, analytics };
+    }
+  );
+
+  app.get('/v1/tracking/submissions/:submissionId/commits', { schema: { tags: ['tracking'], summary: 'Get commits linked to a submission' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };

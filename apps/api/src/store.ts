@@ -489,6 +489,9 @@ export interface AppStore {
     repositoryUrl?: string;
     rawPayload?: Record<string, unknown>;
   }): Promise<void>;
+  listUsers(apiBaseUrl: string): Promise<UserRecord[]>;
+  setUserSystemRole(apiBaseUrl: string, userId: string, role: SystemRole): Promise<UserRecord | null>;
+  deleteUserAccount(apiBaseUrl: string, userId: string): Promise<void>;
   close?(): Promise<void>;
 }
 
@@ -720,7 +723,7 @@ function seedData(apiBaseUrl: string): StoreData {
         title: 'Design Review',
         description: 'Submit an initial design, edge cases, and implementation plan.',
         order: 1,
-        dueAt: '2026-03-27T17:00:00.000Z',
+        dueAt: '2026-12-31T17:00:00.000Z',
         isFinal: false,
         createdAt,
         updatedAt: createdAt,
@@ -731,7 +734,7 @@ function seedData(apiBaseUrl: string): StoreData {
         title: 'Final Project Submission',
         description: 'Submit the final repository state and project write-up.',
         order: 2,
-        dueAt: '2026-04-08T17:00:00.000Z',
+        dueAt: '2027-01-15T17:00:00.000Z',
         isFinal: true,
         createdAt,
         updatedAt: createdAt,
@@ -875,6 +878,37 @@ export class FileStore implements AppStore {
       return null;
     }
     return data.users.find((entry) => entry.id === session.userId) || null;
+  }
+
+  async listUsers(apiBaseUrl: string): Promise<UserRecord[]> {
+    const data = this.read(apiBaseUrl);
+    return data.users;
+  }
+
+  async setUserSystemRole(apiBaseUrl: string, userId: string, role: SystemRole): Promise<UserRecord | null> {
+    const data = this.read(apiBaseUrl);
+    const user = data.users.find((u) => u.id === userId);
+    if (!user) return null;
+    user.systemRole = role;
+    this.write(data);
+    return user;
+  }
+
+  async deleteUserAccount(apiBaseUrl: string, userId: string): Promise<void> {
+    const data = this.read(apiBaseUrl);
+    // Remove sessions
+    data.sessions = data.sessions.filter((s) => s.userId !== userId);
+    // Remove web sessions
+    data.webSessions = data.webSessions.filter((s) => s.userId !== userId);
+    // Anonymise submissions (keep records for audit, strip identity)
+    data.submissions = data.submissions.map((s) =>
+      s.userId === userId ? { ...s, userId: `deleted_${userId}` } : s
+    );
+    // Remove course memberships
+    data.courseMemberships = data.courseMemberships.filter((m) => m.userId !== userId);
+    // Remove the user record
+    data.users = data.users.filter((u) => u.id !== userId);
+    this.write(data);
   }
 
   async refreshCliSession(apiBaseUrl: string, refreshToken: string): Promise<SessionRecord | null> {

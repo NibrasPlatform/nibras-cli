@@ -162,6 +162,37 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
   });
 
   /**
+   * GET /v1/admin/users
+   * List all users. Admin only.
+   */
+  app.get('/v1/admin/users', { schema: { tags: ['admin'], summary: 'List all users' } }, async (request, reply) => {
+    const auth = await requireUser(request, reply, store);
+    if (!requireAdmin(auth, reply)) return;
+    const users = await store.listUsers(requestBaseUrl(request));
+    return { users };
+  });
+
+  /**
+   * PATCH /v1/admin/users/:userId/role
+   * Change a user's system role (user ↔ admin). Admin only.
+   */
+  app.patch('/v1/admin/users/:userId/role', { schema: { tags: ['admin'], summary: 'Change user system role' } }, async (request, reply) => {
+    const auth = await requireUser(request, reply, store);
+    if (!requireAdmin(auth, reply)) return;
+    const params = request.params as { userId: string };
+    if (!validateId(params.userId, reply, 'userId')) return;
+    const body = request.body as { role?: string };
+    if (!body.role || !['user', 'admin'].includes(body.role)) {
+      return reply.code(400).send(Errors.validation('role must be "user" or "admin"'));
+    }
+    const updated = await store.setUserSystemRole(requestBaseUrl(request), params.userId, body.role as 'user' | 'admin');
+    if (!updated) {
+      return reply.code(404).send(Errors.notFound('User'));
+    }
+    return { ok: true, userId: params.userId, systemRole: updated.systemRole };
+  });
+
+  /**
    * POST /v1/admin/projects/:projectId/archive
    * Archive a project. Admin only.
    */

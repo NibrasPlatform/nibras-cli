@@ -237,6 +237,94 @@ export function registerHostedCliRoutes(
   });
 
   app.get(
+    '/v1/submissions/:submissionId/stream',
+    { schema: { tags: ['projects'], summary: 'Stream submission status via SSE', hide: true } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { submissionId: string };
+      if (!validateId(params.submissionId, reply, 'submissionId')) return;
+
+      const TERMINAL = new Set(['passed', 'failed', 'needs_review']);
+      const POLL_MS = 2_000;
+      const TIMEOUT_MS = 5 * 60 * 1_000;
+
+      void reply
+        .header('Content-Type', 'text/event-stream')
+        .header('Cache-Control', 'no-cache')
+        .header('Connection', 'keep-alive')
+        .header('X-Accel-Buffering', 'no');
+
+      const send = (event: string, data: unknown) => {
+        const chunk = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+        void reply.raw.write(chunk);
+      };
+
+      const deadline = Date.now() + TIMEOUT_MS;
+      let lastStatus: string | undefined;
+
+      const tick = async () => {
+        if (Date.now() >= deadline) {
+          send('timeout', { message: 'Stream closed after 5 minutes.' });
+          reply.raw.end();
+          return;
+        }
+        const submission = await store.getSubmission(
+          requestBaseUrl(request),
+          params.submissionId,
+          auth.user.id
+        );
+        if (!submission) {
+          // Try admin fetch for instructors
+          const any = await store.getSubmissionForAdmin(requestBaseUrl(request), params.submissionId);
+          if (!any) {
+            send('error', { error: 'Submission not found.' });
+            reply.raw.end();
+            return;
+          }
+          // Check access
+          const project = await store.getTrackingProjectById(requestBaseUrl(request), any.projectId);
+          const { canManageProject } = await import('../tracking/policies/access');
+          const hasAccess = auth.user.systemRole === 'admin' || (project && canManageProject(auth, project));
+          if (!hasAccess) {
+            send('error', { error: 'Forbidden.' });
+            reply.raw.end();
+            return;
+          }
+          if (any.status !== lastStatus) {
+            lastStatus = any.status;
+            send('status', { submissionId: any.id, status: any.status, summary: any.summary });
+          }
+          if (TERMINAL.has(any.status)) {
+            send('done', { submissionId: any.id, status: any.status });
+            reply.raw.end();
+            return;
+          }
+        } else {
+          if (submission.status !== lastStatus) {
+            lastStatus = submission.status;
+            send('status', { submissionId: submission.id, status: submission.status, summary: submission.summary });
+          }
+          if (TERMINAL.has(submission.status)) {
+            send('done', { submissionId: submission.id, status: submission.status });
+            reply.raw.end();
+            return;
+          }
+        }
+        setTimeout(() => void tick(), POLL_MS);
+      };
+
+      reply.raw.on('close', () => {
+        // Client disconnected — nothing to clean up for polling approach
+      });
+
+      // Send initial heartbeat
+      send('connected', { submissionId: params.submissionId });
+      void tick();
+    }
+  );
+
+  app.get(
     '/v1/submissions/:submissionId',
     { schema: { tags: ['projects'], summary: 'Get submission status' } },
     async (request, reply) => {
@@ -267,4 +355,28 @@ export function registerHostedCliRoutes(
       updatedAt: submission.updatedAt,
     });
   });
+
+  /**
+   * DELETE /v1/me/account
+   * GDPR right-to-erasure: permanently delete all personal data for the authenticated user.
+   * Revokes all sessions, anonymises submissions, deletes profile data.
+   * Requires confirmation body: { confirm: "DELETE MY ACCOUNT" }
+   */
+  app.delete(
+    '/v1/me/account',
+    { schema: { tags: ['auth'], summary: 'Delete account and all personal data (GDPR erasure)' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const body = request.body as { confirm?: string };
+      if (body?.confirm !== 'DELETE MY ACCOUNT') {
+        return reply
+          .code(400)
+          .send(Errors.validation('Send { "confirm": "DELETE MY ACCOUNT" } to confirm erasure.'));
+      }
+      await store.deleteUserAccount(requestBaseUrl(request), auth.user.id);
+      void reply.header('Set-Cookie', clearWebSessionCookie(request));
+      return { ok: true, message: 'Your account and all associated data have been deleted.' };
+    }
+  );
 }

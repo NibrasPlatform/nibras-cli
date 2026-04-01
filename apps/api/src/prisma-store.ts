@@ -1049,6 +1049,80 @@ export class PrismaStore implements AppStore {
     return toUserRecord(session.user);
   }
 
+  async listUsers(apiBaseUrl: string): Promise<UserRecord[]> {
+    await this.seed(apiBaseUrl);
+    const users = await this.prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { githubAccount: true },
+    });
+    return users.map(toUserRecord);
+  }
+
+  async setUserSystemRole(apiBaseUrl: string, userId: string, role: SystemRole): Promise<UserRecord | null> {
+    await this.seed(apiBaseUrl);
+    const updated = await this.prisma.user
+      .update({
+        where: { id: userId },
+        data: { systemRole: role === 'admin' ? SystemRole.admin : SystemRole.user },
+        include: { githubAccount: true },
+      })
+      .catch(() => null);
+    if (!updated) return null;
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'user.roleChanged',
+        targetType: 'user',
+        targetId: userId,
+        payload: { newRole: role } as Prisma.InputJsonValue,
+      },
+    });
+    return toUserRecord(updated);
+  }
+
+  async deleteUserAccount(apiBaseUrl: string, userId: string): Promise<void> {
+    await this.seed(apiBaseUrl);
+    // Run deletion in a transaction to ensure atomicity
+    await this.prisma.$transaction(async (tx) => {
+      // Revoke all CLI sessions
+      await tx.cliSession.updateMany({
+        where: { userId },
+        data: { revokedAt: new Date() },
+      });
+      // Revoke all web sessions
+      await tx.webSession.updateMany({
+        where: { userId },
+        data: { revokedAt: new Date() },
+      });
+      // Anonymise GitHub account (break the link)
+      await tx.githubAccount.updateMany({
+        where: { userId },
+        data: { login: `deleted_${userId}` },
+      });
+      // Remove course memberships
+      await tx.courseMembership.deleteMany({ where: { userId } });
+      // Anonymise the user record (GDPR: right to erasure — keep a tombstone for FK integrity)
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          username: `deleted_${userId}`,
+          email: `deleted_${userId}@erased.invalid`,
+          systemRole: SystemRole.user,
+        },
+      });
+      // Write audit log with the erasure event
+      await tx.auditLog.create({
+        data: {
+          userId,
+          action: 'user.accountDeleted',
+          targetType: 'user',
+          targetId: userId,
+          payload: { gdpr: true, erasedAt: new Date().toISOString() } as Prisma.InputJsonValue,
+        },
+      });
+    });
+  }
+
   async refreshCliSession(apiBaseUrl: string, refreshToken: string): Promise<SessionRecord | null> {
     await this.seed(apiBaseUrl);
     const session = await this.prisma.cliSession.findUnique({
