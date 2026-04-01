@@ -20,6 +20,7 @@ import {
   verifySignedState,
   verifyWebhookSignature,
 } from '@nibras/github';
+import { Errors } from '../../lib/errors';
 import { requireUser } from '../../lib/auth';
 import { requestBaseUrl } from '../../lib/request-base-url';
 import { createWebSessionCookie } from '../../lib/web-session';
@@ -125,7 +126,7 @@ export function registerGitHubRoutes(
     async (request, reply) => {
       const body = request.body as { deviceCode?: string };
       if (!body?.deviceCode) {
-        reply.code(400).send({ error: 'deviceCode is required.' });
+        reply.code(400).send(Errors.validation('deviceCode is required.'));
         return;
       }
 
@@ -157,7 +158,7 @@ export function registerGitHubRoutes(
         body.deviceCode
       );
       if (!record) {
-        reply.code(404).send({ error: 'Unknown device code.' });
+        reply.code(404).send(Errors.notFound('Device code'));
         return;
       }
       if (!session || !record.userId) {
@@ -165,7 +166,7 @@ export function registerGitHubRoutes(
       }
       const user = await store.getUserByToken(requestBaseUrl(request), session.accessToken);
       if (!user) {
-        reply.code(500).send({ error: 'Authorized session missing user.' });
+        reply.code(500).send(Errors.internal());
         return;
       }
       return DevicePollResponseSchema.parse({
@@ -179,7 +180,7 @@ export function registerGitHubRoutes(
 
   app.get('/v1/github/oauth/start', async (request, reply) => {
     if (!githubConfig) {
-      reply.code(503).send({ error: 'GitHub App is not configured.' });
+      reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));
       return;
     }
     const query = request.query as { return_to?: string };
@@ -202,17 +203,17 @@ export function registerGitHubRoutes(
     if (!githubConfig || !(store instanceof PrismaStore)) {
       reply
         .code(503)
-        .send({ error: 'GitHub OAuth requires DATABASE_URL and GitHub App configuration.' });
+        .send(Errors.unavailable('GitHub OAuth requires DATABASE_URL and GitHub App configuration.'));
       return;
     }
     const query = request.query as { code?: string; state?: string };
     if (!query.code || !query.state) {
-      reply.code(400).send({ error: 'code and state are required.' });
+      reply.code(400).send(Errors.validation('code and state are required.'));
       return;
     }
     const state = verifySignedState(githubConfig.clientSecret, query.state);
     if (!state) {
-      reply.code(400).send({ error: 'Invalid OAuth state.' });
+      reply.code(400).send(Errors.validation('Invalid OAuth state.'));
       return;
     }
     const tokenResponse = await exchangeGitHubOAuthCode(githubConfig, query.code);
@@ -246,7 +247,7 @@ export function registerGitHubRoutes(
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (!githubConfig) {
-      reply.code(503).send({ error: 'GitHub App is not configured.' });
+      reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));
       return;
     }
     const signedState =
@@ -269,7 +270,7 @@ export function registerGitHubRoutes(
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (!githubConfig || !(store instanceof PrismaStore)) {
-      reply.code(503).send({ error: 'GitHub App is not configured.' });
+      reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));
       return;
     }
     const payload = GitHubInstallationCompleteRequestSchema.parse(request.body);
@@ -277,13 +278,13 @@ export function registerGitHubRoutes(
     if (payload.state) {
       const state = verifySignedState(githubConfig.clientSecret, payload.state);
       if (!state) {
-        reply.code(400).send({ error: 'Invalid installation state.' });
+        reply.code(400).send(Errors.validation('Invalid installation state.'));
         return;
       }
       if (state.userId && state.userId !== auth.user.id) {
         reply
           .code(403)
-          .send({ error: 'Installation state does not belong to the authenticated user.' });
+          .send(Errors.forbidden());
         return;
       }
       redirectTo = resolveSafeReturnTo(
@@ -295,7 +296,7 @@ export function registerGitHubRoutes(
     }
     const account = await store.getGithubAccountForUser(auth.user.id);
     if (!account?.userAccessToken) {
-      reply.code(400).send({ error: 'GitHub user token is missing for this account.' });
+      reply.code(400).send(Errors.validation('GitHub user token is missing for this account.'));
       return;
     }
     const installations = await getGitHubUserInstallations(githubConfig, account.userAccessToken);
@@ -303,7 +304,7 @@ export function registerGitHubRoutes(
     if (!matched) {
       reply
         .code(403)
-        .send({ error: 'The installation does not belong to the authenticated GitHub user.' });
+        .send(Errors.forbidden());
       return;
     }
     const user = await store.linkGitHubInstallation(auth.user.id, payload.installationId);
@@ -319,7 +320,7 @@ export function registerGitHubRoutes(
     { config: { rateLimit: { max: 50, timeWindow: '1 minute' } } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!githubConfig) {
-        reply.code(503).send({ error: 'GitHub App is not configured.' });
+        reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));
         return;
       }
       const rawBodyValue = (request as FastifyRequest & { rawBody?: Buffer | string }).rawBody;
@@ -331,7 +332,7 @@ export function registerGitHubRoutes(
       const signature = request.headers['x-hub-signature-256'];
       const signatureHeader = Array.isArray(signature) ? signature[0] : signature;
       if (!verifyWebhookSignature(githubConfig.webhookSecret, rawBody, signatureHeader)) {
-        reply.code(401).send({ error: 'Invalid webhook signature.' });
+        reply.code(401).send(Errors.forbidden());
         return;
       }
       const event = request.headers['x-github-event'];
@@ -341,7 +342,7 @@ export function registerGitHubRoutes(
       try {
         payload = JSON.parse(rawBody.toString('utf8')) as Record<string, unknown>;
       } catch {
-        reply.code(400).send({ error: 'Invalid webhook JSON payload.' });
+        reply.code(400).send(Errors.validation('Invalid webhook JSON payload.'));
         return;
       }
       if (event === 'push' || event === 'pull_request') {

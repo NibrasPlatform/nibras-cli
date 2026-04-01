@@ -2,6 +2,8 @@ import { FastifyInstance } from 'fastify';
 import { AppStore, SubmissionWorkflowStatus } from '../../store';
 import { requireUser } from '../../lib/auth';
 import { requestBaseUrl } from '../../lib/request-base-url';
+import { Errors } from '../../lib/errors';
+import { validateId } from '../../lib/validate';
 
 const OVERRIDE_STATUSES: SubmissionWorkflowStatus[] = ['passed', 'failed', 'needs_review'];
 
@@ -11,7 +13,7 @@ function requireAdmin(
 ): auth is NonNullable<typeof auth> {
   if (!auth) return false;
   if (auth.user.systemRole !== 'admin') {
-    reply.code(403).send({ error: 'Admin access required.' });
+    reply.code(403).send(Errors.forbidden());
     return false;
   }
   return true;
@@ -49,12 +51,11 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
     if (!requireAdmin(auth, reply)) return;
 
     const params = request.params as { submissionId: string };
+    if (!validateId(params.submissionId, reply, 'submissionId')) return;
     const body = request.body as { status?: string; summary?: string };
 
     if (!body.status || !OVERRIDE_STATUSES.includes(body.status as SubmissionWorkflowStatus)) {
-      return reply.code(400).send({
-        error: `status must be one of: ${OVERRIDE_STATUSES.join(', ')}`,
-      });
+      return reply.code(400).send(Errors.validation(`status must be one of: ${OVERRIDE_STATUSES.join(', ')}`));
     }
 
     const submission = await store.getSubmissionForAdmin(
@@ -62,7 +63,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
       params.submissionId
     );
     if (!submission) {
-      return reply.code(404).send({ error: 'Unknown submission.' });
+      return reply.code(404).send(Errors.notFound('Submission'));
     }
 
     const summary =
@@ -81,7 +82,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
       auth.user.id
     );
     if (!updated) {
-      return reply.code(404).send({ error: 'Unknown submission.' });
+      return reply.code(404).send(Errors.notFound('Submission'));
     }
 
     return {
@@ -97,12 +98,13 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
     if (!requireAdmin(auth, reply)) return;
 
     const params = request.params as { submissionId: string };
+    if (!validateId(params.submissionId, reply, 'submissionId')) return;
     const submission = await store.getSubmissionForAdmin(
       requestBaseUrl(request),
       params.submissionId
     );
     if (!submission) {
-      return reply.code(404).send({ error: 'Unknown submission.' });
+      return reply.code(404).send(Errors.notFound('Submission'));
     }
 
     const logs = await store.listSubmissionVerificationLogs(
@@ -121,9 +123,10 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
     if (!requireAdmin(auth, reply)) return;
 
     const params = request.params as { submissionId: string };
+    if (!validateId(params.submissionId, reply, 'submissionId')) return;
     const submission = await store.getSubmissionForAdmin(requestBaseUrl(request), params.submissionId);
     if (!submission) {
-      return reply.code(404).send({ error: "Unknown submission." });
+      return reply.code(404).send(Errors.notFound('Submission'));
     }
 
     const updated = await store.overrideSubmissionStatus(
@@ -134,7 +137,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
       auth!.user.id
     );
     if (!updated) {
-      return reply.code(404).send({ error: "Unknown submission." });
+      return reply.code(404).send(Errors.notFound('Submission'));
     }
 
     return { ok: true, submissionId: params.submissionId, status: "queued" };
@@ -167,9 +170,10 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
     if (!requireAdmin(auth, reply)) return;
 
     const params = request.params as { projectId: string };
+    if (!validateId(params.projectId, reply, 'projectId')) return;
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project) {
-      return reply.code(404).send({ error: 'Unknown project.' });
+      return reply.code(404).send(Errors.notFound('Project'));
     }
     const updated = await store.setTrackingProjectStatus(
       requestBaseUrl(request),

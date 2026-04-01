@@ -60,6 +60,8 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
     genReqId: () => `req_${Math.random().toString(36).slice(2, 10)}`,
     connectionTimeout: Number(process.env.CONNECTION_TIMEOUT_MS ?? 10_000),
     requestTimeout: Number(process.env.REQUEST_TIMEOUT_MS ?? 30_000),
+    // 512 KB default — configurable via BODY_LIMIT_BYTES
+    bodyLimit: Number(process.env.BODY_LIMIT_BYTES ?? 524_288),
   });
 
   const githubConfig = loadGitHubAppConfig();
@@ -137,7 +139,16 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
     requestCounts[key] = (requestCounts[key] || 0) + 1;
   });
 
-  app.get('/metrics', async (_request, reply) => {
+  app.get('/metrics', async (request, reply) => {
+    // Optional static bearer token to protect the metrics endpoint.
+    // Set NIBRAS_METRICS_TOKEN in production; leave unset for local dev.
+    const metricsToken = process.env.NIBRAS_METRICS_TOKEN;
+    if (metricsToken) {
+      const auth = request.headers.authorization;
+      if (auth !== `Bearer ${metricsToken}`) {
+        return reply.code(401).send({ error: 'Unauthorized.', code: 'AUTH_REQUIRED' });
+      }
+    }
     const lines: string[] = [
       '# HELP nibras_http_requests_total Total HTTP requests by method and status',
       '# TYPE nibras_http_requests_total counter',
@@ -190,7 +201,8 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
       });
     }
     const statusCode = error.statusCode || 500;
-    void reply.status(statusCode).send({ error: error.message || 'Internal server error.' });
+    const code = statusCode === 429 ? 'RATE_LIMITED' : statusCode >= 500 ? 'INTERNAL_ERROR' : 'INTERNAL_ERROR';
+    void reply.status(statusCode).send({ error: error.message || 'Internal server error.', code });
   });
 
   app.addHook('onClose', async () => {

@@ -19,7 +19,9 @@ import {
   UpdateTrackingSubmissionRequestSchema,
 } from '@nibras/contracts';
 import { requireUser } from '../../lib/auth';
+import { Errors, apiError } from '../../lib/errors';
 import { requestBaseUrl } from '../../lib/request-base-url';
+import { validateId } from '../../lib/validate';
 import { AppStore, PaginationOpts } from '../../store';
 import {
   presentInstructorDashboard,
@@ -69,8 +71,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
+    if (!validateId(params.courseId, reply, 'courseId')) return;
     if (!canManageCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const members = await store.listCourseMembersForInstructor(
@@ -84,8 +87,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
+    if (!validateId(params.courseId, reply, 'courseId')) return;
     if (!canManageCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const payload = AddCourseMemberRequestSchema.parse(request.body);
@@ -99,10 +103,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       reply.code(201);
       return CourseMemberSchema.parse(member);
     } catch (err) {
-      const statusCode = (err as { statusCode?: number }).statusCode || 400;
+      const statusCode = (err as { statusCode?: number }).statusCode || 409;
       reply
         .code(statusCode)
-        .send({ error: err instanceof Error ? err.message : 'Failed to add member.' });
+        .send(apiError('CONFLICT', err instanceof Error ? err.message : 'Failed to add member.'));
     }
   });
 
@@ -110,8 +114,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string; userId: string };
+    if (!validateId(params.courseId, reply, 'courseId')) return;
+    if (!validateId(params.userId, reply, 'userId')) return;
     if (!canManageCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     await store.removeCourseMember(requestBaseUrl(request), params.courseId, params.userId);
@@ -122,7 +128,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (auth.user.systemRole !== 'admin' && !hasAnyInstructorAccess(auth)) {
-      reply.code(403).send({ error: 'Only instructors and admins may create courses.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const payload = CreateTrackingCourseRequestSchema.parse(request.body);
@@ -135,8 +141,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
+    if (!validateId(params.courseId, reply, 'courseId')) return;
     if (!canViewCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const query = request.query as { limit?: string; offset?: string };
@@ -154,7 +161,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     if (!auth) return;
     const payload = CreateTrackingProjectRequestSchema.parse(request.body);
     if (!canManageCourse(auth, payload.courseId)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const created = await store.createTrackingProject(
@@ -170,13 +177,14 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
+    if (!validateId(params.projectId, reply, 'projectId')) return;
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project) {
-      reply.code(404).send({ error: 'Unknown project.' });
+      reply.code(404).send(Errors.notFound('Project'));
       return;
     }
     if (!project.courseId || !canViewCourse(auth, project.courseId)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const milestones = await store.listTrackingMilestones(requestBaseUrl(request), project.id);
@@ -190,9 +198,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
+    if (!validateId(params.projectId, reply, 'projectId')) return;
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project || !canManageProject(auth, project)) {
-      reply.code(project ? 403 : 404).send({ error: project ? 'Forbidden.' : 'Unknown project.' });
+      reply.code(project ? 403 : 404).send(project ? Errors.forbidden() : Errors.notFound('Project'));
       return;
     }
     const payload = UpdateTrackingProjectRequestSchema.parse(request.body);
@@ -203,7 +212,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       payload
     );
     if (!updated) {
-      reply.code(404).send({ error: 'Unknown project.' });
+      reply.code(404).send(Errors.notFound('Project'));
       return;
     }
     return TrackingProjectSummarySchema.parse(presentProject(updated));
@@ -213,9 +222,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
+    if (!validateId(params.projectId, reply, 'projectId')) return;
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project || !canManageProject(auth, project)) {
-      reply.code(project ? 403 : 404).send({ error: project ? 'Forbidden.' : 'Unknown project.' });
+      reply.code(project ? 403 : 404).send(project ? Errors.forbidden() : Errors.notFound('Project'));
       return;
     }
     const updated = await store.setTrackingProjectStatus(
@@ -231,9 +241,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
+    if (!validateId(params.projectId, reply, 'projectId')) return;
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project || !canManageProject(auth, project)) {
-      reply.code(project ? 403 : 404).send({ error: project ? 'Forbidden.' : 'Unknown project.' });
+      reply.code(project ? 403 : 404).send(project ? Errors.forbidden() : Errors.notFound('Project'));
       return;
     }
     const updated = await store.setTrackingProjectStatus(
@@ -249,9 +260,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
+    if (!validateId(params.projectId, reply, 'projectId')) return;
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project || !project.courseId || !canViewCourse(auth, project.courseId)) {
-      reply.code(project ? 403 : 404).send({ error: project ? 'Forbidden.' : 'Unknown project.' });
+      reply.code(project ? 403 : 404).send(project ? Errors.forbidden() : Errors.notFound('Project'));
       return;
     }
     const milestones = await store.listTrackingMilestones(
@@ -267,9 +279,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
+    if (!validateId(params.projectId, reply, 'projectId')) return;
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project || !canManageProject(auth, project)) {
-      reply.code(project ? 403 : 404).send({ error: project ? 'Forbidden.' : 'Unknown project.' });
+      reply.code(project ? 403 : 404).send(project ? Errors.forbidden() : Errors.notFound('Project'));
       return;
     }
     const payload = CreateMilestoneRequestSchema.parse(request.body);
@@ -287,9 +300,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
+    if (!validateId(params.milestoneId, reply, 'milestoneId')) return;
     const milestone = await store.getTrackingMilestone(requestBaseUrl(request), params.milestoneId);
     if (!milestone) {
-      reply.code(404).send({ error: 'Unknown milestone.' });
+      reply.code(404).send(Errors.notFound('Milestone'));
       return;
     }
     const project = await store.getTrackingProjectById(
@@ -297,7 +311,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       milestone.projectId
     );
     if (!project?.courseId || !canViewCourse(auth, project.courseId)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const canManage = canManageProject(auth, project);
@@ -318,9 +332,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
+    if (!validateId(params.milestoneId, reply, 'milestoneId')) return;
     const milestone = await store.getTrackingMilestone(requestBaseUrl(request), params.milestoneId);
     if (!milestone) {
-      reply.code(404).send({ error: 'Unknown milestone.' });
+      reply.code(404).send(Errors.notFound('Milestone'));
       return;
     }
     const project = await store.getTrackingProjectById(
@@ -328,7 +343,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       milestone.projectId
     );
     if (!project || !canManageProject(auth, project)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const payload = UpdateMilestoneRequestSchema.parse(request.body);
@@ -345,9 +360,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
+    if (!validateId(params.milestoneId, reply, 'milestoneId')) return;
     const milestone = await store.getTrackingMilestone(requestBaseUrl(request), params.milestoneId);
     if (!milestone) {
-      reply.code(404).send({ error: 'Unknown milestone.' });
+      reply.code(404).send(Errors.notFound('Milestone'));
       return;
     }
     const project = await store.getTrackingProjectById(
@@ -355,7 +371,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       milestone.projectId
     );
     if (!project || !canManageProject(auth, project)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     await store.deleteTrackingMilestone(requestBaseUrl(request), auth.user.id, params.milestoneId);
@@ -366,9 +382,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
+    if (!validateId(params.milestoneId, reply, 'milestoneId')) return;
     const milestone = await store.getTrackingMilestone(requestBaseUrl(request), params.milestoneId);
     if (!milestone) {
-      reply.code(404).send({ error: 'Unknown milestone.' });
+      reply.code(404).send(Errors.notFound('Milestone'));
       return;
     }
     const project = await store.getTrackingProjectById(
@@ -376,7 +393,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       milestone.projectId
     );
     if (!project?.courseId || !canViewCourse(auth, project.courseId)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const canManage = canManageProject(auth, project);
@@ -400,9 +417,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
+    if (!validateId(params.milestoneId, reply, 'milestoneId')) return;
     const milestone = await store.getTrackingMilestone(requestBaseUrl(request), params.milestoneId);
     if (!milestone) {
-      reply.code(404).send({ error: 'Unknown milestone.' });
+      reply.code(404).send(Errors.notFound('Milestone'));
       return;
     }
     const project = await store.getTrackingProjectById(
@@ -410,7 +428,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       milestone.projectId
     );
     if (!project?.courseId || !canViewCourse(auth, project.courseId)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const payload = CreateTrackingSubmissionRequestSchema.parse(request.body);
@@ -428,12 +446,13 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
+    if (!validateId(params.submissionId, reply, 'submissionId')) return;
     const submission = await store.getSubmissionForAdmin(
       requestBaseUrl(request),
       params.submissionId
     );
     if (!submission) {
-      reply.code(404).send({ error: 'Unknown submission.' });
+      reply.code(404).send(Errors.notFound('Submission'));
       return;
     }
     const project = await store.getTrackingProjectById(
@@ -441,7 +460,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       submission.projectId
     );
     if (!canViewSubmission(auth, project, submission)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     return TrackingSubmissionSchema.parse(submission);
@@ -451,17 +470,18 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
+    if (!validateId(params.submissionId, reply, 'submissionId')) return;
     const existing = await store.getSubmissionForAdmin(
       requestBaseUrl(request),
       params.submissionId
     );
     if (!existing) {
-      reply.code(404).send({ error: 'Unknown submission.' });
+      reply.code(404).send(Errors.notFound('Submission'));
       return;
     }
     const project = await store.getTrackingProjectById(requestBaseUrl(request), existing.projectId);
     if (!canViewSubmission(auth, project, existing)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const payload = UpdateTrackingSubmissionRequestSchema.parse(request.body);
@@ -478,12 +498,13 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
+    if (!validateId(params.submissionId, reply, 'submissionId')) return;
     const submission = await store.getSubmissionForAdmin(
       requestBaseUrl(request),
       params.submissionId
     );
     if (!submission) {
-      reply.code(404).send({ error: 'Unknown submission.' });
+      reply.code(404).send(Errors.notFound('Submission'));
       return;
     }
     const project = await store.getTrackingProjectById(
@@ -491,7 +512,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       submission.projectId
     );
     if (!canViewSubmission(auth, project, submission)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const review = await store.getTrackingReview(requestBaseUrl(request), params.submissionId);
@@ -506,12 +527,13 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
+    if (!validateId(params.submissionId, reply, 'submissionId')) return;
     const submission = await store.getSubmissionForAdmin(
       requestBaseUrl(request),
       params.submissionId
     );
     if (!submission) {
-      reply.code(404).send({ error: 'Unknown submission.' });
+      reply.code(404).send(Errors.notFound('Submission'));
       return;
     }
     const project = await store.getTrackingProjectById(
@@ -519,7 +541,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       submission.projectId
     );
     if (!project || !canManageProject(auth, project)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const payload = CreateReviewRequestSchema.parse(request.body);
@@ -537,7 +559,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (!hasAnyInstructorAccess(auth)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const query = request.query as {
@@ -548,7 +570,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       offset?: string;
     };
     if (query.courseId && !canManageCourse(auth, query.courseId)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const filters = { courseId: query.courseId, projectId: query.projectId, status: query.status };
@@ -625,7 +647,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (!hasAnyInstructorAccess(auth)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     return presentInstructorDashboard(
@@ -637,8 +659,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
+    if (!validateId(params.courseId, reply, 'courseId')) return;
     if (!canManageCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     return presentInstructorDashboard(
@@ -650,8 +673,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
+    if (!validateId(params.courseId, reply, 'courseId')) return;
     if (!canManageCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     const body = request.body as { role?: string; maxUses?: number; expiresAt?: string | null };
@@ -669,11 +693,11 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const params = request.params as { code: string };
     const invite = await store.getCourseInviteByCode(requestBaseUrl(request), params.code);
     if (!invite) {
-      reply.code(404).send({ error: 'Invalid invite code.' });
+      reply.code(404).send(Errors.notFound('Invite'));
       return;
     }
     if (invite.expiresAt && new Date(invite.expiresAt) < new Date()) {
-      reply.code(410).send({ error: 'This invite link has expired.' });
+      reply.code(410).send(apiError('NOT_FOUND', 'This invite link has expired.'));
       return;
     }
     return {
@@ -700,7 +724,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       return membership;
     } catch (err) {
       const e = err as { statusCode?: number; message?: string };
-      reply.code(e.statusCode || 400).send({ error: e.message || 'Failed to join course.' });
+      reply.code(e.statusCode || 409).send(apiError('CONFLICT', e.message || 'Failed to join course.'));
     }
   });
 
@@ -708,12 +732,13 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
+    if (!validateId(params.submissionId, reply, 'submissionId')) return;
     const submission = await store.getSubmissionForAdmin(
       requestBaseUrl(request),
       params.submissionId
     );
     if (!submission) {
-      reply.code(404).send({ error: 'Unknown submission.' });
+      reply.code(404).send(Errors.notFound('Submission'));
       return;
     }
     const project = await store.getTrackingProjectById(
@@ -721,7 +746,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       submission.projectId
     );
     if (!canViewSubmission(auth, project, submission)) {
-      reply.code(403).send({ error: 'Forbidden.' });
+      reply.code(403).send(Errors.forbidden());
       return;
     }
     return await store.getTrackingSubmissionCommits(requestBaseUrl(request), params.submissionId);

@@ -14,6 +14,8 @@ import {
 import { GitHubAppConfig } from '@nibras/github';
 import { PrismaStore } from '../../prisma-store';
 import { AppStore } from '../../store';
+import { Errors } from '../../lib/errors';
+import { validateId } from '../../lib/validate';
 import { getWebSessionToken, requireUser } from '../../lib/auth';
 import { requestBaseUrl } from '../../lib/request-base-url';
 import { clearWebSessionCookie } from '../../lib/web-session';
@@ -48,7 +50,7 @@ export function registerHostedCliRoutes(
       const payload = TokenRefreshRequestSchema.parse(request.body);
       const session = await store.refreshCliSession(requestBaseUrl(request), payload.refreshToken);
       if (!session) {
-        reply.code(401).send({ error: 'Invalid or expired refresh token.' });
+        reply.code(401).send(Errors.invalidSession());
         return;
       }
       return TokenRefreshResponseSchema.parse({
@@ -101,7 +103,7 @@ export function registerHostedCliRoutes(
     const params = request.params as { projectKey: string };
     const project = await store.getProject(requestBaseUrl(request), params.projectKey);
     if (!project) {
-      reply.code(404).send({ error: `Unknown project ${params.projectKey}.` });
+      reply.code(404).send(Errors.notFound('Project'));
       return;
     }
     project.manifest.apiBaseUrl = requestBaseUrl(request);
@@ -112,7 +114,7 @@ export function registerHostedCliRoutes(
     const params = request.params as { projectKey: string };
     const project = await store.getProject(requestBaseUrl(request), params.projectKey);
     if (!project) {
-      reply.code(404).send({ error: `Unknown project ${params.projectKey}.` });
+      reply.code(404).send(Errors.notFound('Project'));
       return;
     }
     return ProjectTaskResponseSchema.parse({
@@ -127,7 +129,7 @@ export function registerHostedCliRoutes(
     const params = request.params as { projectKey: string };
     const project = await store.getProject(requestBaseUrl(request), params.projectKey);
     if (!project) {
-      reply.code(404).send({ error: `Unknown project ${params.projectKey}.` });
+      reply.code(404).send(Errors.notFound('Project'));
       return;
     }
     let repo = await store.provisionProjectRepo(
@@ -177,6 +179,7 @@ export function registerHostedCliRoutes(
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
+    if (!validateId(params.submissionId, reply, 'submissionId')) return;
     const payload = LocalTestResultRequestSchema.parse(request.body);
     const submission = await store.updateLocalTestResult(
       requestBaseUrl(request),
@@ -190,9 +193,7 @@ export function registerHostedCliRoutes(
         requestBaseUrl(request),
         params.submissionId
       );
-      reply
-        .code(existing ? 403 : 404)
-        .send({ error: existing ? 'Forbidden.' : 'Unknown submission.' });
+      existing ? reply.code(403).send(Errors.forbidden()) : reply.code(404).send(Errors.notFound('Submission'));
       return;
     }
     return { ok: true };
@@ -202,6 +203,7 @@ export function registerHostedCliRoutes(
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
+    if (!validateId(params.submissionId, reply, 'submissionId')) return;
     const submission = await store.getSubmission(
       requestBaseUrl(request),
       params.submissionId,
@@ -212,9 +214,7 @@ export function registerHostedCliRoutes(
         requestBaseUrl(request),
         params.submissionId
       );
-      reply
-        .code(existing ? 403 : 404)
-        .send({ error: existing ? 'Forbidden.' : 'Unknown submission.' });
+      existing ? reply.code(403).send(Errors.forbidden()) : reply.code(404).send(Errors.notFound('Submission'));
       return;
     }
     return SubmissionStatusResponseSchema.parse({
