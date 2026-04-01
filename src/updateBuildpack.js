@@ -1,4 +1,4 @@
-const { loadConfig, writeConfig } = require("./config");
+const { loadConfig, writeConfig } = require('./config');
 
 function updateBuildpack({ cwd, nodeVersion }) {
   const config = loadConfig(cwd);

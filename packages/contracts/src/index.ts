@@ -1,31 +1,31 @@
-import { z } from "zod";
-export * from "./tracking";
+import { z } from 'zod';
+export * from './tracking';
 
 export const BuildpackSchema = z.object({
-  node: z.string().min(1)
+  node: z.string().min(1),
 });
 
 const GradingRubricItemSchema = z.object({
   id: z.string().min(1),
   description: z.string().min(1),
-  points: z.number().nonnegative()
+  points: z.number().nonnegative(),
 });
 
 const GradingExampleSchema = z.object({
   label: z.string().min(1),
-  answer: z.string().min(1)
+  answer: z.string().min(1),
 });
 
 const GradingQuestionSchema = z.object({
   id: z.string().min(1),
-  mode: z.enum(["exact", "semantic"]),
+  mode: z.enum(['exact', 'semantic']),
   prompt: z.string().optional(),
   points: z.number().nonnegative(),
   answerFile: z.string().min(1),
   rubric: z.array(GradingRubricItemSchema).optional(),
   examples: z.array(GradingExampleSchema).optional(),
   solutions: z.array(z.string().min(1)).optional(),
-  minConfidence: z.number().min(0).max(1).optional()
+  minConfidence: z.number().min(0).max(1).optional(),
 });
 
 export const ProjectManifestSchema = z.object({
@@ -35,18 +35,20 @@ export const ProjectManifestSchema = z.object({
   defaultBranch: z.string().min(1),
   buildpack: BuildpackSchema,
   test: z.object({
-    mode: z.enum(["public-grading", "command"]),
+    mode: z.enum(['public-grading', 'command']),
     command: z.string().min(1),
-    supportsPrevious: z.boolean().default(false)
+    supportsPrevious: z.boolean().default(false),
   }),
   submission: z.object({
     allowedPaths: z.array(z.string().min(1)).min(1),
-    waitForVerificationSeconds: z.number().int().positive().default(120)
+    waitForVerificationSeconds: z.number().int().positive().default(120),
   }),
-  grading: z.object({
-    questions: z.array(GradingQuestionSchema),
-    totalPoints: z.number().nonnegative()
-  }).optional()
+  grading: z
+    .object({
+      questions: z.array(GradingQuestionSchema),
+      totalPoints: z.number().nonnegative(),
+    })
+    .optional(),
 });
 
 export const CliConfigSchema = z.object({
@@ -56,7 +58,7 @@ export const CliConfigSchema = z.object({
   refreshToken: z.string().optional(),
   tokenCreatedAt: z.string().datetime().optional(),
   defaultOrg: z.string().optional(),
-  telemetryOptIn: z.boolean().optional()
+  telemetryOptIn: z.boolean().optional(),
 });
 
 export const DeviceStartResponseSchema = z.object({
@@ -65,11 +67,11 @@ export const DeviceStartResponseSchema = z.object({
   verificationUri: z.string().url(),
   verificationUriComplete: z.string().url(),
   intervalSeconds: z.number().int().positive(),
-  expiresInSeconds: z.number().int().positive()
+  expiresInSeconds: z.number().int().positive(),
 });
 
 export const DevicePollPendingSchema = z.object({
-  status: z.literal("pending")
+  status: z.literal('pending'),
 });
 
 export const UserSchema = z.object({
@@ -78,29 +80,26 @@ export const UserSchema = z.object({
   email: z.string().email(),
   githubLogin: z.string().min(1),
   githubLinked: z.boolean(),
-  githubAppInstalled: z.boolean()
+  githubAppInstalled: z.boolean(),
 });
 
 export const DevicePollSuccessSchema = z.object({
-  status: z.literal("authorized"),
+  status: z.literal('authorized'),
   accessToken: z.string().min(1),
   refreshToken: z.string().min(1),
-  user: UserSchema
+  user: UserSchema,
 });
 
-export const DevicePollResponseSchema = z.union([
-  DevicePollPendingSchema,
-  DevicePollSuccessSchema
-]);
+export const DevicePollResponseSchema = z.union([DevicePollPendingSchema, DevicePollSuccessSchema]);
 
 export const MeResponseSchema = z.object({
   user: UserSchema,
-  apiBaseUrl: z.string().url()
+  apiBaseUrl: z.string().url(),
 });
 
 export const ProjectTaskResponseSchema = z.object({
   projectKey: z.string().min(1),
-  task: z.string().min(1)
+  task: z.string().min(1),
 });
 
 export const ProjectSetupResponseSchema = z.object({
@@ -110,76 +109,76 @@ export const ProjectSetupResponseSchema = z.object({
     name: z.string().min(1),
     cloneUrl: z.string().nullable(),
     defaultBranch: z.string().min(1),
-    visibility: z.enum(["private", "public"])
+    visibility: z.enum(['private', 'public']),
   }),
   manifest: ProjectManifestSchema,
-  task: z.string().min(1)
+  task: z.string().min(1),
 });
 
 export const SubmissionPrepareRequestSchema = z.object({
   projectKey: z.string().min(1),
   commitSha: z.string().min(1),
   repoUrl: z.string().min(1),
-  branch: z.string().min(1)
+  branch: z.string().min(1),
 });
 
 export const SubmissionPrepareResponseSchema = z.object({
   submissionId: z.string().min(1),
-  status: z.enum(["queued", "running", "passed", "failed", "needs_review"])
+  status: z.enum(['queued', 'running', 'passed', 'failed', 'needs_review']),
 });
 
 export const LocalTestResultRequestSchema = z.object({
   exitCode: z.number().int(),
   summary: z.string().min(1),
-  ranPrevious: z.boolean().default(false)
+  ranPrevious: z.boolean().default(false),
 });
 
 export const SubmissionStatusResponseSchema = z.object({
   submissionId: z.string().min(1),
   projectKey: z.string().min(1),
-  status: z.enum(["queued", "running", "passed", "failed", "needs_review"]),
+  status: z.enum(['queued', 'running', 'passed', 'failed', 'needs_review']),
   commitSha: z.string().min(1),
   summary: z.string().min(1),
   createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime()
+  updatedAt: z.string().datetime(),
 });
 
 export const PingResponseSchema = z.object({
   ok: z.boolean(),
-  api: z.enum(["reachable", "unreachable"]),
-  auth: z.enum(["valid", "missing", "invalid"]),
-  github: z.enum(["linked", "missing"]),
-  githubApp: z.enum(["installed", "missing"])
+  api: z.enum(['reachable', 'unreachable']),
+  auth: z.enum(['valid', 'missing', 'invalid']),
+  github: z.enum(['linked', 'missing']),
+  githubApp: z.enum(['installed', 'missing']),
 });
 
 export const TokenRefreshRequestSchema = z.object({
-  refreshToken: z.string().min(1)
+  refreshToken: z.string().min(1),
 });
 
 export const TokenRefreshResponseSchema = z.object({
   accessToken: z.string().min(1),
-  refreshToken: z.string().min(1)
+  refreshToken: z.string().min(1),
 });
 
 export const GitHubInstallUrlResponseSchema = z.object({
-  installUrl: z.string().url()
+  installUrl: z.string().url(),
 });
 
 export const GitHubConfigResponseSchema = z.object({
   configured: z.boolean(),
   appName: z.string().optional(),
-  webBaseUrl: z.string().optional()
+  webBaseUrl: z.string().optional(),
 });
 
 export const GitHubInstallationCompleteRequestSchema = z.object({
   installationId: z.string().min(1),
-  state: z.string().min(1).optional()
+  state: z.string().min(1).optional(),
 });
 
 export const GitHubInstallationCompleteResponseSchema = z.object({
   githubAppInstalled: z.boolean(),
   installationId: z.string().min(1),
-  redirectTo: z.string().url().optional()
+  redirectTo: z.string().url().optional(),
 });
 
 export type ProjectManifest = z.infer<typeof ProjectManifestSchema>;
@@ -196,5 +195,9 @@ export type SubmissionStatusResponse = z.infer<typeof SubmissionStatusResponseSc
 export type PingResponse = z.infer<typeof PingResponseSchema>;
 export type GitHubInstallUrlResponse = z.infer<typeof GitHubInstallUrlResponseSchema>;
 export type GitHubConfigResponse = z.infer<typeof GitHubConfigResponseSchema>;
-export type GitHubInstallationCompleteRequest = z.infer<typeof GitHubInstallationCompleteRequestSchema>;
-export type GitHubInstallationCompleteResponse = z.infer<typeof GitHubInstallationCompleteResponseSchema>;
+export type GitHubInstallationCompleteRequest = z.infer<
+  typeof GitHubInstallationCompleteRequestSchema
+>;
+export type GitHubInstallationCompleteResponse = z.infer<
+  typeof GitHubInstallationCompleteResponseSchema
+>;

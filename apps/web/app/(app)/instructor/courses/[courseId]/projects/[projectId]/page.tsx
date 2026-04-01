@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { use } from "react";
-import { apiFetch } from "../../../../../../lib/session";
-import styles from "../../../../instructor.module.css";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { use } from 'react';
+import { apiFetch } from '../../../../../../lib/session';
+import styles from '../../../../instructor.module.css';
 
 type RubricItem = { criterion: string; maxScore: number };
 type ResourceItem = { label: string; url: string };
@@ -33,7 +33,7 @@ type Milestone = {
 };
 
 export default function ProjectDetailPage({
-  params
+  params,
 }: {
   params: Promise<{ courseId: string; projectId: string }>;
 }) {
@@ -50,17 +50,17 @@ export default function ProjectDetailPage({
       try {
         const [projRes, msRes] = await Promise.all([
           apiFetch(`/v1/tracking/projects/${projectId}`, { auth: true }),
-          apiFetch(`/v1/tracking/projects/${projectId}/milestones`, { auth: true })
+          apiFetch(`/v1/tracking/projects/${projectId}/milestones`, { auth: true }),
         ]);
-        if (!projRes.ok) throw new Error("Failed to load project.");
-        const projData = await projRes.json() as Project;
+        if (!projRes.ok) throw new Error('Failed to load project.');
+        const projData = (await projRes.json()) as Project;
         setProject(projData);
         if (msRes.ok) {
-          const msData = await msRes.json() as Milestone[];
+          const msData = (await msRes.json()) as Milestone[];
           setMilestones(msData.sort((a, b) => a.order - b.order));
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error.");
+        setError(err instanceof Error ? err.message : 'Unknown error.');
       } finally {
         setLoading(false);
       }
@@ -68,25 +68,26 @@ export default function ProjectDetailPage({
   }, [projectId]);
 
   async function handleDeleteMilestone(milestoneId: string) {
-    if (!confirm("Delete this milestone? This cannot be undone.")) return;
+    if (!confirm('Delete this milestone? This cannot be undone.')) return;
     setDeleting(milestoneId);
     try {
       const res = await apiFetch(`/v1/tracking/milestones/${milestoneId}`, {
-        method: "DELETE",
-        auth: true
+        method: 'DELETE',
+        auth: true,
       });
-      if (!res.ok) throw new Error("Delete failed.");
+      if (!res.ok) throw new Error('Delete failed.');
       setMilestones((prev) => prev.filter((m) => m.id !== milestoneId));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Delete failed.");
+      alert(err instanceof Error ? err.message : 'Delete failed.');
     } finally {
       setDeleting(null);
     }
   }
 
   function statusClass(status: string) {
-    if (status === "published" || status === "approved" || status === "open") return styles.statusPublished;
-    if (status === "archived" || status === "failed") return styles.statusArchived;
+    if (status === 'published' || status === 'approved' || status === 'open')
+      return styles.statusPublished;
+    if (status === 'archived' || status === 'failed') return styles.statusArchived;
     return styles.statusDraft;
   }
 
@@ -101,7 +102,7 @@ export default function ProjectDetailPage({
   if (error || !project) {
     return (
       <div className={styles.page}>
-        <p className={styles.errorText}>{error ?? "Project not found."}</p>
+        <p className={styles.errorText}>{error ?? 'Project not found.'}</p>
       </div>
     );
   }
@@ -111,15 +112,18 @@ export default function ProjectDetailPage({
       <div className={styles.detailHeader}>
         <div>
           <p className={styles.breadcrumb}>
-            <Link href="/instructor">Instructor</Link> /{" "}
+            <Link href="/instructor">Instructor</Link> /{' '}
             <Link href={`/instructor/courses/${courseId}`}>Course</Link> / {project.title}
           </p>
           <h1>{project.title}</h1>
-          <span className={`${styles.statusBadge} ${statusClass(project.status)}`} style={{ marginTop: 4, display: "inline-block" }}>
+          <span
+            className={`${styles.statusBadge} ${statusClass(project.status)}`}
+            style={{ marginTop: 4, display: 'inline-block' }}
+          >
             {project.status}
           </span>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
           <Link
             href={`/instructor/courses/${courseId}/projects/${projectId}/edit`}
             className={styles.btnSecondary}
@@ -179,7 +183,9 @@ export default function ProjectDetailPage({
               <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2 }}>
                 {project.resources.map((res, i) => (
                   <li key={i}>
-                    <a href={res.url} target="_blank" rel="noopener noreferrer">{res.label}</a>
+                    <a href={res.url} target="_blank" rel="noopener noreferrer">
+                      {res.label}
+                    </a>
                   </li>
                 ))}
               </ul>
@@ -195,7 +201,9 @@ export default function ProjectDetailPage({
               <span className={styles.muted}>{milestones.length} total</span>
             </div>
             {milestones.length === 0 ? (
-              <p className={styles.muted}>No milestones yet. Add one to define submission checkpoints.</p>
+              <p className={styles.muted}>
+                No milestones yet. Add one to define submission checkpoints.
+              </p>
             ) : (
               <table className={styles.submissionTable}>
                 <thead>
@@ -214,10 +222,12 @@ export default function ProjectDetailPage({
                       <td>
                         <strong>{ms.title}</strong>
                         {ms.isFinal && (
-                          <span className={styles.muted} style={{ marginLeft: 6, fontSize: 11 }}>(final)</span>
+                          <span className={styles.muted} style={{ marginLeft: 6, fontSize: 11 }}>
+                            (final)
+                          </span>
                         )}
                       </td>
-                      <td className={styles.mono} style={{ whiteSpace: "nowrap" }}>
+                      <td className={styles.mono} style={{ whiteSpace: 'nowrap' }}>
                         {ms.dueDateLabel}
                       </td>
                       <td>
@@ -226,10 +236,10 @@ export default function ProjectDetailPage({
                         </span>
                       </td>
                       <td>
-                        <div style={{ display: "flex", gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
                           <button
                             className={styles.btnSecondary}
-                            style={{ padding: "3px 8px", fontSize: "12px" }}
+                            style={{ padding: '3px 8px', fontSize: '12px' }}
                             onClick={() =>
                               router.push(
                                 `/instructor/courses/${courseId}/projects/${projectId}/milestones/${ms.id}/edit`
@@ -240,11 +250,15 @@ export default function ProjectDetailPage({
                           </button>
                           <button
                             className={styles.btnSecondary}
-                            style={{ padding: "3px 8px", fontSize: "12px", color: "var(--error, #e53e3e)" }}
+                            style={{
+                              padding: '3px 8px',
+                              fontSize: '12px',
+                              color: 'var(--error, #e53e3e)',
+                            }}
                             disabled={deleting === ms.id}
                             onClick={() => void handleDeleteMilestone(ms.id)}
                           >
-                            {deleting === ms.id ? "…" : "Delete"}
+                            {deleting === ms.id ? '…' : 'Delete'}
                           </button>
                         </div>
                       </td>

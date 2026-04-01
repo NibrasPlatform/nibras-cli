@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useState, type FormEvent } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { use } from "react";
-import { apiFetch } from "../../../../../../lib/session";
-import styles from "../../../../instructor.module.css";
+import { useState, type FormEvent } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { use } from 'react';
+import { apiFetch } from '../../../../../../lib/session';
+import styles from '../../../../instructor.module.css';
 
 type RubricRow = { criterion: string; maxScore: number };
 type ResourceRow = { label: string; url: string };
@@ -15,11 +15,11 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [rubric, setRubric] = useState<RubricRow[]>([{ criterion: "", maxScore: 10 }]);
+  const [rubric, setRubric] = useState<RubricRow[]>([{ criterion: '', maxScore: 10 }]);
   const [resources, setResources] = useState<ResourceRow[]>([]);
 
   function addRubricRow() {
-    setRubric((prev) => [...prev, { criterion: "", maxScore: 10 }]);
+    setRubric((prev) => [...prev, { criterion: '', maxScore: 10 }]);
   }
 
   function removeRubricRow(index: number) {
@@ -27,11 +27,11 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
   }
 
   function updateRubricRow(index: number, field: keyof RubricRow, value: string | number) {
-    setRubric((prev) => prev.map((row, i) => i === index ? { ...row, [field]: value } : row));
+    setRubric((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
   }
 
   function addResourceRow() {
-    setResources((prev) => [...prev, { label: "", url: "" }]);
+    setResources((prev) => [...prev, { label: '', url: '' }]);
   }
 
   function removeResourceRow(index: number) {
@@ -39,7 +39,7 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
   }
 
   function updateResourceRow(index: number, field: keyof ResourceRow, value: string) {
-    setResources((prev) => prev.map((row, i) => i === index ? { ...row, [field]: value } : row));
+    setResources((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -48,43 +48,47 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
     setSubmitting(true);
 
     const form = new FormData(event.currentTarget);
-    const slug = (form.get("title") as string)
+    const slug = (form.get('title') as string)
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
 
     const payload = {
       courseId,
       slug,
-      title: (form.get("title") as string).trim(),
-      description: (form.get("description") as string).trim(),
-      status: "draft",
-      deliveryMode: form.get("deliveryMode") as string,
-      rubric: rubric.filter((row) => row.criterion.trim()).map((row) => ({
-        criterion: row.criterion.trim(),
-        maxScore: Number(row.maxScore)
-      })),
-      resources: resources.filter((row) => row.label.trim() && row.url.trim()).map((row) => ({
-        label: row.label.trim(),
-        url: row.url.trim()
-      }))
+      title: (form.get('title') as string).trim(),
+      description: (form.get('description') as string).trim(),
+      status: 'draft',
+      deliveryMode: form.get('deliveryMode') as string,
+      rubric: rubric
+        .filter((row) => row.criterion.trim())
+        .map((row) => ({
+          criterion: row.criterion.trim(),
+          maxScore: Number(row.maxScore),
+        })),
+      resources: resources
+        .filter((row) => row.label.trim() && row.url.trim())
+        .map((row) => ({
+          label: row.label.trim(),
+          url: row.url.trim(),
+        })),
     };
 
     try {
-      const res = await apiFetch("/v1/tracking/projects", {
-        method: "POST",
+      const res = await apiFetch('/v1/tracking/projects', {
+        method: 'POST',
         auth: true,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload)
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const body = await res.json() as { error?: string };
+        const body = (await res.json()) as { error?: string };
         throw new Error(body.error || `Request failed (${res.status}).`);
       }
       router.push(`/instructor/courses/${courseId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error.");
+      setError(err instanceof Error ? err.message : 'Unknown error.');
       setSubmitting(false);
     }
   }
@@ -93,7 +97,7 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
     <div className={styles.formPage}>
       <div>
         <p className={styles.breadcrumb}>
-          <Link href="/instructor">Instructor</Link> /{" "}
+          <Link href="/instructor">Instructor</Link> /{' '}
           <Link href={`/instructor/courses/${courseId}`}>Course</Link> / New Project
         </p>
         <h1>Create Project</h1>
@@ -102,12 +106,23 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
       <form onSubmit={(e) => void handleSubmit(e)} className={styles.formSection}>
         <div className={styles.formGroup}>
           <label htmlFor="title">Project Title</label>
-          <input id="title" name="title" type="text" required placeholder="e.g. Project 1: Buffer Overflow" />
+          <input
+            id="title"
+            name="title"
+            type="text"
+            required
+            placeholder="e.g. Project 1: Buffer Overflow"
+          />
         </div>
 
         <div className={styles.formGroup}>
           <label htmlFor="description">Description</label>
-          <textarea id="description" name="description" placeholder="Brief description shown to students." rows={3} />
+          <textarea
+            id="description"
+            name="description"
+            placeholder="Brief description shown to students."
+            rows={3}
+          />
         </div>
 
         <div className={styles.formGroup}>
@@ -127,7 +142,9 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
             </button>
           </div>
           {rubric.length === 0 && (
-            <p className={styles.muted} style={{ fontSize: "13px" }}>No rubric criteria. Project will not be graded by criterion.</p>
+            <p className={styles.muted} style={{ fontSize: '13px' }}>
+              No rubric criteria. Project will not be graded by criterion.
+            </p>
           )}
           {rubric.map((row, index) => (
             <div key={index} className={styles.dynamicRow}>
@@ -135,7 +152,7 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
                 type="text"
                 placeholder="Criterion description"
                 value={row.criterion}
-                onChange={(e) => updateRubricRow(index, "criterion", e.target.value)}
+                onChange={(e) => updateRubricRow(index, 'criterion', e.target.value)}
                 className={styles.dynamicRowMain}
               />
               <input
@@ -143,7 +160,9 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
                 min={0}
                 max={1000}
                 value={row.maxScore}
-                onChange={(e) => updateRubricRow(index, "maxScore", parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  updateRubricRow(index, 'maxScore', parseFloat(e.target.value) || 0)
+                }
                 className={styles.dynamicRowScore}
                 title="Max score"
               />
@@ -174,14 +193,14 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
                 type="text"
                 placeholder="Label"
                 value={row.label}
-                onChange={(e) => updateResourceRow(index, "label", e.target.value)}
+                onChange={(e) => updateResourceRow(index, 'label', e.target.value)}
                 className={styles.dynamicRowLabel}
               />
               <input
                 type="url"
                 placeholder="https://…"
                 value={row.url}
-                onChange={(e) => updateResourceRow(index, "url", e.target.value)}
+                onChange={(e) => updateResourceRow(index, 'url', e.target.value)}
                 className={styles.dynamicRowMain}
               />
               <button
@@ -200,9 +219,11 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
 
         <div className={styles.formActions}>
           <button type="submit" className={styles.btnPrimary} disabled={submitting}>
-            {submitting ? "Creating…" : "Create Project"}
+            {submitting ? 'Creating…' : 'Create Project'}
           </button>
-          <Link href={`/instructor/courses/${courseId}`} className={styles.backLink}>Cancel</Link>
+          <Link href={`/instructor/courses/${courseId}`} className={styles.backLink}>
+            Cancel
+          </Link>
         </div>
       </form>
     </div>

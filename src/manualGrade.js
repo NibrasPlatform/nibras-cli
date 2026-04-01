@@ -1,13 +1,13 @@
-const fs = require("fs");
-const path = require("path");
-const { resolveProjectPath } = require("./gradingPaths");
+const fs = require('fs');
+const path = require('path');
+const { resolveProjectPath } = require('./gradingPaths');
 
 function readJsonIfExists(filePath) {
   try {
-    const raw = fs.readFileSync(filePath, "utf8");
+    const raw = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(raw);
   } catch (err) {
-    if (err && err.code === "ENOENT") {
+    if (err && err.code === 'ENOENT') {
       return null;
     }
     throw err;
@@ -61,19 +61,25 @@ function resolveManualScore({
   projectConfig,
   earnedOverride,
   totalOverride,
-  scoresPathOverride
+  scoresPathOverride,
 }) {
   const projectPath = resolveProjectPath(cwd, projectConfig.path || project);
   const scoresPath = scoresPathOverride
     ? path.isAbsolute(scoresPathOverride)
       ? scoresPathOverride
       : path.join(cwd, scoresPathOverride)
-    : path.join(projectPath, projectConfig.scoresFile || "scores.json");
+    : path.join(projectPath, projectConfig.scoresFile || 'scores.json');
   const scoresExists = fs.existsSync(scoresPath);
   const scoresData = scoresExists ? readJsonIfExists(scoresPath) : null;
 
-  if (!scoresExists && !Number.isFinite(Number(earnedOverride)) && !Number.isFinite(Number(totalOverride))) {
-    throw new Error(`scores.json not found at ${scoresPath}. Provide --earned/--total or create the file.`);
+  if (
+    !scoresExists &&
+    !Number.isFinite(Number(earnedOverride)) &&
+    !Number.isFinite(Number(totalOverride))
+  ) {
+    throw new Error(
+      `scores.json not found at ${scoresPath}. Provide --earned/--total or create the file.`
+    );
   }
 
   if (scoresData && scoresData.scores) {
@@ -101,10 +107,10 @@ function resolveManualScore({
   }
 
   if (!Number.isFinite(earnedPoints)) {
-    throw new Error("earnedPoints not found. Provide --earned or set it in scores.json.");
+    throw new Error('earnedPoints not found. Provide --earned or set it in scores.json.');
   }
   if (!Number.isFinite(totalPoints) || totalPoints <= 0) {
-    throw new Error("totalPoints not found. Provide --total or set it in config or scores.json.");
+    throw new Error('totalPoints not found. Provide --total or set it in config or scores.json.');
   }
 
   validateTotals(earnedPoints, totalPoints, scoresPath);

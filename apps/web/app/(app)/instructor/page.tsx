@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { apiFetch } from "../../lib/session";
-import styles from "./instructor.module.css";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { apiFetch } from '../../lib/session';
+import styles from './instructor.module.css';
 
 type Course = {
   id: string;
@@ -22,12 +22,12 @@ export default function InstructorPage() {
   useEffect(() => {
     void (async () => {
       try {
-        const res = await apiFetch("/v1/tracking/courses", { auth: true });
-        if (!res.ok) throw new Error("Failed to load courses.");
-        const data = await res.json() as Course[];
+        const res = await apiFetch('/v1/tracking/courses', { auth: true });
+        if (!res.ok) throw new Error('Failed to load courses.');
+        const data = (await res.json()) as Course[];
         setCourses(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error.");
+        setError(err instanceof Error ? err.message : 'Unknown error.');
       } finally {
         setLoading(false);
       }
@@ -61,7 +61,11 @@ export default function InstructorPage() {
       {courses.length > 0 && (
         <div className={styles.courseGrid}>
           {courses.map((course) => (
-            <Link key={course.id} href={`/instructor/courses/${course.id}`} className={styles.courseCard}>
+            <Link
+              key={course.id}
+              href={`/instructor/courses/${course.id}`}
+              className={styles.courseCard}
+            >
               <span className={styles.courseCode}>{course.courseCode}</span>
               <strong>{course.title}</strong>
               <span className={styles.muted}>{course.termLabel}</span>

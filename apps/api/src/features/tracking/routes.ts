@@ -1,4 +1,4 @@
-import { FastifyInstance } from "fastify";
+import { FastifyInstance } from 'fastify';
 import {
   AddCourseMemberRequestSchema,
   CourseMemberSchema,
@@ -16,44 +16,57 @@ import {
   TrackingSubmissionSchema,
   UpdateMilestoneRequestSchema,
   UpdateTrackingProjectRequestSchema,
-  UpdateTrackingSubmissionRequestSchema
-} from "@nibras/contracts";
-import { requireUser } from "../../lib/auth";
-import { requestBaseUrl } from "../../lib/request-base-url";
-import { sendReviewSubmittedEmail } from "../../lib/email";
-import { AppStore } from "../../store";
-import { presentInstructorDashboard, presentMilestone, presentProject, presentStudentDashboard } from "./presenters/dashboard";
-import { canManageCourse, canManageProject, canViewCourse, canViewSubmission, hasAnyInstructorAccess } from "./policies/access";
+  UpdateTrackingSubmissionRequestSchema,
+} from '@nibras/contracts';
+import { requireUser } from '../../lib/auth';
+import { requestBaseUrl } from '../../lib/request-base-url';
+import { AppStore } from '../../store';
+import {
+  presentInstructorDashboard,
+  presentMilestone,
+  presentProject,
+  presentStudentDashboard,
+} from './presenters/dashboard';
+import {
+  canManageCourse,
+  canManageProject,
+  canViewCourse,
+  canViewSubmission,
+  hasAnyInstructorAccess,
+} from './policies/access';
 
 function isReviewRecord<T>(value: T | null): value is T {
   return value !== null;
 }
 
 export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): void {
-  app.get("/v1/tracking/courses", async (request, reply) => {
+  app.get('/v1/tracking/courses', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     return await store.listTrackingCourses(requestBaseUrl(request), auth.user.id);
   });
 
-  app.get("/v1/tracking/courses/:courseId/members", async (request, reply) => {
+  app.get('/v1/tracking/courses/:courseId/members', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
     if (!canManageCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
-    const members = await store.listCourseMembersForInstructor(requestBaseUrl(request), params.courseId);
+    const members = await store.listCourseMembersForInstructor(
+      requestBaseUrl(request),
+      params.courseId
+    );
     return members.map((m) => CourseMemberSchema.parse(m));
   });
 
-  app.post("/v1/tracking/courses/:courseId/members", async (request, reply) => {
+  app.post('/v1/tracking/courses/:courseId/members', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
     if (!canManageCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     const payload = AddCourseMemberRequestSchema.parse(request.body);
@@ -68,27 +81,29 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       return CourseMemberSchema.parse(member);
     } catch (err) {
       const statusCode = (err as { statusCode?: number }).statusCode || 400;
-      reply.code(statusCode).send({ error: err instanceof Error ? err.message : "Failed to add member." });
+      reply
+        .code(statusCode)
+        .send({ error: err instanceof Error ? err.message : 'Failed to add member.' });
     }
   });
 
-  app.delete("/v1/tracking/courses/:courseId/members/:userId", async (request, reply) => {
+  app.delete('/v1/tracking/courses/:courseId/members/:userId', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string; userId: string };
     if (!canManageCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     await store.removeCourseMember(requestBaseUrl(request), params.courseId, params.userId);
     return { ok: true };
   });
 
-  app.post("/v1/tracking/courses", async (request, reply) => {
+  app.post('/v1/tracking/courses', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
-    if (auth.user.systemRole !== "admin" && !hasAnyInstructorAccess(auth)) {
-      reply.code(403).send({ error: "Only instructors and admins may create courses." });
+    if (auth.user.systemRole !== 'admin' && !hasAnyInstructorAccess(auth)) {
+      reply.code(403).send({ error: 'Only instructors and admins may create courses.' });
       return;
     }
     const payload = CreateTrackingCourseRequestSchema.parse(request.body);
@@ -97,416 +112,529 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingCourseSummarySchema.parse(course);
   });
 
-  app.get("/v1/tracking/courses/:courseId/projects", async (request, reply) => {
+  app.get('/v1/tracking/courses/:courseId/projects', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
     if (!canViewCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
-    return (await store.listTrackingProjects(requestBaseUrl(request), params.courseId)).map(presentProject);
+    return (await store.listTrackingProjects(requestBaseUrl(request), params.courseId)).map(
+      presentProject
+    );
   });
 
-  app.post("/v1/tracking/projects", async (request, reply) => {
+  app.post('/v1/tracking/projects', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const payload = CreateTrackingProjectRequestSchema.parse(request.body);
     if (!canManageCourse(auth, payload.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
-    const created = await store.createTrackingProject(requestBaseUrl(request), auth.user.id, payload);
+    const created = await store.createTrackingProject(
+      requestBaseUrl(request),
+      auth.user.id,
+      payload
+    );
     reply.code(201);
     return TrackingProjectSummarySchema.parse(presentProject(created));
   });
 
-  app.get("/v1/tracking/projects/:projectId", async (request, reply) => {
+  app.get('/v1/tracking/projects/:projectId', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project) {
-      reply.code(404).send({ error: "Unknown project." });
+      reply.code(404).send({ error: 'Unknown project.' });
       return;
     }
     if (!project.courseId || !canViewCourse(auth, project.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     const milestones = await store.listTrackingMilestones(requestBaseUrl(request), project.id);
     return TrackingProjectDetailSchema.parse({
       ...presentProject(project),
-      milestones: milestones.map((milestone) => presentMilestone(milestone, [], []))
+      milestones: milestones.map((milestone) => presentMilestone(milestone, [], [])),
     });
   });
 
-  app.patch("/v1/tracking/projects/:projectId", async (request, reply) => {
+  app.patch('/v1/tracking/projects/:projectId', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project || !canManageProject(auth, project)) {
-      reply.code(project ? 403 : 404).send({ error: project ? "Forbidden." : "Unknown project." });
+      reply.code(project ? 403 : 404).send({ error: project ? 'Forbidden.' : 'Unknown project.' });
       return;
     }
     const payload = UpdateTrackingProjectRequestSchema.parse(request.body);
-    const updated = await store.updateTrackingProject(requestBaseUrl(request), auth.user.id, params.projectId, payload);
+    const updated = await store.updateTrackingProject(
+      requestBaseUrl(request),
+      auth.user.id,
+      params.projectId,
+      payload
+    );
     if (!updated) {
-      reply.code(404).send({ error: "Unknown project." });
+      reply.code(404).send({ error: 'Unknown project.' });
       return;
     }
     return TrackingProjectSummarySchema.parse(presentProject(updated));
   });
 
-  app.post("/v1/tracking/projects/:projectId/publish", async (request, reply) => {
+  app.post('/v1/tracking/projects/:projectId/publish', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project || !canManageProject(auth, project)) {
-      reply.code(project ? 403 : 404).send({ error: project ? "Forbidden." : "Unknown project." });
+      reply.code(project ? 403 : 404).send({ error: project ? 'Forbidden.' : 'Unknown project.' });
       return;
     }
-    const updated = await store.setTrackingProjectStatus(requestBaseUrl(request), auth.user.id, params.projectId, "published");
+    const updated = await store.setTrackingProjectStatus(
+      requestBaseUrl(request),
+      auth.user.id,
+      params.projectId,
+      'published'
+    );
     return TrackingProjectSummarySchema.parse(presentProject(updated || project));
   });
 
-  app.post("/v1/tracking/projects/:projectId/unpublish", async (request, reply) => {
+  app.post('/v1/tracking/projects/:projectId/unpublish', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project || !canManageProject(auth, project)) {
-      reply.code(project ? 403 : 404).send({ error: project ? "Forbidden." : "Unknown project." });
+      reply.code(project ? 403 : 404).send({ error: project ? 'Forbidden.' : 'Unknown project.' });
       return;
     }
-    const updated = await store.setTrackingProjectStatus(requestBaseUrl(request), auth.user.id, params.projectId, "draft");
+    const updated = await store.setTrackingProjectStatus(
+      requestBaseUrl(request),
+      auth.user.id,
+      params.projectId,
+      'draft'
+    );
     return TrackingProjectSummarySchema.parse(presentProject(updated || project));
   });
 
-  app.get("/v1/tracking/projects/:projectId/milestones", async (request, reply) => {
+  app.get('/v1/tracking/projects/:projectId/milestones', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project || !project.courseId || !canViewCourse(auth, project.courseId)) {
-      reply.code(project ? 403 : 404).send({ error: project ? "Forbidden." : "Unknown project." });
+      reply.code(project ? 403 : 404).send({ error: project ? 'Forbidden.' : 'Unknown project.' });
       return;
     }
-    const milestones = await store.listTrackingMilestones(requestBaseUrl(request), params.projectId);
-    return milestones.map((entry) => TrackingMilestoneSchema.parse(presentMilestone(entry, [], [])));
+    const milestones = await store.listTrackingMilestones(
+      requestBaseUrl(request),
+      params.projectId
+    );
+    return milestones.map((entry) =>
+      TrackingMilestoneSchema.parse(presentMilestone(entry, [], []))
+    );
   });
 
-  app.post("/v1/tracking/projects/:projectId/milestones", async (request, reply) => {
+  app.post('/v1/tracking/projects/:projectId/milestones', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project || !canManageProject(auth, project)) {
-      reply.code(project ? 403 : 404).send({ error: project ? "Forbidden." : "Unknown project." });
+      reply.code(project ? 403 : 404).send({ error: project ? 'Forbidden.' : 'Unknown project.' });
       return;
     }
     const payload = CreateMilestoneRequestSchema.parse(request.body);
-    const milestone = await store.createTrackingMilestone(requestBaseUrl(request), auth.user.id, params.projectId, payload);
+    const milestone = await store.createTrackingMilestone(
+      requestBaseUrl(request),
+      auth.user.id,
+      params.projectId,
+      payload
+    );
     reply.code(201);
     return TrackingMilestoneSchema.parse(presentMilestone(milestone, [], []));
   });
 
-  app.get("/v1/tracking/milestones/:milestoneId", async (request, reply) => {
+  app.get('/v1/tracking/milestones/:milestoneId', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
     const milestone = await store.getTrackingMilestone(requestBaseUrl(request), params.milestoneId);
     if (!milestone) {
-      reply.code(404).send({ error: "Unknown milestone." });
+      reply.code(404).send({ error: 'Unknown milestone.' });
       return;
     }
-    const project = await store.getTrackingProjectById(requestBaseUrl(request), milestone.projectId);
+    const project = await store.getTrackingProjectById(
+      requestBaseUrl(request),
+      milestone.projectId
+    );
     if (!project?.courseId || !canViewCourse(auth, project.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     const canManage = canManageProject(auth, project);
-    const submissions = (await store.listTrackingMilestoneSubmissions(requestBaseUrl(request), milestone.id))
-      .filter((entry) => auth.user.systemRole === "admin" || canManage || entry.userId === auth.user.id);
-    const reviews = (await Promise.all(submissions.map((entry) => store.getTrackingReview(requestBaseUrl(request), entry.id)))).filter(isReviewRecord);
+    const submissions = (
+      await store.listTrackingMilestoneSubmissions(requestBaseUrl(request), milestone.id)
+    ).filter(
+      (entry) => auth.user.systemRole === 'admin' || canManage || entry.userId === auth.user.id
+    );
+    const reviews = (
+      await Promise.all(
+        submissions.map((entry) => store.getTrackingReview(requestBaseUrl(request), entry.id))
+      )
+    ).filter(isReviewRecord);
     return TrackingMilestoneSchema.parse(presentMilestone(milestone, submissions, reviews));
   });
 
-  app.patch("/v1/tracking/milestones/:milestoneId", async (request, reply) => {
+  app.patch('/v1/tracking/milestones/:milestoneId', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
     const milestone = await store.getTrackingMilestone(requestBaseUrl(request), params.milestoneId);
     if (!milestone) {
-      reply.code(404).send({ error: "Unknown milestone." });
+      reply.code(404).send({ error: 'Unknown milestone.' });
       return;
     }
-    const project = await store.getTrackingProjectById(requestBaseUrl(request), milestone.projectId);
+    const project = await store.getTrackingProjectById(
+      requestBaseUrl(request),
+      milestone.projectId
+    );
     if (!project || !canManageProject(auth, project)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     const payload = UpdateMilestoneRequestSchema.parse(request.body);
-    const updated = await store.updateTrackingMilestone(requestBaseUrl(request), auth.user.id, params.milestoneId, payload);
+    const updated = await store.updateTrackingMilestone(
+      requestBaseUrl(request),
+      auth.user.id,
+      params.milestoneId,
+      payload
+    );
     return TrackingMilestoneSchema.parse(presentMilestone(updated || milestone, [], []));
   });
 
-  app.delete("/v1/tracking/milestones/:milestoneId", async (request, reply) => {
+  app.delete('/v1/tracking/milestones/:milestoneId', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
     const milestone = await store.getTrackingMilestone(requestBaseUrl(request), params.milestoneId);
     if (!milestone) {
-      reply.code(404).send({ error: "Unknown milestone." });
+      reply.code(404).send({ error: 'Unknown milestone.' });
       return;
     }
-    const project = await store.getTrackingProjectById(requestBaseUrl(request), milestone.projectId);
+    const project = await store.getTrackingProjectById(
+      requestBaseUrl(request),
+      milestone.projectId
+    );
     if (!project || !canManageProject(auth, project)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     await store.deleteTrackingMilestone(requestBaseUrl(request), auth.user.id, params.milestoneId);
     return { ok: true };
   });
 
-  app.get("/v1/tracking/milestones/:milestoneId/submissions", async (request, reply) => {
+  app.get('/v1/tracking/milestones/:milestoneId/submissions', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
     const milestone = await store.getTrackingMilestone(requestBaseUrl(request), params.milestoneId);
     if (!milestone) {
-      reply.code(404).send({ error: "Unknown milestone." });
+      reply.code(404).send({ error: 'Unknown milestone.' });
       return;
     }
-    const project = await store.getTrackingProjectById(requestBaseUrl(request), milestone.projectId);
+    const project = await store.getTrackingProjectById(
+      requestBaseUrl(request),
+      milestone.projectId
+    );
     if (!project?.courseId || !canViewCourse(auth, project.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     const canManage = canManageProject(auth, project);
-    const submissions = await store.listTrackingMilestoneSubmissions(requestBaseUrl(request), params.milestoneId);
+    const submissions = await store.listTrackingMilestoneSubmissions(
+      requestBaseUrl(request),
+      params.milestoneId
+    );
     return submissions
-      .filter((entry) => auth.user.systemRole === "admin" || canManage || entry.userId === auth.user.id)
+      .filter(
+        (entry) => auth.user.systemRole === 'admin' || canManage || entry.userId === auth.user.id
+      )
       .map((entry) => TrackingSubmissionSchema.parse(entry));
   });
 
-  app.post("/v1/tracking/milestones/:milestoneId/submissions", async (request, reply) => {
+  app.post('/v1/tracking/milestones/:milestoneId/submissions', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
     const milestone = await store.getTrackingMilestone(requestBaseUrl(request), params.milestoneId);
     if (!milestone) {
-      reply.code(404).send({ error: "Unknown milestone." });
+      reply.code(404).send({ error: 'Unknown milestone.' });
       return;
     }
-    const project = await store.getTrackingProjectById(requestBaseUrl(request), milestone.projectId);
+    const project = await store.getTrackingProjectById(
+      requestBaseUrl(request),
+      milestone.projectId
+    );
     if (!project?.courseId || !canViewCourse(auth, project.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     const payload = CreateTrackingSubmissionRequestSchema.parse(request.body);
-    const created = await store.createTrackingSubmission(requestBaseUrl(request), auth.user.id, params.milestoneId, payload);
+    const created = await store.createTrackingSubmission(
+      requestBaseUrl(request),
+      auth.user.id,
+      params.milestoneId,
+      payload
+    );
     reply.code(201);
     return TrackingSubmissionSchema.parse(created);
   });
 
-  app.get("/v1/tracking/submissions/:submissionId", async (request, reply) => {
+  app.get('/v1/tracking/submissions/:submissionId', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
-    const submission = await store.getSubmissionForAdmin(requestBaseUrl(request), params.submissionId);
+    const submission = await store.getSubmissionForAdmin(
+      requestBaseUrl(request),
+      params.submissionId
+    );
     if (!submission) {
-      reply.code(404).send({ error: "Unknown submission." });
+      reply.code(404).send({ error: 'Unknown submission.' });
       return;
     }
-    const project = await store.getTrackingProjectById(requestBaseUrl(request), submission.projectId);
+    const project = await store.getTrackingProjectById(
+      requestBaseUrl(request),
+      submission.projectId
+    );
     if (!canViewSubmission(auth, project, submission)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     return TrackingSubmissionSchema.parse(submission);
   });
 
-  app.patch("/v1/tracking/submissions/:submissionId", async (request, reply) => {
+  app.patch('/v1/tracking/submissions/:submissionId', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
-    const existing = await store.getSubmissionForAdmin(requestBaseUrl(request), params.submissionId);
+    const existing = await store.getSubmissionForAdmin(
+      requestBaseUrl(request),
+      params.submissionId
+    );
     if (!existing) {
-      reply.code(404).send({ error: "Unknown submission." });
+      reply.code(404).send({ error: 'Unknown submission.' });
       return;
     }
     const project = await store.getTrackingProjectById(requestBaseUrl(request), existing.projectId);
     if (!canViewSubmission(auth, project, existing)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     const payload = UpdateTrackingSubmissionRequestSchema.parse(request.body);
-    const updated = await store.updateTrackingSubmission(requestBaseUrl(request), auth.user.id, params.submissionId, payload);
+    const updated = await store.updateTrackingSubmission(
+      requestBaseUrl(request),
+      auth.user.id,
+      params.submissionId,
+      payload
+    );
     return TrackingSubmissionSchema.parse(updated || existing);
   });
 
-  app.get("/v1/tracking/submissions/:submissionId/review", async (request, reply) => {
+  app.get('/v1/tracking/submissions/:submissionId/review', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
-    const submission = await store.getSubmissionForAdmin(requestBaseUrl(request), params.submissionId);
+    const submission = await store.getSubmissionForAdmin(
+      requestBaseUrl(request),
+      params.submissionId
+    );
     if (!submission) {
-      reply.code(404).send({ error: "Unknown submission." });
+      reply.code(404).send({ error: 'Unknown submission.' });
       return;
     }
-    const project = await store.getTrackingProjectById(requestBaseUrl(request), submission.projectId);
+    const project = await store.getTrackingProjectById(
+      requestBaseUrl(request),
+      submission.projectId
+    );
     if (!canViewSubmission(auth, project, submission)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     const review = await store.getTrackingReview(requestBaseUrl(request), params.submissionId);
     if (!review) {
-      reply.code(404).send({ error: "No review found." });
+      reply.code(404).send({ error: 'No review found.' });
       return;
     }
     return TrackingReviewSchema.parse(review);
   });
 
-  app.post("/v1/tracking/submissions/:submissionId/review", async (request, reply) => {
+  app.post('/v1/tracking/submissions/:submissionId/review', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
-    const submission = await store.getSubmissionForAdmin(requestBaseUrl(request), params.submissionId);
+    const submission = await store.getSubmissionForAdmin(
+      requestBaseUrl(request),
+      params.submissionId
+    );
     if (!submission) {
-      reply.code(404).send({ error: "Unknown submission." });
+      reply.code(404).send({ error: 'Unknown submission.' });
       return;
     }
-    const project = await store.getTrackingProjectById(requestBaseUrl(request), submission.projectId);
+    const project = await store.getTrackingProjectById(
+      requestBaseUrl(request),
+      submission.projectId
+    );
     if (!project || !canManageProject(auth, project)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     const payload = CreateReviewRequestSchema.parse(request.body);
-    const review = await store.createTrackingReview(requestBaseUrl(request), auth.user.id, params.submissionId, payload);
-
-    // Non-blocking: notify student of review result
-    const webBaseUrl = process.env.NIBRAS_WEB_BASE_URL;
-    store.getSubmissionStudentEmail(requestBaseUrl(request), params.submissionId)
-      .then((info) => {
-        if (!info) return;
-        return sendReviewSubmittedEmail({
-          studentEmail: info.email,
-          studentName: info.username,
-          projectName: project.title,
-          reviewStatus: payload.status,
-          feedback: payload.feedback,
-          submissionUrl: webBaseUrl ? `${webBaseUrl}/submissions/${params.submissionId}` : ""
-        });
-      })
-      .catch(() => { /* non-fatal */ });
-
+    const review = await store.createTrackingReview(
+      requestBaseUrl(request),
+      auth.user.id,
+      params.submissionId,
+      payload
+    );
     reply.code(201);
     return TrackingReviewSchema.parse(review);
   });
 
-  app.get("/v1/tracking/review-queue", async (request, reply) => {
+  app.get('/v1/tracking/review-queue', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (!hasAnyInstructorAccess(auth)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
-    const query = request.query as { courseId?: string; projectId?: string; status?: "queued" | "running" | "passed" | "failed" | "needs_review" };
+    const query = request.query as {
+      courseId?: string;
+      projectId?: string;
+      status?: 'queued' | 'running' | 'passed' | 'failed' | 'needs_review';
+    };
     if (query.courseId && !canManageCourse(auth, query.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     const results = await store.listTrackingReviewQueue(requestBaseUrl(request), query);
-    const filtered = auth.user.systemRole === "admin"
-      ? results
-      : (await Promise.all(results.map(async (submission) => {
-          const project = await store.getTrackingProjectById(requestBaseUrl(request), submission.projectId);
-          return project && canManageProject(auth, project) ? submission : null;
-        }))).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+    const filtered =
+      auth.user.systemRole === 'admin'
+        ? results
+        : (
+            await Promise.all(
+              results.map(async (submission) => {
+                const project = await store.getTrackingProjectById(
+                  requestBaseUrl(request),
+                  submission.projectId
+                );
+                return project && canManageProject(auth, project) ? submission : null;
+              })
+            )
+          ).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
     return ReviewQueueResponseSchema.parse({ submissions: filtered });
   });
 
-  app.get("/v1/tracking/activity", async (request, reply) => {
+  app.get('/v1/tracking/activity', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     return await store.listTrackingActivity(requestBaseUrl(request), auth.user.id);
   });
 
-  app.get("/v1/tracking/dashboard/student", async (request, reply) => {
+  app.get('/v1/tracking/dashboard/student', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const query = request.query as { courseId?: string };
-    const dashboard = await store.getStudentTrackingDashboard(requestBaseUrl(request), auth.user.id, query.courseId || null);
-    const submissionsByMilestone: Record<string, Awaited<ReturnType<AppStore["listTrackingMilestoneSubmissions"]>>> = {};
-    const reviewsByMilestone: Record<string, NonNullable<Awaited<ReturnType<AppStore["getTrackingReview"]>>>[]> = {};
+    const dashboard = await store.getStudentTrackingDashboard(
+      requestBaseUrl(request),
+      auth.user.id,
+      query.courseId || null
+    );
+    const submissionsByMilestone: Record<
+      string,
+      Awaited<ReturnType<AppStore['listTrackingMilestoneSubmissions']>>
+    > = {};
+    const reviewsByMilestone: Record<
+      string,
+      NonNullable<Awaited<ReturnType<AppStore['getTrackingReview']>>>[]
+    > = {};
     for (const milestones of Object.values(dashboard.milestonesByProject)) {
       for (const milestone of milestones) {
-        const submissions = (await store.listTrackingMilestoneSubmissions(requestBaseUrl(request), milestone.id))
-          .filter((entry) => entry.userId === auth.user.id);
+        const submissions = (
+          await store.listTrackingMilestoneSubmissions(requestBaseUrl(request), milestone.id)
+        ).filter((entry) => entry.userId === auth.user.id);
         submissionsByMilestone[milestone.id] = submissions;
-        const reviews = (await Promise.all(submissions.map((entry) => store.getTrackingReview(requestBaseUrl(request), entry.id)))).filter(isReviewRecord);
+        const reviews = (
+          await Promise.all(
+            submissions.map((entry) => store.getTrackingReview(requestBaseUrl(request), entry.id))
+          )
+        ).filter(isReviewRecord);
         reviewsByMilestone[milestone.id] = reviews;
       }
     }
     return presentStudentDashboard({
       dashboard,
       submissionsByMilestone,
-      reviewsByMilestone
+      reviewsByMilestone,
     });
   });
 
-  app.get("/v1/tracking/dashboard/instructor", async (request, reply) => {
+  app.get('/v1/tracking/dashboard/instructor', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (!hasAnyInstructorAccess(auth)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
-    return presentInstructorDashboard(await store.getInstructorTrackingDashboard(requestBaseUrl(request), auth.user.id));
+    return presentInstructorDashboard(
+      await store.getInstructorTrackingDashboard(requestBaseUrl(request), auth.user.id)
+    );
   });
 
-  app.get("/v1/tracking/dashboard/course/:courseId", async (request, reply) => {
+  app.get('/v1/tracking/dashboard/course/:courseId', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
     if (!canManageCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
-    return presentInstructorDashboard(await store.getCourseTrackingDashboard(requestBaseUrl(request), auth.user.id, params.courseId));
+    return presentInstructorDashboard(
+      await store.getCourseTrackingDashboard(requestBaseUrl(request), auth.user.id, params.courseId)
+    );
   });
 
-  app.post("/v1/tracking/courses/:courseId/invites", { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (request, reply) => {
+  app.post('/v1/tracking/courses/:courseId/invites', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
     if (!canManageCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     const body = request.body as { role?: string; maxUses?: number; expiresAt?: string | null };
-    const role = (body.role as "student" | "instructor" | "ta") || "student";
+    const role = (body.role as 'student' | 'instructor' | 'ta') || 'student';
     const invite = await store.createCourseInvite(requestBaseUrl(request), params.courseId, role, {
       maxUses: body.maxUses,
-      expiresAt: body.expiresAt
+      expiresAt: body.expiresAt,
     });
     const inviteUrl = `${requestBaseUrl(request)}/join/${invite.code}`;
     reply.code(201);
     return { code: invite.code, inviteUrl };
   });
 
-  app.get("/v1/tracking/invites/:code", async (request, reply) => {
+  app.get('/v1/tracking/invites/:code', async (request, reply) => {
     const params = request.params as { code: string };
     const invite = await store.getCourseInviteByCode(requestBaseUrl(request), params.code);
     if (!invite) {
-      reply.code(404).send({ error: "Invalid invite code." });
+      reply.code(404).send({ error: 'Invalid invite code.' });
       return;
     }
     if (invite.expiresAt && new Date(invite.expiresAt) < new Date()) {
-      reply.code(410).send({ error: "This invite link has expired." });
+      reply.code(410).send({ error: 'This invite link has expired.' });
       return;
     }
     return {
@@ -515,109 +643,46 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       courseCode: invite.course.courseCode,
       termLabel: invite.course.termLabel,
       role: invite.role,
-      expiresAt: invite.expiresAt
+      expiresAt: invite.expiresAt,
     };
   });
 
-  app.post("/v1/tracking/invites/:code/join", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (request, reply) => {
+  app.post('/v1/tracking/invites/:code/join', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { code: string };
     try {
-      const membership = await store.redeemCourseInvite(requestBaseUrl(request), params.code, auth.user.id);
+      const membership = await store.redeemCourseInvite(
+        requestBaseUrl(request),
+        params.code,
+        auth.user.id
+      );
       reply.code(201);
       return membership;
     } catch (err) {
       const e = err as { statusCode?: number; message?: string };
-      reply.code(e.statusCode || 400).send({ error: e.message || "Failed to join course." });
+      reply.code(e.statusCode || 400).send({ error: e.message || 'Failed to join course.' });
     }
   });
 
-  // ── Grade export ─────────────────────────────────────────────────────────
-  app.get("/v1/tracking/courses/:courseId/grades.csv", async (request, reply) => {
-    const auth = await requireUser(request, reply, store);
-    if (!auth) return;
-    const params = request.params as { courseId: string };
-    if (!canManageCourse(auth, params.courseId)) {
-      reply.code(403).send({ error: "Forbidden." });
-      return;
-    }
-    const base = requestBaseUrl(request);
-
-    const [members, projects] = await Promise.all([
-      store.listCourseMembersForInstructor(base, params.courseId),
-      store.listTrackingProjects(base, params.courseId)
-    ]);
-    const students = members.filter((m) => m.role === "student");
-
-    // Flatten: project → milestones
-    const projectMilestones = await Promise.all(
-      projects.map(async (p) => ({ project: p, milestones: await store.listTrackingMilestones(base, p.id) }))
-    );
-    const allMilestones = projectMilestones.flatMap((pm) =>
-      pm.milestones.map((m) => ({ ...m, projectName: pm.project.title }))
-    );
-
-    if (allMilestones.length === 0) {
-      reply.header("content-type", "text/csv; charset=utf-8");
-      return reply.send("github_login,no milestones defined\n");
-    }
-
-    // Header row
-    const milestoneHeaders = allMilestones.map((m) => `"${m.projectName} — ${m.title} (score)"`);
-    const rows: string[] = [`github_login,username,${milestoneHeaders.join(",")}`];
-
-    // All submissions per milestone, keyed by userId
-    const submissionsByMilestone = await Promise.all(
-      allMilestones.map(async (m) => {
-        const subs = await store.listTrackingMilestoneSubmissions(base, m.id);
-        // latest per user
-        const byUser: Record<string, typeof subs[0]> = {};
-        for (const s of subs.sort((a, b) => b.createdAt.localeCompare(a.createdAt))) {
-          byUser[s.userId] ??= s;
-        }
-        return byUser;
-      })
-    );
-
-    // Review scores per submission (batch — one query per needed submission)
-    const reviewCache: Record<string, number | null> = {};
-    const getScore = async (submissionId: string): Promise<number | null> => {
-      if (submissionId in reviewCache) return reviewCache[submissionId];
-      const review = await store.getTrackingReview(base, submissionId);
-      reviewCache[submissionId] = review?.score ?? null;
-      return reviewCache[submissionId];
-    };
-
-    for (const student of students) {
-      const scores = await Promise.all(
-        submissionsByMilestone.map(async (byUser) => {
-          const sub = byUser[student.userId];
-          if (!sub) return "";
-          const score = await getScore(sub.id);
-          return score !== null ? String(score) : sub.status;
-        })
-      );
-      rows.push(`${student.githubLogin},${student.username},${scores.join(",")}`);
-    }
-
-    reply.header("content-type", "text/csv; charset=utf-8");
-    reply.header("content-disposition", `attachment; filename="grades-${params.courseId}.csv"`);
-    return reply.send(rows.join("\n") + "\n");
-  });
-
-  app.get("/v1/tracking/submissions/:submissionId/commits", async (request, reply) => {
+  app.get('/v1/tracking/submissions/:submissionId/commits', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
-    const submission = await store.getSubmissionForAdmin(requestBaseUrl(request), params.submissionId);
+    const submission = await store.getSubmissionForAdmin(
+      requestBaseUrl(request),
+      params.submissionId
+    );
     if (!submission) {
-      reply.code(404).send({ error: "Unknown submission." });
+      reply.code(404).send({ error: 'Unknown submission.' });
       return;
     }
-    const project = await store.getTrackingProjectById(requestBaseUrl(request), submission.projectId);
+    const project = await store.getTrackingProjectById(
+      requestBaseUrl(request),
+      submission.projectId
+    );
     if (!canViewSubmission(auth, project, submission)) {
-      reply.code(403).send({ error: "Forbidden." });
+      reply.code(403).send({ error: 'Forbidden.' });
       return;
     }
     return await store.getTrackingSubmissionCommits(requestBaseUrl(request), params.submissionId);

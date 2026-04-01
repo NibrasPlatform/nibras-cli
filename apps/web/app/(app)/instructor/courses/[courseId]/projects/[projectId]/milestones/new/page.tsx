@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useState, type FormEvent } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { use } from "react";
-import { apiFetch } from "../../../../../../../../lib/session";
-import styles from "../../../../../../instructor.module.css";
+import { useState, type FormEvent } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { use } from 'react';
+import { apiFetch } from '../../../../../../../../lib/session';
+import styles from '../../../../../../instructor.module.css';
 
 export default function NewMilestonePage({
-  params
+  params,
 }: {
   params: Promise<{ courseId: string; projectId: string }>;
 }) {
@@ -23,30 +23,30 @@ export default function NewMilestonePage({
     setSubmitting(true);
 
     const form = new FormData(event.currentTarget);
-    const dueAtRaw = form.get("dueAt") as string;
+    const dueAtRaw = form.get('dueAt') as string;
 
     const payload = {
-      title: (form.get("title") as string).trim(),
-      description: (form.get("description") as string).trim(),
-      order: parseInt(form.get("order") as string, 10) || 1,
+      title: (form.get('title') as string).trim(),
+      description: (form.get('description') as string).trim(),
+      order: parseInt(form.get('order') as string, 10) || 1,
       dueAt: dueAtRaw ? new Date(dueAtRaw).toISOString() : null,
-      isFinal: form.get("isFinal") === "on"
+      isFinal: form.get('isFinal') === 'on',
     };
 
     try {
       const res = await apiFetch(`/v1/tracking/projects/${projectId}/milestones`, {
-        method: "POST",
+        method: 'POST',
         auth: true,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload)
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const body = await res.json() as { error?: string };
+        const body = (await res.json()) as { error?: string };
         throw new Error(body.error || `Request failed (${res.status}).`);
       }
       router.push(`/instructor/courses/${courseId}/projects/${projectId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error.");
+      setError(err instanceof Error ? err.message : 'Unknown error.');
       setSubmitting(false);
     }
   }
@@ -55,9 +55,10 @@ export default function NewMilestonePage({
     <div className={styles.formPage}>
       <div>
         <p className={styles.breadcrumb}>
-          <Link href="/instructor">Instructor</Link> /{" "}
-          <Link href={`/instructor/courses/${courseId}`}>Course</Link> /{" "}
-          <Link href={`/instructor/courses/${courseId}/projects/${projectId}`}>Project</Link> / New Milestone
+          <Link href="/instructor">Instructor</Link> /{' '}
+          <Link href={`/instructor/courses/${courseId}`}>Course</Link> /{' '}
+          <Link href={`/instructor/courses/${courseId}/projects/${projectId}`}>Project</Link> / New
+          Milestone
         </p>
         <h1>Add Milestone</h1>
       </div>
@@ -70,12 +71,24 @@ export default function NewMilestonePage({
 
         <div className={styles.formGroup}>
           <label htmlFor="description">Description</label>
-          <textarea id="description" name="description" rows={3} placeholder="What students need to submit for this milestone." />
+          <textarea
+            id="description"
+            name="description"
+            rows={3}
+            placeholder="What students need to submit for this milestone."
+          />
         </div>
 
         <div className={styles.formGroup}>
           <label htmlFor="order">Order</label>
-          <input id="order" name="order" type="number" min={0} defaultValue={1} style={{ width: 100 }} />
+          <input
+            id="order"
+            name="order"
+            type="number"
+            min={0}
+            defaultValue={1}
+            style={{ width: 100 }}
+          />
         </div>
 
         <div className={styles.formGroup}>
@@ -84,7 +97,7 @@ export default function NewMilestonePage({
         </div>
 
         <div className={styles.formGroup}>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
             <input name="isFinal" type="checkbox" />
             Final milestone (marks project completion)
           </label>
@@ -94,7 +107,7 @@ export default function NewMilestonePage({
 
         <div className={styles.formActions}>
           <button type="submit" className={styles.btnPrimary} disabled={submitting}>
-            {submitting ? "Creating…" : "Create Milestone"}
+            {submitting ? 'Creating…' : 'Create Milestone'}
           </button>
           <Link
             href={`/instructor/courses/${courseId}/projects/${projectId}`}

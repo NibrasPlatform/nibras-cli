@@ -5,9 +5,7 @@
       "id": "q1",
       "points": 45,
       "answerFile": "q1.txt",
-      "solutions": [
-        "Multiple Choice Answers:\n(a) A, D, E\n(b) Only A\n(c) A, D"
-      ]
+      "solutions": ["Multiple Choice Answers:\n(a) A, D, E\n(b) Only A\n(c) A, D"]
     },
     {
       "id": "q2",

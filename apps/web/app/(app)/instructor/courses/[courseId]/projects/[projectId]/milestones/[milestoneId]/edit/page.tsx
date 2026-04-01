@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect, useState, type FormEvent } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { use } from "react";
-import { apiFetch } from "../../../../../../../../../lib/session";
-import styles from "../../../../../../../instructor.module.css";
+import { useEffect, useState, type FormEvent } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { use } from 'react';
+import { apiFetch } from '../../../../../../../../../lib/session';
+import styles from '../../../../../../../instructor.module.css';
 
 type Milestone = {
   id: string;
@@ -17,14 +17,14 @@ type Milestone = {
 };
 
 function toDatetimeLocal(iso: string | null): string {
-  if (!iso) return "";
+  if (!iso) return '';
   const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
+  const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export default function EditMilestonePage({
-  params
+  params,
 }: {
   params: Promise<{ courseId: string; projectId: string; milestoneId: string }>;
 }) {
@@ -33,25 +33,25 @@ export default function EditMilestonePage({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [order, setOrder] = useState(1);
-  const [dueAt, setDueAt] = useState("");
+  const [dueAt, setDueAt] = useState('');
   const [isFinal, setIsFinal] = useState(false);
 
   useEffect(() => {
     void (async () => {
       try {
         const res = await apiFetch(`/v1/tracking/milestones/${milestoneId}`, { auth: true });
-        if (!res.ok) throw new Error("Failed to load milestone.");
-        const data = await res.json() as Milestone;
+        if (!res.ok) throw new Error('Failed to load milestone.');
+        const data = (await res.json()) as Milestone;
         setTitle(data.title);
-        setDescription(data.description || "");
+        setDescription(data.description || '');
         setOrder(data.order);
         setDueAt(toDatetimeLocal(data.dueAt));
         setIsFinal(data.isFinal);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error.");
+        setError(err instanceof Error ? err.message : 'Unknown error.');
       } finally {
         setLoading(false);
       }
@@ -68,23 +68,23 @@ export default function EditMilestonePage({
       description: description.trim(),
       order,
       dueAt: dueAt ? new Date(dueAt).toISOString() : null,
-      isFinal
+      isFinal,
     };
 
     try {
       const res = await apiFetch(`/v1/tracking/milestones/${milestoneId}`, {
-        method: "PATCH",
+        method: 'PATCH',
         auth: true,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload)
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const body = await res.json() as { error?: string };
+        const body = (await res.json()) as { error?: string };
         throw new Error(body.error || `Request failed (${res.status}).`);
       }
       router.push(`/instructor/courses/${courseId}/projects/${projectId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error.");
+      setError(err instanceof Error ? err.message : 'Unknown error.');
       setSubmitting(false);
     }
   }
@@ -101,9 +101,10 @@ export default function EditMilestonePage({
     <div className={styles.formPage}>
       <div>
         <p className={styles.breadcrumb}>
-          <Link href="/instructor">Instructor</Link> /{" "}
-          <Link href={`/instructor/courses/${courseId}`}>Course</Link> /{" "}
-          <Link href={`/instructor/courses/${courseId}/projects/${projectId}`}>Project</Link> / Edit Milestone
+          <Link href="/instructor">Instructor</Link> /{' '}
+          <Link href={`/instructor/courses/${courseId}`}>Course</Link> /{' '}
+          <Link href={`/instructor/courses/${courseId}/projects/${projectId}`}>Project</Link> / Edit
+          Milestone
         </p>
         <h1>Edit Milestone</h1>
       </div>
@@ -153,7 +154,7 @@ export default function EditMilestonePage({
         </div>
 
         <div className={styles.formGroup}>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
             <input
               type="checkbox"
               checked={isFinal}
@@ -167,7 +168,7 @@ export default function EditMilestonePage({
 
         <div className={styles.formActions}>
           <button type="submit" className={styles.btnPrimary} disabled={submitting}>
-            {submitting ? "Saving…" : "Save Changes"}
+            {submitting ? 'Saving…' : 'Save Changes'}
           </button>
           <Link
             href={`/instructor/courses/${courseId}/projects/${projectId}`}

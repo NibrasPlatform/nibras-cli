@@ -1,19 +1,19 @@
-import { FastifyRequest } from "fastify";
+import { FastifyRequest } from 'fastify';
 
-const COOKIE_NAME = "nibras_web_session";
+const COOKIE_NAME = 'nibras_web_session';
 
 type CookieOptions = {
   maxAgeSeconds?: number;
 };
 
 function isSecureRequest(request: FastifyRequest): boolean {
-  const forwardedProto = request.headers["x-forwarded-proto"];
+  const forwardedProto = request.headers['x-forwarded-proto'];
   const proto = Array.isArray(forwardedProto)
     ? forwardedProto[0]
-    : typeof forwardedProto === "string"
-      ? forwardedProto.split(",")[0]?.trim()
+    : typeof forwardedProto === 'string'
+      ? forwardedProto.split(',')[0]?.trim()
       : request.protocol;
-  return proto === "https";
+  return proto === 'https';
 }
 
 export function webSessionCookieName(): string {
@@ -27,21 +27,21 @@ export function createWebSessionCookie(
 ): string {
   const parts = [
     `${COOKIE_NAME}=${encodeURIComponent(token)}`,
-    "Path=/",
-    "HttpOnly",
-    "SameSite=Lax"
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
   ];
 
   if (isSecureRequest(request)) {
-    parts.push("Secure");
+    parts.push('Secure');
   }
-  if (typeof options.maxAgeSeconds === "number") {
+  if (typeof options.maxAgeSeconds === 'number') {
     parts.push(`Max-Age=${options.maxAgeSeconds}`);
   }
 
-  return parts.join("; ");
+  return parts.join('; ');
 }
 
 export function clearWebSessionCookie(request: FastifyRequest): string {
-  return createWebSessionCookie(request, "", { maxAgeSeconds: 0 });
+  return createWebSessionCookie(request, '', { maxAgeSeconds: 0 });
 }

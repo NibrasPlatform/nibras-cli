@@ -1,12 +1,12 @@
-import { AuthenticatedRequest, hasCourseAccess, hasCourseRole } from "../../../lib/auth";
-import { ProjectRecord, SubmissionRecord } from "../../../store";
+import { AuthenticatedRequest, hasCourseAccess, hasCourseRole } from '../../../lib/auth';
+import { ProjectRecord, SubmissionRecord } from '../../../store';
 
 export function canViewCourse(auth: AuthenticatedRequest, courseId: string): boolean {
   return hasCourseAccess(auth, courseId);
 }
 
 export function canManageCourse(auth: AuthenticatedRequest, courseId: string): boolean {
-  return hasCourseRole(auth, courseId, ["instructor", "ta"]);
+  return hasCourseRole(auth, courseId, ['instructor', 'ta']);
 }
 
 export function canManageProject(auth: AuthenticatedRequest, project: ProjectRecord): boolean {
@@ -17,10 +17,10 @@ export function canManageProject(auth: AuthenticatedRequest, project: ProjectRec
 }
 
 export function hasAnyInstructorAccess(auth: AuthenticatedRequest): boolean {
-  if (auth.user.systemRole === "admin") {
+  if (auth.user.systemRole === 'admin') {
     return true;
   }
-  return auth.memberships.some((entry) => entry.role === "instructor" || entry.role === "ta");
+  return auth.memberships.some((entry) => entry.role === 'instructor' || entry.role === 'ta');
 }
 
 export function canViewSubmission(
@@ -28,7 +28,7 @@ export function canViewSubmission(
   project: ProjectRecord | null,
   submission: SubmissionRecord
 ): boolean {
-  if (auth.user.systemRole === "admin" || submission.userId === auth.user.id) {
+  if (auth.user.systemRole === 'admin' || submission.userId === auth.user.id) {
     return true;
   }
   if (!project) {

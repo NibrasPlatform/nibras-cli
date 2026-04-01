@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect, useState, type FormEvent } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { use } from "react";
-import { apiFetch } from "../../../../../../../lib/session";
-import styles from "../../../../../instructor.module.css";
+import { useEffect, useState, type FormEvent } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { use } from 'react';
+import { apiFetch } from '../../../../../../../lib/session';
+import styles from '../../../../../instructor.module.css';
 
 type RubricRow = { criterion: string; maxScore: number };
 type ResourceRow = { label: string; url: string };
@@ -21,7 +21,7 @@ type Project = {
 };
 
 export default function EditProjectPage({
-  params
+  params,
 }: {
   params: Promise<{ courseId: string; projectId: string }>;
 }) {
@@ -30,10 +30,10 @@ export default function EditProjectPage({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [deliveryMode, setDeliveryMode] = useState("individual");
-  const [status, setStatus] = useState("draft");
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [deliveryMode, setDeliveryMode] = useState('individual');
+  const [status, setStatus] = useState('draft');
   const [rubric, setRubric] = useState<RubricRow[]>([]);
   const [resources, setResources] = useState<ResourceRow[]>([]);
 
@@ -41,16 +41,16 @@ export default function EditProjectPage({
     void (async () => {
       try {
         const res = await apiFetch(`/v1/tracking/projects/${projectId}`, { auth: true });
-        if (!res.ok) throw new Error("Failed to load project.");
-        const data = await res.json() as Project;
+        if (!res.ok) throw new Error('Failed to load project.');
+        const data = (await res.json()) as Project;
         setTitle(data.title);
-        setDescription(data.description || "");
+        setDescription(data.description || '');
         setDeliveryMode(data.deliveryMode);
         setStatus(data.status);
         setRubric(data.rubric.length > 0 ? data.rubric : []);
         setResources(data.resources || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error.");
+        setError(err instanceof Error ? err.message : 'Unknown error.');
       } finally {
         setLoading(false);
       }
@@ -58,7 +58,7 @@ export default function EditProjectPage({
   }, [projectId]);
 
   function addRubricRow() {
-    setRubric((prev) => [...prev, { criterion: "", maxScore: 10 }]);
+    setRubric((prev) => [...prev, { criterion: '', maxScore: 10 }]);
   }
 
   function removeRubricRow(index: number) {
@@ -66,11 +66,11 @@ export default function EditProjectPage({
   }
 
   function updateRubricRow(index: number, field: keyof RubricRow, value: string | number) {
-    setRubric((prev) => prev.map((row, i) => i === index ? { ...row, [field]: value } : row));
+    setRubric((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
   }
 
   function addResourceRow() {
-    setResources((prev) => [...prev, { label: "", url: "" }]);
+    setResources((prev) => [...prev, { label: '', url: '' }]);
   }
 
   function removeResourceRow(index: number) {
@@ -78,7 +78,7 @@ export default function EditProjectPage({
   }
 
   function updateResourceRow(index: number, field: keyof ResourceRow, value: string) {
-    setResources((prev) => prev.map((row, i) => i === index ? { ...row, [field]: value } : row));
+    setResources((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -91,30 +91,34 @@ export default function EditProjectPage({
       description: description.trim(),
       deliveryMode,
       status,
-      rubric: rubric.filter((row) => row.criterion.trim()).map((row) => ({
-        criterion: row.criterion.trim(),
-        maxScore: Number(row.maxScore)
-      })),
-      resources: resources.filter((row) => row.label.trim() && row.url.trim()).map((row) => ({
-        label: row.label.trim(),
-        url: row.url.trim()
-      }))
+      rubric: rubric
+        .filter((row) => row.criterion.trim())
+        .map((row) => ({
+          criterion: row.criterion.trim(),
+          maxScore: Number(row.maxScore),
+        })),
+      resources: resources
+        .filter((row) => row.label.trim() && row.url.trim())
+        .map((row) => ({
+          label: row.label.trim(),
+          url: row.url.trim(),
+        })),
     };
 
     try {
       const res = await apiFetch(`/v1/tracking/projects/${projectId}`, {
-        method: "PATCH",
+        method: 'PATCH',
         auth: true,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload)
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const body = await res.json() as { error?: string };
+        const body = (await res.json()) as { error?: string };
         throw new Error(body.error || `Request failed (${res.status}).`);
       }
       router.push(`/instructor/courses/${courseId}/projects/${projectId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error.");
+      setError(err instanceof Error ? err.message : 'Unknown error.');
       setSubmitting(false);
     }
   }
@@ -131,8 +135,8 @@ export default function EditProjectPage({
     <div className={styles.formPage}>
       <div>
         <p className={styles.breadcrumb}>
-          <Link href="/instructor">Instructor</Link> /{" "}
-          <Link href={`/instructor/courses/${courseId}`}>Course</Link> /{" "}
+          <Link href="/instructor">Instructor</Link> /{' '}
+          <Link href={`/instructor/courses/${courseId}`}>Course</Link> /{' '}
           <Link href={`/instructor/courses/${courseId}/projects/${projectId}`}>Project</Link> / Edit
         </p>
         <h1>Edit Project</h1>
@@ -174,11 +178,7 @@ export default function EditProjectPage({
 
         <div className={styles.formGroup}>
           <label htmlFor="status">Status</label>
-          <select
-            id="status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-          >
+          <select id="status" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="draft">Draft</option>
             <option value="published">Published</option>
             <option value="archived">Archived</option>
@@ -194,7 +194,9 @@ export default function EditProjectPage({
             </button>
           </div>
           {rubric.length === 0 && (
-            <p className={styles.muted} style={{ fontSize: "13px" }}>No rubric criteria.</p>
+            <p className={styles.muted} style={{ fontSize: '13px' }}>
+              No rubric criteria.
+            </p>
           )}
           {rubric.map((row, index) => (
             <div key={index} className={styles.dynamicRow}>
@@ -202,7 +204,7 @@ export default function EditProjectPage({
                 type="text"
                 placeholder="Criterion description"
                 value={row.criterion}
-                onChange={(e) => updateRubricRow(index, "criterion", e.target.value)}
+                onChange={(e) => updateRubricRow(index, 'criterion', e.target.value)}
                 className={styles.dynamicRowMain}
               />
               <input
@@ -210,7 +212,9 @@ export default function EditProjectPage({
                 min={0}
                 max={1000}
                 value={row.maxScore}
-                onChange={(e) => updateRubricRow(index, "maxScore", parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  updateRubricRow(index, 'maxScore', parseFloat(e.target.value) || 0)
+                }
                 className={styles.dynamicRowScore}
                 title="Max score"
               />
@@ -241,14 +245,14 @@ export default function EditProjectPage({
                 type="text"
                 placeholder="Label"
                 value={row.label}
-                onChange={(e) => updateResourceRow(index, "label", e.target.value)}
+                onChange={(e) => updateResourceRow(index, 'label', e.target.value)}
                 className={styles.dynamicRowLabel}
               />
               <input
                 type="url"
                 placeholder="https://…"
                 value={row.url}
-                onChange={(e) => updateResourceRow(index, "url", e.target.value)}
+                onChange={(e) => updateResourceRow(index, 'url', e.target.value)}
                 className={styles.dynamicRowMain}
               />
               <button
@@ -267,7 +271,7 @@ export default function EditProjectPage({
 
         <div className={styles.formActions}>
           <button type="submit" className={styles.btnPrimary} disabled={submitting}>
-            {submitting ? "Saving…" : "Save Changes"}
+            {submitting ? 'Saving…' : 'Save Changes'}
           </button>
           <Link
             href={`/instructor/courses/${courseId}/projects/${projectId}`}

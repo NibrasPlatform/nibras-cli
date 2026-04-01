@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { apiFetch } from "../../lib/session";
-import Sidebar from "./sidebar";
-import TopHeader from "./top-header";
-import styles from "./app-shell.module.css";
+import { useEffect, useState } from 'react';
+import { apiFetch } from '../../lib/session';
+import Sidebar from './sidebar';
+import TopHeader from './top-header';
+import styles from './app-shell.module.css';
 
 type ShellSessionPayload = {
   user: {
@@ -17,7 +17,7 @@ type ShellSessionPayload = {
   };
 };
 
-export type ShellUser = ShellSessionPayload["user"];
+export type ShellUser = ShellSessionPayload['user'];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<ShellUser | null>(null);
@@ -28,11 +28,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
     void (async () => {
       try {
-        const response = await apiFetch("/v1/web/session", { auth: true });
+        const response = await apiFetch('/v1/web/session', { auth: true });
         if (!response.ok) {
-          throw new Error("Session unavailable.");
+          throw new Error('Session unavailable.');
         }
-        const payload = await response.json() as ShellSessionPayload;
+        const payload = (await response.json()) as ShellSessionPayload;
         if (alive) {
           setSession(payload.user);
         }

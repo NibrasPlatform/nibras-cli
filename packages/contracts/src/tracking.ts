@@ -1,31 +1,31 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-export const TrackingMembershipRoleSchema = z.enum(["student", "instructor", "ta"]);
-export const TrackingProjectStatusSchema = z.enum(["draft", "published", "archived"]);
-export const TrackingDeliveryModeSchema = z.enum(["individual", "team"]);
-export const TrackingSubmissionTypeSchema = z.enum(["github", "link", "text"]);
+export const TrackingMembershipRoleSchema = z.enum(['student', 'instructor', 'ta']);
+export const TrackingProjectStatusSchema = z.enum(['draft', 'published', 'archived']);
+export const TrackingDeliveryModeSchema = z.enum(['individual', 'team']);
+export const TrackingSubmissionTypeSchema = z.enum(['github', 'link', 'text']);
 export const TrackingSubmissionStatusSchema = z.enum([
-  "queued",
-  "running",
-  "passed",
-  "failed",
-  "needs_review"
+  'queued',
+  'running',
+  'passed',
+  'failed',
+  'needs_review',
 ]);
 export const TrackingReviewStatusSchema = z.enum([
-  "pending",
-  "approved",
-  "changes_requested",
-  "graded"
+  'pending',
+  'approved',
+  'changes_requested',
+  'graded',
 ]);
 
 export const TrackingResourceSchema = z.object({
   label: z.string().min(1),
-  url: z.string().url()
+  url: z.string().url(),
 });
 
 export const TrackingRubricItemSchema = z.object({
   criterion: z.string().min(1),
-  maxScore: z.number().nonnegative()
+  maxScore: z.number().nonnegative(),
 });
 
 export const TrackingCourseSummarySchema = z.object({
@@ -34,13 +34,13 @@ export const TrackingCourseSummarySchema = z.object({
   title: z.string().min(1),
   termLabel: z.string().min(1),
   courseCode: z.string().min(1),
-  isActive: z.boolean()
+  isActive: z.boolean(),
 });
 
 export const TrackingMembershipSchema = z.object({
   courseId: z.string().min(1),
   userId: z.string().min(1),
-  role: TrackingMembershipRoleSchema
+  role: TrackingMembershipRoleSchema,
 });
 
 export const TrackingProjectSummarySchema = z.object({
@@ -48,7 +48,7 @@ export const TrackingProjectSummarySchema = z.object({
   projectKey: z.string().min(1),
   courseId: z.string().min(1),
   title: z.string().min(1),
-  description: z.string().default(""),
+  description: z.string().default(''),
   status: TrackingProjectStatusSchema,
   deliveryMode: TrackingDeliveryModeSchema,
   gradeWeight: z.string().nullable(),
@@ -58,53 +58,30 @@ export const TrackingProjectSummarySchema = z.object({
   type: z.string().min(1),
   rubric: z.array(TrackingRubricItemSchema),
   resources: z.array(TrackingResourceSchema),
-  team: z.array(z.object({
-    name: z.string().min(1),
-    initials: z.string().min(1),
-    color: z.string().min(1)
-  }))
-});
-
-export const AiCriterionScoreSchema = z.object({
-  id: z.string().min(1),
-  points: z.number(),
-  earned: z.number(),
-  justification: z.string()
-});
-
-export const MilestoneReviewSummarySchema = z.object({
-  status: TrackingReviewStatusSchema,
-  score: z.number().nullable(),
-  feedback: z.string().default(""),
-  criterionScores: z.array(AiCriterionScoreSchema).nullable(),
-  evidenceQuotes: z.array(z.string()).nullable()
-});
-
-export const MilestoneSubmissionSummarySchema = z.object({
-  id: z.string().min(1),
-  status: TrackingSubmissionStatusSchema,
-  commitSha: z.string(),
-  branch: z.string(),
-  createdAt: z.string().datetime()
+  team: z.array(
+    z.object({
+      name: z.string().min(1),
+      initials: z.string().min(1),
+      color: z.string().min(1),
+    })
+  ),
 });
 
 export const TrackingMilestoneSchema = z.object({
   id: z.string().min(1),
   projectId: z.string().min(1),
   title: z.string().min(1),
-  description: z.string().default(""),
+  description: z.string().default(''),
   order: z.number().int().nonnegative(),
   dueAt: z.string().datetime().nullable(),
   dueDateLabel: z.string().min(1),
   status: z.string().min(1),
   statusLabel: z.string().min(1),
   isFinal: z.boolean(),
-  latestReview: MilestoneReviewSummarySchema.nullable().default(null),
-  submissionHistory: z.array(MilestoneSubmissionSummarySchema).default([])
 });
 
 export const TrackingProjectDetailSchema = TrackingProjectSummarySchema.extend({
-  milestones: z.array(TrackingMilestoneSchema)
+  milestones: z.array(TrackingMilestoneSchema),
 });
 
 export const TrackingSubmissionSchema = z.object({
@@ -124,7 +101,14 @@ export const TrackingSubmissionSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   submittedAt: z.string().datetime().nullable(),
-  localTestExitCode: z.number().int().nullable()
+  localTestExitCode: z.number().int().nullable(),
+});
+
+export const AiCriterionScoreSchema = z.object({
+  id: z.string().min(1),
+  points: z.number(),
+  earned: z.number(),
+  justification: z.string(),
 });
 
 export const TrackingReviewSchema = z.object({
@@ -133,7 +117,7 @@ export const TrackingReviewSchema = z.object({
   reviewerUserId: z.string().min(1),
   status: TrackingReviewStatusSchema,
   score: z.number().nullable(),
-  feedback: z.string().default(""),
+  feedback: z.string().default(''),
   rubric: z.array(TrackingRubricItemSchema),
   reviewedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
@@ -145,7 +129,7 @@ export const TrackingReviewSchema = z.object({
   aiCriterionScores: z.array(AiCriterionScoreSchema).nullable(),
   aiEvidenceQuotes: z.array(z.string()).nullable(),
   aiModel: z.string().nullable(),
-  aiGradedAt: z.string().datetime().nullable()
+  aiGradedAt: z.string().datetime().nullable(),
 });
 
 export const TrackingActivityEventSchema = z.object({
@@ -157,7 +141,7 @@ export const TrackingActivityEventSchema = z.object({
   submissionId: z.string().nullable(),
   action: z.string().min(1),
   summary: z.string().min(1),
-  createdAt: z.string().datetime()
+  createdAt: z.string().datetime(),
 });
 
 export const TrackingDashboardStatsSchema = z.object({
@@ -165,7 +149,7 @@ export const TrackingDashboardStatsSchema = z.object({
   underReview: z.number().int().nonnegative(),
   completion: z.number().int().nonnegative(),
   total: z.number().int().nonnegative(),
-  daysRemaining: z.number().int()
+  daysRemaining: z.number().int(),
 });
 
 export const StudentProjectsDashboardResponseSchema = z.object({
@@ -176,18 +160,18 @@ export const StudentProjectsDashboardResponseSchema = z.object({
   activeProjectId: z.string().nullable(),
   activity: z.array(TrackingActivityEventSchema),
   statsByProject: z.record(z.string(), TrackingDashboardStatsSchema),
-  pageError: z.string().nullable()
+  pageError: z.string().nullable(),
 });
 
 export const InstructorDashboardResponseSchema = z.object({
   courses: z.array(TrackingCourseSummarySchema),
   reviewQueue: z.array(TrackingSubmissionSchema),
-  activity: z.array(TrackingActivityEventSchema)
+  activity: z.array(TrackingActivityEventSchema),
 });
 
 export const AddCourseMemberRequestSchema = z.object({
   githubLogin: z.string().min(1),
-  role: TrackingMembershipRoleSchema
+  role: TrackingMembershipRoleSchema,
 });
 
 export const CourseMemberSchema = z.object({
@@ -197,37 +181,42 @@ export const CourseMemberSchema = z.object({
   username: z.string().min(1),
   githubLogin: z.string().min(1),
   role: TrackingMembershipRoleSchema,
-  createdAt: z.string().datetime()
+  createdAt: z.string().datetime(),
 });
 
 export const CreateTrackingCourseRequestSchema = z.object({
-  slug: z.string().min(1).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
+  slug: z
+    .string()
+    .min(1)
+    .regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
   title: z.string().min(1),
   termLabel: z.string().min(1),
-  courseCode: z.string().min(1)
+  courseCode: z.string().min(1),
 });
 
 export const CreateTrackingProjectRequestSchema = z.object({
   courseId: z.string().min(1),
   slug: z.string().min(1),
   title: z.string().min(1),
-  description: z.string().default(""),
-  status: TrackingProjectStatusSchema.default("draft"),
-  deliveryMode: TrackingDeliveryModeSchema.default("individual"),
+  description: z.string().default(''),
+  status: TrackingProjectStatusSchema.default('draft'),
+  deliveryMode: TrackingDeliveryModeSchema.default('individual'),
   rubric: z.array(TrackingRubricItemSchema).default([]),
-  resources: z.array(TrackingResourceSchema).default([])
+  resources: z.array(TrackingResourceSchema).default([]),
 });
 
-export const UpdateTrackingProjectRequestSchema = CreateTrackingProjectRequestSchema.partial().omit({
-  courseId: true
-});
+export const UpdateTrackingProjectRequestSchema = CreateTrackingProjectRequestSchema.partial().omit(
+  {
+    courseId: true,
+  }
+);
 
 export const CreateMilestoneRequestSchema = z.object({
   title: z.string().min(1),
-  description: z.string().default(""),
+  description: z.string().default(''),
   order: z.number().int().nonnegative(),
   dueAt: z.string().datetime().nullable().default(null),
-  isFinal: z.boolean().default(false)
+  isFinal: z.boolean().default(false),
 });
 
 export const UpdateMilestoneRequestSchema = CreateMilestoneRequestSchema.partial();
@@ -235,23 +224,24 @@ export const UpdateMilestoneRequestSchema = CreateMilestoneRequestSchema.partial
 export const CreateTrackingSubmissionRequestSchema = z.object({
   submissionType: TrackingSubmissionTypeSchema,
   submissionValue: z.string().min(1),
-  notes: z.string().default(""),
-  repoUrl: z.string().default(""),
-  branch: z.string().default("main"),
-  commitSha: z.string().default("")
+  notes: z.string().default(''),
+  repoUrl: z.string().default(''),
+  branch: z.string().default('main'),
+  commitSha: z.string().default(''),
 });
 
-export const UpdateTrackingSubmissionRequestSchema = CreateTrackingSubmissionRequestSchema.partial();
+export const UpdateTrackingSubmissionRequestSchema =
+  CreateTrackingSubmissionRequestSchema.partial();
 
 export const CreateReviewRequestSchema = z.object({
   status: TrackingReviewStatusSchema,
   score: z.number().nullable().default(null),
-  feedback: z.string().default(""),
-  rubric: z.array(TrackingRubricItemSchema).default([])
+  feedback: z.string().default(''),
+  rubric: z.array(TrackingRubricItemSchema).default([]),
 });
 
 export const ReviewQueueResponseSchema = z.object({
-  submissions: z.array(TrackingSubmissionSchema)
+  submissions: z.array(TrackingSubmissionSchema),
 });
 
 export const CourseInvitePreviewSchema = z.object({
@@ -260,12 +250,12 @@ export const CourseInvitePreviewSchema = z.object({
   courseCode: z.string().min(1),
   termLabel: z.string().min(1),
   role: TrackingMembershipRoleSchema,
-  expiresAt: z.string().datetime().nullable()
+  expiresAt: z.string().datetime().nullable(),
 });
 
 export const CreateCourseInviteResponseSchema = z.object({
   code: z.string().min(1),
-  inviteUrl: z.string().min(1)
+  inviteUrl: z.string().min(1),
 });
 
 export type CourseInvitePreview = z.infer<typeof CourseInvitePreviewSchema>;
@@ -275,13 +265,13 @@ export type TrackingMembership = z.infer<typeof TrackingMembershipSchema>;
 export type TrackingProjectSummary = z.infer<typeof TrackingProjectSummarySchema>;
 export type TrackingProjectDetail = z.infer<typeof TrackingProjectDetailSchema>;
 export type TrackingMilestone = z.infer<typeof TrackingMilestoneSchema>;
-export type MilestoneReviewSummary = z.infer<typeof MilestoneReviewSummarySchema>;
-export type MilestoneSubmissionSummary = z.infer<typeof MilestoneSubmissionSummarySchema>;
 export type TrackingSubmission = z.infer<typeof TrackingSubmissionSchema>;
 export type AiCriterionScore = z.infer<typeof AiCriterionScoreSchema>;
 export type TrackingReview = z.infer<typeof TrackingReviewSchema>;
 export type TrackingActivityEvent = z.infer<typeof TrackingActivityEventSchema>;
-export type StudentProjectsDashboardResponse = z.infer<typeof StudentProjectsDashboardResponseSchema>;
+export type StudentProjectsDashboardResponse = z.infer<
+  typeof StudentProjectsDashboardResponseSchema
+>;
 export type InstructorDashboardResponse = z.infer<typeof InstructorDashboardResponseSchema>;
 export type CreateTrackingProjectRequest = z.infer<typeof CreateTrackingProjectRequestSchema>;
 export type UpdateTrackingProjectRequest = z.infer<typeof UpdateTrackingProjectRequestSchema>;

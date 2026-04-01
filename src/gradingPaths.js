@@ -1,4 +1,4 @@
-const path = require("path");
+const path = require('path');
 
 function resolveNearestDefined(...values) {
   for (const value of values) {
@@ -28,5 +28,5 @@ module.exports = {
   resolveNearestDefined,
   resolveProjectPath,
   resolveRelativeToProjectOrAbsolute,
-  resolveRelativeToCwdOrAbsolute
+  resolveRelativeToCwdOrAbsolute,
 };

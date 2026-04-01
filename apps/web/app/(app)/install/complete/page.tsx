@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
-import { Suspense, FormEvent, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { apiFetch } from "../../../lib/session";
-import styles from "./page.module.css";
+import { Suspense, FormEvent, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { apiFetch } from '../../../lib/session';
+import styles from './page.module.css';
 
 function InstallCompleteContent() {
   const searchParams = useSearchParams();
-  const installationIdFromQuery = searchParams.get("installation_id")?.trim() || "";
-  const stateFromQuery = searchParams.get("state")?.trim() || "";
-  const setupAction = searchParams.get("setup_action")?.trim() || "";
+  const installationIdFromQuery = searchParams.get('installation_id')?.trim() || '';
+  const stateFromQuery = searchParams.get('state')?.trim() || '';
+  const setupAction = searchParams.get('setup_action')?.trim() || '';
 
-  const [installationId, setInstallationId] = useState("");
-  const [status, setStatus] = useState("");
+  const [installationId, setInstallationId] = useState('');
+  const [status, setStatus] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [autoLinked, setAutoLinked] = useState(false);
 
@@ -23,16 +23,16 @@ function InstallCompleteContent() {
   }, [installationIdFromQuery]);
 
   async function submitInstallation(id: string, state?: string) {
-    const response = await apiFetch("/v1/github/setup/complete", {
-      method: "POST",
+    const response = await apiFetch('/v1/github/setup/complete', {
+      method: 'POST',
       auth: true,
       headers: {
-        "content-type": "application/json"
+        'content-type': 'application/json',
       },
       body: JSON.stringify({
         installationId: id,
-        ...(state ? { state } : {})
-      })
+        ...(state ? { state } : {}),
+      }),
     });
     return response.json() as Promise<{ installationId: string; redirectTo?: string }>;
   }
@@ -44,14 +44,14 @@ function InstallCompleteContent() {
 
     setAutoLinked(true);
     setSubmitting(true);
-    setStatus("Completing GitHub App installation...");
+    setStatus('Completing GitHub App installation...');
 
     void (async () => {
       try {
         const payload = await submitInstallation(installationIdFromQuery, stateFromQuery);
         setStatus(`Installation ${payload.installationId} linked successfully. Redirecting...`);
         window.setTimeout(() => {
-          window.location.href = payload.redirectTo || "/dashboard";
+          window.location.href = payload.redirectTo || '/dashboard';
         }, 900);
       } catch (err) {
         setStatus(err instanceof Error ? err.message : String(err));
@@ -64,13 +64,13 @@ function InstallCompleteContent() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
-    setStatus("");
+    setStatus('');
     try {
       const payload = await submitInstallation(installationId.trim(), stateFromQuery || undefined);
       setStatus(`Installation ${payload.installationId} linked successfully.`);
-      setInstallationId("");
+      setInstallationId('');
       window.setTimeout(() => {
-        window.location.href = payload.redirectTo || "/dashboard";
+        window.location.href = payload.redirectTo || '/dashboard';
       }, 900);
     } catch (err) {
       setStatus(err instanceof Error ? err.message : String(err));
@@ -87,8 +87,8 @@ function InstallCompleteContent() {
           <h1>Complete installation linking</h1>
           <p className="bodyMuted">
             {installationIdFromQuery
-              ? "GitHub returned an installation to link. Review the state below or let the page finish the link automatically."
-              : "Paste the installation ID returned by GitHub to verify ownership and connect the app installation to your hosted account."}
+              ? 'GitHub returned an installation to link. Review the state below or let the page finish the link automatically.'
+              : 'Paste the installation ID returned by GitHub to verify ownership and connect the app installation to your hosted account.'}
           </p>
           {setupAction ? <p className="bodyMuted">GitHub setup action: {setupAction}</p> : null}
         </div>
@@ -106,10 +106,20 @@ function InstallCompleteContent() {
             />
           </label>
           <div className={styles.actions}>
-            <button className="buttonPrimary" type="submit" disabled={submitting || !installationId.trim()}>
-              {submitting ? "Linking..." : installationIdFromQuery ? "Retry installation link" : "Link installation"}
+            <button
+              className="buttonPrimary"
+              type="submit"
+              disabled={submitting || !installationId.trim()}
+            >
+              {submitting
+                ? 'Linking...'
+                : installationIdFromQuery
+                  ? 'Retry installation link'
+                  : 'Link installation'}
             </button>
-            <a className="buttonSecondary" href="/dashboard">Back to dashboard</a>
+            <a className="buttonSecondary" href="/dashboard">
+              Back to dashboard
+            </a>
           </div>
         </form>
         {status ? <p className={styles.status}>{status}</p> : null}
@@ -120,17 +130,18 @@ function InstallCompleteContent() {
 
 export default function InstallCompletePage() {
   return (
-    <Suspense fallback={(
-      <main className="pageSection">
-        <section className={`${styles.hero} pageHero`}>
-          <div>
-            <span className="sectionEyebrow">GitHub App</span>
-            <h1>Complete installation linking</h1>
-            <p className="bodyMuted">Loading GitHub installation details...</p>
-          </div>
-        </section>
-      </main>
-    )}
+    <Suspense
+      fallback={
+        <main className="pageSection">
+          <section className={`${styles.hero} pageHero`}>
+            <div>
+              <span className="sectionEyebrow">GitHub App</span>
+              <h1>Complete installation linking</h1>
+              <p className="bodyMuted">Loading GitHub installation details...</p>
+            </div>
+          </section>
+        </main>
+      }
     >
       <InstallCompleteContent />
     </Suspense>

@@ -31,7 +31,8 @@
     "web:build": "npm run build -w @nibras/web",
     "manual:preflight": "npm test && npm run web:build",
     "test": "npm run build && node --test test/*.js",
-    "lint": "node -e \"console.log('no lint configured')\""
+    "lint": "eslint . && prettier --check .",
+    "lint:fix": "eslint . --fix && prettier --write ."
   },
   "files": [
     "apps",
@@ -46,12 +47,21 @@
     "commander": "^12.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
     "@types/node": "^24.0.0",
     "concurrently": "^9.2.1",
     "dotenv": "^16.6.1",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "eslint-plugin-react": "^7.37.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "globals": "^17.4.0",
     "nodemon": "^3.1.10",
+    "prettier": "^3.0.0",
     "prisma": "^6.5.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

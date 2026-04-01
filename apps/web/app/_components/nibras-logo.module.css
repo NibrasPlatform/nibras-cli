@@ -29,18 +29,18 @@
   filter: drop-shadow(0 6px 18px rgba(2, 6, 23, 0.18));
 }
 
-:global([data-theme="light"]) .themeLight {
+:global([data-theme='light']) .themeLight {
   display: block;
 }
 
-:global([data-theme="light"]) .themeDark {
+:global([data-theme='light']) .themeDark {
   display: none;
 }
 
-:global([data-theme="dark"]) .themeLight {
+:global([data-theme='dark']) .themeLight {
   display: none;
 }
 
-:global([data-theme="dark"]) .themeDark {
+:global([data-theme='dark']) .themeDark {
   display: block;
 }

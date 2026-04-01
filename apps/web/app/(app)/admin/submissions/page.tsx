@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { apiFetch } from "../../../lib/session";
-import styles from "../../instructor/instructor.module.css";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { apiFetch } from '../../../lib/session';
+import styles from '../../instructor/instructor.module.css';
 
 type Submission = {
   id: string;
@@ -17,13 +17,13 @@ type Submission = {
   updatedAt: string;
 };
 
-const OVERRIDE_STATUSES = ["passed", "failed", "needs_review"] as const;
+const OVERRIDE_STATUSES = ['passed', 'failed', 'needs_review'] as const;
 
 export default function AdminSubmissionsPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState('all');
   const [overriding, setOverriding] = useState<string | null>(null);
   const [overrideValues, setOverrideValues] = useState<Record<string, string>>({});
 
@@ -35,12 +35,12 @@ export default function AdminSubmissionsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch("/v1/admin/submissions", { auth: true });
-      if (!res.ok) throw new Error("Failed to load submissions.");
-      const data = await res.json() as { submissions: Submission[] };
+      const res = await apiFetch('/v1/admin/submissions', { auth: true });
+      if (!res.ok) throw new Error('Failed to load submissions.');
+      const data = (await res.json()) as { submissions: Submission[] };
       setSubmissions(data.submissions || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error.");
+      setError(err instanceof Error ? err.message : 'Unknown error.');
     } finally {
       setLoading(false);
     }
@@ -52,33 +52,36 @@ export default function AdminSubmissionsPage() {
     setOverriding(submissionId);
     try {
       const res = await apiFetch(`/v1/admin/submissions/${submissionId}/status`, {
-        method: "PATCH",
+        method: 'PATCH',
         auth: true,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error || "Override failed.");
+        const body = (await res.json()) as { error?: string };
+        throw new Error(body.error || 'Override failed.');
       }
       setSubmissions((prev) =>
-        prev.map((sub) => sub.id === submissionId ? { ...sub, status: newStatus } : sub)
+        prev.map((sub) => (sub.id === submissionId ? { ...sub, status: newStatus } : sub))
       );
-      setOverrideValues((prev) => { const next = { ...prev }; delete next[submissionId]; return next; });
+      setOverrideValues((prev) => {
+        const next = { ...prev };
+        delete next[submissionId];
+        return next;
+      });
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Override failed.");
+      alert(err instanceof Error ? err.message : 'Override failed.');
     } finally {
       setOverriding(null);
     }
   }
 
-  const filtered = statusFilter === "all"
-    ? submissions
-    : submissions.filter((sub) => sub.status === statusFilter);
+  const filtered =
+    statusFilter === 'all' ? submissions : submissions.filter((sub) => sub.status === statusFilter);
 
   function statusClass(status: string) {
-    if (status === "passed") return styles.statusPublished;
-    if (status === "failed") return styles.statusArchived;
+    if (status === 'passed') return styles.statusPublished;
+    if (status === 'failed') return styles.statusArchived;
     return styles.statusDraft;
   }
 
@@ -95,7 +98,7 @@ export default function AdminSubmissionsPage() {
           className={styles.btnSecondary}
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ padding: "8px 12px", cursor: "pointer" }}
+          style={{ padding: '8px 12px', cursor: 'pointer' }}
         >
           <option value="all">All statuses</option>
           <option value="queued">Queued</option>
@@ -110,7 +113,7 @@ export default function AdminSubmissionsPage() {
       {error && <p className={styles.errorText}>{error}</p>}
 
       {!loading && !error && (
-        <div className={styles.panel} style={{ overflowX: "auto" }}>
+        <div className={styles.panel} style={{ overflowX: 'auto' }}>
           {filtered.length === 0 ? (
             <p className={styles.muted}>No submissions match this filter.</p>
           ) : (
@@ -127,37 +130,51 @@ export default function AdminSubmissionsPage() {
               <tbody>
                 {filtered.map((sub) => (
                   <tr key={sub.id}>
-                    <td><strong>{sub.projectKey}</strong></td>
+                    <td>
+                      <strong>{sub.projectKey}</strong>
+                    </td>
                     <td className={styles.mono}>{sub.commitSha.slice(0, 7)}</td>
                     <td>
                       <span className={`${styles.statusBadge} ${statusClass(sub.status)}`}>
-                        {sub.status.replace("_", " ")}
+                        {sub.status.replace('_', ' ')}
                       </span>
                     </td>
                     <td className={styles.mono}>
-                      {new Date(sub.createdAt).toLocaleDateString("en-US", {
-                        month: "short", day: "numeric"
+                      {new Date(sub.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
                       })}
                     </td>
                     <td>
-                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <select
-                          value={overrideValues[sub.id] || ""}
-                          onChange={(e) => setOverrideValues((prev) => ({ ...prev, [sub.id]: e.target.value }))}
-                          style={{ padding: "4px 8px", fontSize: "12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "4px", color: "var(--text)" }}
+                          value={overrideValues[sub.id] || ''}
+                          onChange={(e) =>
+                            setOverrideValues((prev) => ({ ...prev, [sub.id]: e.target.value }))
+                          }
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '4px',
+                            color: 'var(--text)',
+                          }}
                         >
                           <option value="">Select…</option>
                           {OVERRIDE_STATUSES.map((s) => (
-                            <option key={s} value={s}>{s.replace("_", " ")}</option>
+                            <option key={s} value={s}>
+                              {s.replace('_', ' ')}
+                            </option>
                           ))}
                         </select>
                         <button
                           className={styles.btnPrimary}
-                          style={{ padding: "4px 10px", fontSize: "12px" }}
+                          style={{ padding: '4px 10px', fontSize: '12px' }}
                           disabled={!overrideValues[sub.id] || overriding === sub.id}
                           onClick={() => void handleOverride(sub.id)}
                         >
-                          {overriding === sub.id ? "…" : "Save"}
+                          {overriding === sub.id ? '…' : 'Save'}
                         </button>
                       </div>
                     </td>

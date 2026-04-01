@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "Nibras",
-  description: "Hosted GitHub-linked CLI and dashboard for project workflows."
+  title: 'Nibras',
+  description: 'Hosted GitHub-linked CLI and dashboard for project workflows.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   document.documentElement.setAttribute("data-theme", "light");
                 }
               })();
-            `
+            `,
           }}
         />
         {children}

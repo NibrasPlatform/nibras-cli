@@ -1,8 +1,8 @@
 function normalizePathname(pathname) {
-  if (!pathname || pathname === "/") {
-    return "";
+  if (!pathname || pathname === '/') {
+    return '';
   }
-  return pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  return pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
 }
 
 export function normalizeApiBaseUrl(value) {
@@ -23,7 +23,7 @@ export function isLoopbackUrl(value) {
     return false;
   }
   const url = new URL(normalized);
-  return url.hostname === "127.0.0.1" || url.hostname === "localhost";
+  return url.hostname === '127.0.0.1' || url.hostname === 'localhost';
 }
 
 export function shouldIgnoreStoredApiBaseUrlForOrigin(pageOrigin, value) {
@@ -31,14 +31,14 @@ export function shouldIgnoreStoredApiBaseUrlForOrigin(pageOrigin, value) {
   if (!normalizedOrigin) {
     return false;
   }
-  return normalizedOrigin.startsWith("https://") && !isLoopbackUrl(normalizedOrigin) && isLoopbackUrl(value);
+  return (
+    normalizedOrigin.startsWith('https://') &&
+    !isLoopbackUrl(normalizedOrigin) &&
+    isLoopbackUrl(value)
+  );
 }
 
-export function buildApiBaseUrlCandidates({
-  pageOrigin,
-  storedApiBaseUrl,
-  configuredApiBaseUrl
-}) {
+export function buildApiBaseUrlCandidates({ pageOrigin, storedApiBaseUrl, configuredApiBaseUrl }) {
   const candidates = [];
   const seen = new Set();
 
@@ -53,10 +53,7 @@ export function buildApiBaseUrlCandidates({
 
   push(pageOrigin);
 
-  if (
-    storedApiBaseUrl &&
-    !shouldIgnoreStoredApiBaseUrlForOrigin(pageOrigin, storedApiBaseUrl)
-  ) {
+  if (storedApiBaseUrl && !shouldIgnoreStoredApiBaseUrlForOrigin(pageOrigin, storedApiBaseUrl)) {
     push(storedApiBaseUrl);
   }
 
@@ -66,7 +63,7 @@ export function buildApiBaseUrlCandidates({
 }
 
 export function formatApiDiscoveryError(candidates) {
-  const attempted = candidates.length > 0 ? candidates.join(", ") : "no API base URLs";
+  const attempted = candidates.length > 0 ? candidates.join(', ') : 'no API base URLs';
   return `Unable to reach the Nibras API. Tried: ${attempted}. Start \`npm run api:dev\` for local API access, start \`npm run proxy:dev\` for same-origin proxy access, or update \`.env\` and your tunnel URL before signing in again.`;
 }
 
@@ -75,12 +72,12 @@ export async function discoverApiBaseUrlWith({
   storedApiBaseUrl,
   configuredApiBaseUrl,
   probe,
-  persistApiBaseUrl
+  persistApiBaseUrl,
 }) {
   const candidates = buildApiBaseUrlCandidates({
     pageOrigin,
     storedApiBaseUrl,
-    configuredApiBaseUrl
+    configuredApiBaseUrl,
   });
 
   for (const candidate of candidates) {
@@ -117,12 +114,12 @@ export async function apiFetchWith({
   auth = false,
   discoverApiBaseUrl,
   fetchImpl,
-  accessToken
+  accessToken,
 }) {
   const apiBaseUrl = await discoverApiBaseUrl();
   const headers = new Headers(init.headers ?? undefined);
   if (auth && accessToken) {
-    headers.set("authorization", `Bearer ${accessToken}`);
+    headers.set('authorization', `Bearer ${accessToken}`);
   }
 
   let response;
@@ -130,7 +127,7 @@ export async function apiFetchWith({
     response = await fetchImpl(createApiUrl(apiBaseUrl, path), {
       ...init,
       headers,
-      credentials: auth ? "include" : init.credentials
+      credentials: auth ? 'include' : init.credentials,
     });
   } catch {
     throw new Error(formatApiFetchError(apiBaseUrl));
@@ -142,11 +139,16 @@ export async function apiFetchWith({
 
   try {
     const payload = await response.clone().json();
-    if (payload && typeof payload === "object" && typeof payload.error === "string" && payload.error) {
+    if (
+      payload &&
+      typeof payload === 'object' &&
+      typeof payload.error === 'string' &&
+      payload.error
+    ) {
       throw new Error(payload.error);
     }
   } catch (error) {
-    if (error instanceof Error && error.name !== "SyntaxError") {
+    if (error instanceof Error && error.name !== 'SyntaxError') {
       throw error;
     }
   }

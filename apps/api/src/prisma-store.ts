@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from 'node:crypto';
 import {
   CourseRole,
   DeliveryMode,
@@ -9,10 +9,10 @@ import {
   ReviewStatus,
   SubmissionStatus,
   SystemRole,
-  TrackingSubmissionType
-} from "@prisma/client";
-import { generateRepositoryFromTemplate, GitHubAppConfig } from "@nibras/github";
-import { encrypt as encryptValue, decrypt as decryptValue } from "@nibras/core";
+  TrackingSubmissionType,
+} from '@prisma/client';
+import { generateRepositoryFromTemplate, GitHubAppConfig } from '@nibras/github';
+import { encrypt as encryptValue, decrypt as decryptValue } from '@nibras/core';
 import {
   ActivityRecord,
   AppStore,
@@ -38,23 +38,23 @@ import {
   TrackingRubricItemRecord,
   UserRecord,
   VerificationLogRecord,
-  WebSessionRecord
-} from "./store";
+  WebSessionRecord,
+} from './store';
 
 function defaultTask(): string {
   return [
-    "# CS161 / exam1",
-    "",
-    "This is the first hosted-style Nibras task.",
-    "",
-    "1. Run `nibras login` against the hosted API.",
-    "2. Run `nibras test` inside a provisioned project repo.",
-    "3. Run `nibras submit` to push and wait for verification."
-  ].join("\n");
+    '# CS161 / exam1',
+    '',
+    'This is the first hosted-style Nibras task.',
+    '',
+    '1. Run `nibras login` against the hosted API.',
+    '2. Run `nibras test` inside a provisioned project repo.',
+    '3. Run `nibras submit` to push and wait for verification.',
+  ].join('\n');
 }
 
 function branchNameFromRef(ref: string): string {
-  return ref.startsWith("refs/heads/") ? ref.slice("refs/heads/".length) : ref;
+  return ref.startsWith('refs/heads/') ? ref.slice('refs/heads/'.length) : ref;
 }
 
 function parseGitHubRepoUrl(value: string): { owner: string; name: string } | null {
@@ -67,10 +67,13 @@ function parseGitHubRepoUrl(value: string): { owner: string; name: string } | nu
   }
   try {
     const url = new URL(value);
-    if (url.hostname !== "github.com") {
+    if (url.hostname !== 'github.com') {
       return null;
     }
-    const [owner, name] = url.pathname.replace(/^\/+/, "").replace(/\.git$/, "").split("/");
+    const [owner, name] = url.pathname
+      .replace(/^\/+/, '')
+      .replace(/\.git$/, '')
+      .split('/');
     if (!owner || !name) {
       return null;
     }
@@ -93,10 +96,10 @@ function toUserRecord(user: {
     id: user.id,
     username: user.username,
     email: user.email,
-    githubLogin: user.githubAccount?.login || "",
+    githubLogin: user.githubAccount?.login || '',
     githubLinked: user.githubLinked,
     githubAppInstalled: user.githubAppInstalled,
-    systemRole: user.systemRole === SystemRole.admin ? "admin" : "user"
+    systemRole: user.systemRole === SystemRole.admin ? 'admin' : 'user',
   };
 }
 
@@ -128,7 +131,7 @@ function toSubmissionRecord(submission: {
     commitSha: submission.commitSha,
     repoUrl: submission.repoUrl,
     branch: submission.branch,
-    status: submission.status as SubmissionRecord["status"],
+    status: submission.status as SubmissionRecord['status'],
     summary: submission.summary,
     submissionType: submission.submissionType as SubmissionType,
     submissionValue: submission.submissionValue,
@@ -136,7 +139,7 @@ function toSubmissionRecord(submission: {
     createdAt: submission.createdAt.toISOString(),
     updatedAt: submission.updatedAt.toISOString(),
     submittedAt: submission.submittedAt ? submission.submittedAt.toISOString() : null,
-    localTestExitCode: submission.localTestExitCode
+    localTestExitCode: submission.localTestExitCode,
   };
 }
 
@@ -158,7 +161,7 @@ function toCourseRecord(course: {
     courseCode: course.courseCode,
     isActive: course.isActive,
     createdAt: course.createdAt.toISOString(),
-    updatedAt: course.updatedAt.toISOString()
+    updatedAt: course.updatedAt.toISOString(),
   };
 }
 
@@ -176,7 +179,7 @@ function toMembershipRecord(membership: {
     userId: membership.userId,
     role: membership.role as MembershipRole,
     createdAt: membership.createdAt.toISOString(),
-    updatedAt: membership.updatedAt.toISOString()
+    updatedAt: membership.updatedAt.toISOString(),
   };
 }
 
@@ -200,7 +203,7 @@ function toMilestoneRecord(milestone: {
     dueAt: milestone.dueAt ? milestone.dueAt.toISOString() : null,
     isFinal: milestone.isFinal,
     createdAt: milestone.createdAt.toISOString(),
-    updatedAt: milestone.updatedAt.toISOString()
+    updatedAt: milestone.updatedAt.toISOString(),
   };
 }
 
@@ -230,7 +233,9 @@ function toReviewRecord(review: {
     status: review.status as StoreReviewStatus,
     score: review.score,
     feedback: review.feedback,
-    rubric: Array.isArray(review.rubricJson) ? review.rubricJson as TrackingRubricItemRecord[] : [],
+    rubric: Array.isArray(review.rubricJson)
+      ? (review.rubricJson as TrackingRubricItemRecord[])
+      : [],
     reviewedAt: review.reviewedAt ? review.reviewedAt.toISOString() : null,
     createdAt: review.createdAt.toISOString(),
     updatedAt: review.updatedAt.toISOString(),
@@ -238,13 +243,13 @@ function toReviewRecord(review: {
     aiNeedsReview: review.aiNeedsReview ?? null,
     aiReasoningSummary: review.aiReasoningSummary ?? null,
     aiCriterionScores: Array.isArray(review.aiCriterionScores)
-      ? review.aiCriterionScores as ReviewRecord["aiCriterionScores"]
+      ? (review.aiCriterionScores as ReviewRecord['aiCriterionScores'])
       : null,
     aiEvidenceQuotes: Array.isArray(review.aiEvidenceQuotes)
-      ? review.aiEvidenceQuotes as string[]
+      ? (review.aiEvidenceQuotes as string[])
       : null,
     aiModel: review.aiModel ?? null,
-    aiGradedAt: review.aiGradedAt ? review.aiGradedAt.toISOString() : null
+    aiGradedAt: review.aiGradedAt ? review.aiGradedAt.toISOString() : null,
   };
 }
 
@@ -268,7 +273,7 @@ function toGithubDeliveryRecord(record: {
     ref: record.ref,
     commitSha: record.commitSha,
     payload: (record.payloadJson as Record<string, unknown> | null) || {},
-    receivedAt: record.receivedAt.toISOString()
+    receivedAt: record.receivedAt.toISOString(),
   };
 }
 
@@ -287,45 +292,52 @@ function toVerificationLogRecord(run: {
     id: run.id,
     submissionId: run.submissionAttemptId,
     attempt: run.attempt,
-    status: run.status as VerificationLogRecord["status"],
+    status: run.status as VerificationLogRecord['status'],
     log: run.log,
     startedAt: run.startedAt ? run.startedAt.toISOString() : null,
     finishedAt: run.finishedAt ? run.finishedAt.toISOString() : null,
     createdAt: run.createdAt.toISOString(),
-    updatedAt: run.updatedAt.toISOString()
+    updatedAt: run.updatedAt.toISOString(),
   };
 }
 
-function projectStats(milestones: MilestoneRecord[], submissions: SubmissionRecord[], reviews: ReviewRecord[]): TrackingDashboardStats {
+function projectStats(
+  milestones: MilestoneRecord[],
+  submissions: SubmissionRecord[],
+  reviews: ReviewRecord[]
+): TrackingDashboardStats {
   const statuses = milestones.map((milestone) => {
     const milestoneSubmissions = submissions
       .filter((entry) => entry.milestoneId === milestone.id)
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
     if (milestoneSubmissions.length === 0) {
-      return "open";
+      return 'open';
     }
     const latestReview = reviews
       .filter((entry) => entry.submissionId === milestoneSubmissions[0].id)
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
-    if (latestReview?.status === "approved" || latestReview?.status === "graded") {
+    if (latestReview?.status === 'approved' || latestReview?.status === 'graded') {
       return latestReview.status;
     }
-    return "submitted";
+    return 'submitted';
   });
-  const approved = statuses.filter((entry) => entry === "approved" || entry === "graded").length;
-  const underReview = statuses.filter((entry) => entry === "submitted").length;
+  const approved = statuses.filter((entry) => entry === 'approved' || entry === 'graded').length;
+  const underReview = statuses.filter((entry) => entry === 'submitted').length;
   const futureDates = milestones
     .map((entry) => entry.dueAt)
     .filter((entry): entry is string => Boolean(entry))
     .map((entry) => new Date(entry))
     .filter((entry) => entry.getTime() > Date.now());
-  const lastDue = futureDates.length > 0 ? new Date(Math.max(...futureDates.map((entry) => entry.getTime()))) : null;
+  const lastDue =
+    futureDates.length > 0
+      ? new Date(Math.max(...futureDates.map((entry) => entry.getTime())))
+      : null;
   return {
     approved,
     underReview,
     completion: milestones.length ? Math.round((approved / milestones.length) * 100) : 0,
     total: milestones.length,
-    daysRemaining: lastDue ? Math.ceil((lastDue.getTime() - Date.now()) / 86_400_000) : 0
+    daysRemaining: lastDue ? Math.ceil((lastDue.getTime() - Date.now()) / 86_400_000) : 0,
   };
 }
 
@@ -353,15 +365,20 @@ function toProjectRecord(project: {
     title: project.name,
     description: project.description,
     status: project.status as ProjectStatus,
-    deliveryMode: project.deliveryMode === DeliveryMode.team ? "team" : "individual",
-    rubric: Array.isArray(project.rubricJson) ? project.rubricJson as TrackingRubricItemRecord[] : [],
-    resources: Array.isArray(project.resourcesJson) ? project.resourcesJson as TrackingResourceRecord[] : [],
+    deliveryMode: project.deliveryMode === DeliveryMode.team ? 'team' : 'individual',
+    rubric: Array.isArray(project.rubricJson)
+      ? (project.rubricJson as TrackingRubricItemRecord[])
+      : [],
+    resources: Array.isArray(project.resourcesJson)
+      ? (project.resourcesJson as TrackingResourceRecord[])
+      : [],
     instructorUserId: null,
-    manifest: release?.manifestJson as ProjectRecord["manifest"] || defaultManifest("http://127.0.0.1"),
+    manifest:
+      (release?.manifestJson as ProjectRecord['manifest']) || defaultManifest('http://127.0.0.1'),
     task: release?.taskText || defaultTask(),
     repoByUserId: {},
     createdAt: project.createdAt.toISOString(),
-    updatedAt: project.updatedAt.toISOString()
+    updatedAt: project.updatedAt.toISOString(),
   };
 }
 
@@ -377,30 +394,38 @@ export class PrismaStore implements AppStore {
     if (this.seeded) {
       return;
     }
-    if (process.env.NODE_ENV === "production" && process.env.NIBRAS_ENABLE_DEMO_SEED !== "1") {
+    if (process.env.NODE_ENV === 'production' && process.env.NIBRAS_ENABLE_DEMO_SEED !== '1') {
       this.seeded = true;
       return;
     }
-    const [existingCourse, existingProject, existingDemoUser, existingInstructorUser, existingRelease, existingMemberships, existingMilestones] = await Promise.all([
-      this.prisma.course.findUnique({ where: { slug: "cs161" } }),
-      this.prisma.project.findUnique({ where: { slug: "cs161/exam1" } }),
-      this.prisma.user.findUnique({ where: { email: "demo@nibras.dev" } }),
-      this.prisma.user.findUnique({ where: { email: "instructor@nibras.dev" } }),
+    const [
+      existingCourse,
+      existingProject,
+      existingDemoUser,
+      existingInstructorUser,
+      existingRelease,
+      existingMemberships,
+      existingMilestones,
+    ] = await Promise.all([
+      this.prisma.course.findUnique({ where: { slug: 'cs161' } }),
+      this.prisma.project.findUnique({ where: { slug: 'cs161/exam1' } }),
+      this.prisma.user.findUnique({ where: { email: 'demo@nibras.dev' } }),
+      this.prisma.user.findUnique({ where: { email: 'instructor@nibras.dev' } }),
       this.prisma.projectRelease.findFirst({
         where: {
-          project: { slug: "cs161/exam1" }
-        }
+          project: { slug: 'cs161/exam1' },
+        },
       }),
       this.prisma.courseMembership.count({
         where: {
-          course: { slug: "cs161" }
-        }
+          course: { slug: 'cs161' },
+        },
       }),
       this.prisma.milestone.count({
         where: {
-          project: { slug: "cs161/exam1" }
-        }
-      })
+          project: { slug: 'cs161/exam1' },
+        },
+      }),
     ]);
     if (
       existingCourse &&
@@ -416,165 +441,167 @@ export class PrismaStore implements AppStore {
     }
 
     const subject = await this.prisma.subject.upsert({
-      where: { slug: "cs161" },
-      update: { name: "CS161" },
-      create: { slug: "cs161", name: "CS161" }
+      where: { slug: 'cs161' },
+      update: { name: 'CS161' },
+      create: { slug: 'cs161', name: 'CS161' },
     });
 
     const course = await this.prisma.course.upsert({
-      where: { slug: "cs161" },
+      where: { slug: 'cs161' },
       update: {
-        title: "CS 161: Foundations of Systems",
-        termLabel: "Spring 2026",
-        courseCode: "CS161",
-        isActive: true
+        title: 'CS 161: Foundations of Systems',
+        termLabel: 'Spring 2026',
+        courseCode: 'CS161',
+        isActive: true,
       },
       create: {
-        slug: "cs161",
-        title: "CS 161: Foundations of Systems",
-        termLabel: "Spring 2026",
-        courseCode: "CS161",
-        isActive: true
-      }
+        slug: 'cs161',
+        title: 'CS 161: Foundations of Systems',
+        termLabel: 'Spring 2026',
+        courseCode: 'CS161',
+        isActive: true,
+      },
     });
 
     const project = await this.prisma.project.upsert({
-      where: { slug: "cs161/exam1" },
+      where: { slug: 'cs161/exam1' },
       update: {
-        name: "Exam 1",
-        defaultBranch: "main",
+        name: 'Exam 1',
+        defaultBranch: 'main',
         subjectId: subject.id,
         courseId: course.id,
-        description: "Design, implement, and defend your solution for the first milestone sequence.",
+        description:
+          'Design, implement, and defend your solution for the first milestone sequence.',
         status: PrismaProjectStatus.published,
         deliveryMode: DeliveryMode.individual,
         rubricJson: [
-          { criterion: "Correctness", maxScore: 50 },
-          { criterion: "Clarity", maxScore: 30 },
-          { criterion: "Testing", maxScore: 20 }
+          { criterion: 'Correctness', maxScore: 50 },
+          { criterion: 'Clarity', maxScore: 30 },
+          { criterion: 'Testing', maxScore: 20 },
         ],
         resourcesJson: [
-          { label: "Task brief", url: "https://example.com/task-brief" },
-          { label: "Reference notes", url: "https://example.com/reference-notes" }
-        ]
+          { label: 'Task brief', url: 'https://example.com/task-brief' },
+          { label: 'Reference notes', url: 'https://example.com/reference-notes' },
+        ],
       },
       create: {
-        slug: "cs161/exam1",
-        name: "Exam 1",
-        defaultBranch: "main",
+        slug: 'cs161/exam1',
+        name: 'Exam 1',
+        defaultBranch: 'main',
         subjectId: subject.id,
         courseId: course.id,
-        description: "Design, implement, and defend your solution for the first milestone sequence.",
+        description:
+          'Design, implement, and defend your solution for the first milestone sequence.',
         status: PrismaProjectStatus.published,
         deliveryMode: DeliveryMode.individual,
         rubricJson: [
-          { criterion: "Correctness", maxScore: 50 },
-          { criterion: "Clarity", maxScore: 30 },
-          { criterion: "Testing", maxScore: 20 }
+          { criterion: 'Correctness', maxScore: 50 },
+          { criterion: 'Clarity', maxScore: 30 },
+          { criterion: 'Testing', maxScore: 20 },
         ],
         resourcesJson: [
-          { label: "Task brief", url: "https://example.com/task-brief" },
-          { label: "Reference notes", url: "https://example.com/reference-notes" }
-        ]
-      }
+          { label: 'Task brief', url: 'https://example.com/task-brief' },
+          { label: 'Reference notes', url: 'https://example.com/reference-notes' },
+        ],
+      },
     });
 
     await this.prisma.user.upsert({
-      where: { email: "demo@nibras.dev" },
+      where: { email: 'demo@nibras.dev' },
       update: {
-        username: "demo",
+        username: 'demo',
         githubLinked: true,
         githubAppInstalled: true,
-        systemRole: SystemRole.user
+        systemRole: SystemRole.user,
       },
       create: {
-        username: "demo",
-        email: "demo@nibras.dev",
+        username: 'demo',
+        email: 'demo@nibras.dev',
         githubLinked: true,
         githubAppInstalled: true,
-        systemRole: SystemRole.user
-      }
+        systemRole: SystemRole.user,
+      },
     });
 
     await this.prisma.user.upsert({
-      where: { email: "instructor@nibras.dev" },
+      where: { email: 'instructor@nibras.dev' },
       update: {
-        username: "instructor",
+        username: 'instructor',
         githubLinked: true,
         githubAppInstalled: true,
-        systemRole: SystemRole.admin
+        systemRole: SystemRole.admin,
       },
       create: {
-        username: "instructor",
-        email: "instructor@nibras.dev",
+        username: 'instructor',
+        email: 'instructor@nibras.dev',
         githubLinked: true,
         githubAppInstalled: true,
-        systemRole: SystemRole.admin
-      }
+        systemRole: SystemRole.admin,
+      },
     });
 
     const user = await this.prisma.user.findUniqueOrThrow({
-      where: { email: "demo@nibras.dev" }
+      where: { email: 'demo@nibras.dev' },
     });
 
     const instructor = await this.prisma.user.findUniqueOrThrow({
-      where: { email: "instructor@nibras.dev" }
+      where: { email: 'instructor@nibras.dev' },
     });
 
     await this.prisma.githubAccount.upsert({
       where: { userId: user.id },
-      update: { githubUserId: "demo-user-id", login: "demo-user" },
+      update: { githubUserId: 'demo-user-id', login: 'demo-user' },
       create: {
         userId: user.id,
-        githubUserId: "demo-user-id",
-        login: "demo-user",
-        installationId: "demo-installation"
-      }
+        githubUserId: 'demo-user-id',
+        login: 'demo-user',
+        installationId: 'demo-installation',
+      },
     });
 
     await this.prisma.githubAccount.upsert({
       where: { userId: instructor.id },
-      update: { githubUserId: "instructor-user-id", login: "nibras-instructor" },
+      update: { githubUserId: 'instructor-user-id', login: 'nibras-instructor' },
       create: {
         userId: instructor.id,
-        githubUserId: "instructor-user-id",
-        login: "nibras-instructor",
-        installationId: "demo-installation"
-      }
+        githubUserId: 'instructor-user-id',
+        login: 'nibras-instructor',
+        installationId: 'demo-installation',
+      },
     });
 
     await this.prisma.courseMembership.upsert({
       where: {
         courseId_userId: {
           courseId: course.id,
-          userId: user.id
-        }
+          userId: user.id,
+        },
       },
       update: {
-        role: CourseRole.student
+        role: CourseRole.student,
       },
       create: {
         courseId: course.id,
         userId: user.id,
-        role: CourseRole.student
-      }
+        role: CourseRole.student,
+      },
     });
 
     await this.prisma.courseMembership.upsert({
       where: {
         courseId_userId: {
           courseId: course.id,
-          userId: instructor.id
-        }
+          userId: instructor.id,
+        },
       },
       update: {
-        role: CourseRole.instructor
+        role: CourseRole.instructor,
       },
       create: {
         courseId: course.id,
         userId: instructor.id,
-        role: CourseRole.instructor
-      }
+        role: CourseRole.instructor,
+      },
     });
 
     const manifest = defaultManifest(apiBaseUrl);
@@ -582,76 +609,78 @@ export class PrismaStore implements AppStore {
       where: {
         projectId_version: {
           projectId: project.id,
-          version: manifest.releaseVersion
-        }
+          version: manifest.releaseVersion,
+        },
       },
       update: {
         taskText: defaultTask(),
-        manifestJson: manifest
+        manifestJson: manifest,
       },
       create: {
         projectId: project.id,
         version: manifest.releaseVersion,
         taskText: defaultTask(),
         manifestJson: manifest,
-        publicAssetRef: "public://seed",
-        privateAssetRef: "private://seed"
-      }
+        publicAssetRef: 'public://seed',
+        privateAssetRef: 'private://seed',
+      },
     });
 
     const milestones = [
       {
-        title: "Design Review",
-        description: "Submit an initial design, edge cases, and implementation plan.",
+        title: 'Design Review',
+        description: 'Submit an initial design, edge cases, and implementation plan.',
         order: 1,
-        dueAt: new Date("2026-03-27T17:00:00.000Z"),
-        isFinal: false
+        dueAt: new Date('2026-03-27T17:00:00.000Z'),
+        isFinal: false,
       },
       {
-        title: "Final Project Submission",
-        description: "Submit the final repository state and project write-up.",
+        title: 'Final Project Submission',
+        description: 'Submit the final repository state and project write-up.',
         order: 2,
-        dueAt: new Date("2026-04-08T17:00:00.000Z"),
-        isFinal: true
-      }
+        dueAt: new Date('2026-04-08T17:00:00.000Z'),
+        isFinal: true,
+      },
     ];
 
     for (const milestone of milestones) {
-      await this.prisma.milestone.upsert({
-        where: {
-          projectId_order: {
-            projectId: project.id,
-            order: milestone.order
-          }
-        },
-        update: milestone,
-        create: {
-          projectId: project.id,
-          ...milestone
-        }
-      }).catch(async () => {
-        const existing = await this.prisma.milestone.findFirst({
+      await this.prisma.milestone
+        .upsert({
           where: {
+            projectId_order: {
+              projectId: project.id,
+              order: milestone.order,
+            },
+          },
+          update: milestone,
+          create: {
             projectId: project.id,
-            order: milestone.order
+            ...milestone,
+          },
+        })
+        .catch(async () => {
+          const existing = await this.prisma.milestone.findFirst({
+            where: {
+              projectId: project.id,
+              order: milestone.order,
+            },
+          });
+          if (!existing) {
+            throw new Error('Unable to seed milestone.');
           }
+          await this.prisma.milestone.update({
+            where: { id: existing.id },
+            data: milestone,
+          });
         });
-        if (!existing) {
-          throw new Error("Unable to seed milestone.");
-        }
-        await this.prisma.milestone.update({
-          where: { id: existing.id },
-          data: milestone
-        });
-      });
     }
     this.seeded = true;
   }
 
   private async getDefaultUser(): Promise<{ id: string }> {
     return this.prisma.user.findUniqueOrThrow({
-      where: { email: "demo@nibras.dev" },
-      select: { id: true }
+      where: { email: 'demo@nibras.dev' },
+      select: { id: true },
     });
   }
 
@@ -662,14 +691,14 @@ export class PrismaStore implements AppStore {
         userId,
         accessToken: `access_${randomUUID()}`,
         refreshToken: `refresh_${randomUUID()}`,
-        expiresAt
-      }
+        expiresAt,
+      },
     });
     return {
       accessToken: created.accessToken,
       refreshToken: created.refreshToken,
       userId: created.userId,
-      createdAt: created.createdAt.toISOString()
+      createdAt: created.createdAt.toISOString(),
     };
   }
 
@@ -688,14 +717,14 @@ export class PrismaStore implements AppStore {
       where: { email },
       update: {
         username,
-        githubLinked: true
+        githubLinked: true,
       },
       create: {
         username,
         email,
         githubLinked: true,
-        githubAppInstalled: false
-      }
+        githubAppInstalled: false,
+      },
     });
 
     // Encrypt tokens at rest when NIBRAS_ENCRYPTION_KEY is set.
@@ -703,7 +732,11 @@ export class PrismaStore implements AppStore {
     const maybeEncrypt = (value: string | undefined | null): string | null => {
       if (!value) return null;
       if (!process.env.NIBRAS_ENCRYPTION_KEY) return value;
-      try { return encryptValue(value); } catch { return value; }
+      try {
+        return encryptValue(value);
+      } catch {
+        return value;
+      }
     };
 
     await this.prisma.githubAccount.upsert({
@@ -718,7 +751,7 @@ export class PrismaStore implements AppStore {
           : null,
         userRefreshTokenExpiresAt: args.refreshTokenExpiresIn
           ? new Date(Date.now() + args.refreshTokenExpiresIn * 1000)
-          : null
+          : null,
       },
       create: {
         userId: user.id,
@@ -731,30 +764,34 @@ export class PrismaStore implements AppStore {
           : null,
         userRefreshTokenExpiresAt: args.refreshTokenExpiresIn
           ? new Date(Date.now() + args.refreshTokenExpiresIn * 1000)
-          : null
-      }
+          : null,
+      },
     });
 
     const session = await this.createSessionForUser(user.id);
     const hydrated = await this.prisma.user.findUniqueOrThrow({
       where: { id: user.id },
-      include: { githubAccount: true }
+      include: { githubAccount: true },
     });
 
     // Audit: record sign-in event
-    await this.prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: "user.signed_in",
-        targetType: "User",
-        targetId: user.id,
-        payload: { login: args.login } as Prisma.InputJsonValue
-      }
-    }).catch(() => { /* non-fatal */ });
+    await this.prisma.auditLog
+      .create({
+        data: {
+          userId: user.id,
+          action: 'user.signed_in',
+          targetType: 'User',
+          targetId: user.id,
+          payload: { login: args.login } as Prisma.InputJsonValue,
+        },
+      })
+      .catch(() => {
+        /* non-fatal */
+      });
 
     return {
       user: toUserRecord(hydrated),
-      session
+      session,
     };
   }
 
@@ -764,7 +801,7 @@ export class PrismaStore implements AppStore {
     userAccessToken: string | null;
   } | null> {
     const account = await this.prisma.githubAccount.findUnique({
-      where: { userId }
+      where: { userId },
     });
     if (!account) {
       return null;
@@ -772,39 +809,47 @@ export class PrismaStore implements AppStore {
     // Decrypt token if encryption key is configured; fall back to stored value
     const maybeDecrypt = (value: string | null): string | null => {
       if (!value || !process.env.NIBRAS_ENCRYPTION_KEY) return value;
-      try { return decryptValue(value); } catch { return value; }
+      try {
+        return decryptValue(value);
+      } catch {
+        return value;
+      }
     };
     return {
       login: account.login,
       installationId: account.installationId,
-      userAccessToken: maybeDecrypt(account.userAccessToken)
+      userAccessToken: maybeDecrypt(account.userAccessToken),
     };
   }
 
   async linkGitHubInstallation(userId: string, installationId: string): Promise<UserRecord> {
     await this.prisma.githubAccount.update({
       where: { userId },
-      data: { installationId }
+      data: { installationId },
     });
     await this.prisma.user.update({
       where: { id: userId },
-      data: { githubAppInstalled: true }
+      data: { githubAppInstalled: true },
     });
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      include: { githubAccount: true }
+      include: { githubAccount: true },
     });
 
     // Audit: record installation link event
-    await this.prisma.auditLog.create({
-      data: {
-        userId,
-        action: "installation.linked",
-        targetType: "GithubAccount",
-        targetId: userId,
-        payload: { installationId } as Prisma.InputJsonValue
-      }
-    }).catch(() => { /* non-fatal */ });
+    await this.prisma.auditLog
+      .create({
+        data: {
+          userId,
+          action: 'installation.linked',
+          targetType: 'GithubAccount',
+          targetId: userId,
+          payload: { installationId } as Prisma.InputJsonValue,
+        },
+      })
+      .catch(() => {
+        /* non-fatal */
+      });
 
     return toUserRecord(user);
   }
@@ -833,44 +878,40 @@ export class PrismaStore implements AppStore {
       where: {
         submissionType: TrackingSubmissionType.github,
         branch,
-        OR: [
-          { commitSha: payload.after },
-          { commitSha: { startsWith: "github-pending-" } }
+        OR: [{ commitSha: payload.after }, { commitSha: { startsWith: 'github-pending-' } }],
+        AND: [
+          {
+            OR: [{ repoUrl: { contains: repoPath } }, { submissionValue: { contains: repoPath } }],
+          },
         ],
-        AND: [{
-          OR: [
-            { repoUrl: { contains: repoPath } },
-            { submissionValue: { contains: repoPath } }
-          ]
-        }]
       },
       include: { project: true },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: 'desc' },
     });
     if (!submission) {
       return;
     }
     const attempt = await this.prisma.verificationRun.count({
-      where: { submissionAttemptId: submission.id }
+      where: { submissionAttemptId: submission.id },
     });
     await this.prisma.submissionAttempt.update({
       where: { id: submission.id },
       data: {
         status: SubmissionStatus.running,
         summary: `GitHub push received for ${payload.ref}. Verification is running.`,
-        commitSha: payload.after || submission.commitSha
-      }
+        commitSha: payload.after || submission.commitSha,
+      },
     });
     await this.prisma.githubDelivery.create({
       data: {
         submissionAttemptId: submission.id,
         repoUrl: payload.repositoryUrl || `https://github.com/${payload.owner}/${payload.repoName}`,
-        eventType: payload.eventType || "push",
+        eventType: payload.eventType || 'push',
         deliveryId: payload.deliveryId || randomUUID(),
         ref: payload.ref,
         commitSha: payload.after,
-        payloadJson: (payload.rawPayload || {}) as Prisma.InputJsonValue
-      }
+        payloadJson: (payload.rawPayload || {}) as Prisma.InputJsonValue,
+      },
     });
     await this.prisma.verificationRun.create({
       data: {
@@ -878,8 +919,8 @@ export class PrismaStore implements AppStore {
         attempt,
         status: SubmissionStatus.running,
         log: `Webhook push received for ${payload.ref}`,
-        startedAt: new Date()
-      }
+        startedAt: new Date(),
+      },
     });
   }
 
@@ -891,8 +932,8 @@ export class PrismaStore implements AppStore {
         userCode: `NB-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
         intervalSeconds: 2,
-        status: "pending"
-      }
+        status: 'pending',
+      },
     });
     return {
       deviceCode: created.deviceCode,
@@ -900,11 +941,14 @@ export class PrismaStore implements AppStore {
       expiresAt: created.expiresAt.toISOString(),
       intervalSeconds: created.intervalSeconds,
       userId: created.userId,
-      status: created.status === "authorized" ? "authorized" : "pending"
+      status: created.status === 'authorized' ? 'authorized' : 'pending',
     };
   }
 
-  async authorizeDeviceCode(apiBaseUrl: string, userCode: string): Promise<DeviceCodeRecord | null> {
+  async authorizeDeviceCode(
+    apiBaseUrl: string,
+    userCode: string
+  ): Promise<DeviceCodeRecord | null> {
     await this.seed(apiBaseUrl);
     const defaultUser = await this.getDefaultUser();
     const found = await this.prisma.deviceCode.findUnique({ where: { userCode } });
@@ -914,10 +958,10 @@ export class PrismaStore implements AppStore {
     const updated = await this.prisma.deviceCode.update({
       where: { userCode },
       data: {
-        status: "authorized",
+        status: 'authorized',
         userId: defaultUser.id,
-        approvedAt: new Date()
-      }
+        approvedAt: new Date(),
+      },
     });
     return {
       deviceCode: updated.deviceCode,
@@ -925,11 +969,14 @@ export class PrismaStore implements AppStore {
       expiresAt: updated.expiresAt.toISOString(),
       intervalSeconds: updated.intervalSeconds,
       userId: updated.userId,
-      status: "authorized"
+      status: 'authorized',
     };
   }
 
-  async pollDeviceCode(apiBaseUrl: string, deviceCode: string): Promise<{ record: DeviceCodeRecord | null; session: SessionRecord | null }> {
+  async pollDeviceCode(
+    apiBaseUrl: string,
+    deviceCode: string
+  ): Promise<{ record: DeviceCodeRecord | null; session: SessionRecord | null }> {
     await this.seed(apiBaseUrl);
     const record = await this.prisma.deviceCode.findUnique({ where: { deviceCode } });
     if (!record) {
@@ -941,16 +988,16 @@ export class PrismaStore implements AppStore {
       expiresAt: record.expiresAt.toISOString(),
       intervalSeconds: record.intervalSeconds,
       userId: record.userId,
-      status: record.status === "authorized" ? "authorized" : "pending"
+      status: record.status === 'authorized' ? 'authorized' : 'pending',
     };
 
-    if (record.status !== "authorized" || !record.userId) {
+    if (record.status !== 'authorized' || !record.userId) {
       return { record: mappedRecord, session: null };
     }
 
     const existing = await this.prisma.cliSession.findFirst({
       where: { userId: record.userId, revokedAt: null },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: 'desc' },
     });
     if (existing) {
       return {
@@ -959,8 +1006,8 @@ export class PrismaStore implements AppStore {
           accessToken: existing.accessToken,
           refreshToken: existing.refreshToken,
           userId: existing.userId,
-          createdAt: existing.createdAt.toISOString()
-        }
+          createdAt: existing.createdAt.toISOString(),
+        },
       };
     }
 
@@ -968,8 +1015,8 @@ export class PrismaStore implements AppStore {
       data: {
         userId: record.userId,
         accessToken: `access_${randomUUID()}`,
-        refreshToken: `refresh_${randomUUID()}`
-      }
+        refreshToken: `refresh_${randomUUID()}`,
+      },
     });
     return {
       record: mappedRecord,
@@ -977,8 +1024,8 @@ export class PrismaStore implements AppStore {
         accessToken: created.accessToken,
         refreshToken: created.refreshToken,
         userId: created.userId,
-        createdAt: created.createdAt.toISOString()
-      }
+        createdAt: created.createdAt.toISOString(),
+      },
     };
   }
 
@@ -988,9 +1035,9 @@ export class PrismaStore implements AppStore {
       where: { accessToken },
       include: {
         user: {
-          include: { githubAccount: true }
-        }
-      }
+          include: { githubAccount: true },
+        },
+      },
     });
     if (!session || session.revokedAt) {
       return null;
@@ -1004,7 +1051,7 @@ export class PrismaStore implements AppStore {
   async refreshCliSession(apiBaseUrl: string, refreshToken: string): Promise<SessionRecord | null> {
     await this.seed(apiBaseUrl);
     const session = await this.prisma.cliSession.findUnique({
-      where: { refreshToken }
+      where: { refreshToken },
     });
     if (!session || session.revokedAt) {
       return null;
@@ -1014,22 +1061,22 @@ export class PrismaStore implements AppStore {
     const [, created] = await this.prisma.$transaction([
       this.prisma.cliSession.update({
         where: { id: session.id },
-        data: { revokedAt: new Date() }
+        data: { revokedAt: new Date() },
       }),
       this.prisma.cliSession.create({
         data: {
           userId: session.userId,
           accessToken: `access_${randomUUID()}`,
           refreshToken: `refresh_${randomUUID()}`,
-          expiresAt
-        }
-      })
+          expiresAt,
+        },
+      }),
     ]);
     return {
       accessToken: created.accessToken,
       refreshToken: created.refreshToken,
       userId: created.userId,
-      createdAt: created.createdAt.toISOString()
+      createdAt: created.createdAt.toISOString(),
     };
   }
 
@@ -1037,7 +1084,7 @@ export class PrismaStore implements AppStore {
     await this.seed(apiBaseUrl);
     await this.prisma.cliSession.updateMany({
       where: { accessToken, revokedAt: null },
-      data: { revokedAt: new Date() }
+      data: { revokedAt: new Date() },
     });
   }
 
@@ -1047,8 +1094,8 @@ export class PrismaStore implements AppStore {
       data: {
         userId,
         sessionToken: `web_${randomUUID()}`,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      }
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
     });
     return {
       sessionToken: created.sessionToken,
@@ -1056,7 +1103,7 @@ export class PrismaStore implements AppStore {
       createdAt: created.createdAt.toISOString(),
       updatedAt: created.updatedAt.toISOString(),
       expiresAt: created.expiresAt.toISOString(),
-      revokedAt: created.revokedAt ? created.revokedAt.toISOString() : null
+      revokedAt: created.revokedAt ? created.revokedAt.toISOString() : null,
     };
   }
 
@@ -1066,9 +1113,9 @@ export class PrismaStore implements AppStore {
       where: { sessionToken },
       include: {
         user: {
-          include: { githubAccount: true }
-        }
-      }
+          include: { githubAccount: true },
+        },
+      },
     });
     if (!session || session.revokedAt || session.expiresAt.getTime() <= Date.now()) {
       return null;
@@ -1080,7 +1127,7 @@ export class PrismaStore implements AppStore {
     await this.seed(apiBaseUrl);
     await this.prisma.webSession.updateMany({
       where: { sessionToken, revokedAt: null },
-      data: { revokedAt: new Date() }
+      data: { revokedAt: new Date() },
     });
   }
 
@@ -1089,8 +1136,8 @@ export class PrismaStore implements AppStore {
     const project = await this.prisma.project.findUnique({
       where: { slug: projectKey },
       include: {
-        releases: { orderBy: { createdAt: "desc" }, take: 1 }
-      }
+        releases: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
     });
     if (!project || project.releases.length === 0) {
       return null;
@@ -1098,23 +1145,27 @@ export class PrismaStore implements AppStore {
     return toProjectRecord(project);
   }
 
-  async provisionProjectRepo(apiBaseUrl: string, projectKey: string, userId: string): Promise<RepoRecord> {
+  async provisionProjectRepo(
+    apiBaseUrl: string,
+    projectKey: string,
+    userId: string
+  ): Promise<RepoRecord> {
     await this.seed(apiBaseUrl);
     const project = await this.prisma.project.findUnique({ where: { slug: projectKey } });
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { githubAccount: true }
+      include: { githubAccount: true },
     });
     if (!project || !user || !user.githubAccount) {
-      throw new Error("Project or user not found.");
+      throw new Error('Project or user not found.');
     }
     const existing = await this.prisma.userProjectRepo.findUnique({
       where: {
         userId_projectId: {
           userId,
-          projectId: project.id
-        }
-      }
+          projectId: project.id,
+        },
+      },
     });
     if (existing) {
       return {
@@ -1122,7 +1173,7 @@ export class PrismaStore implements AppStore {
         name: existing.name,
         cloneUrl: existing.cloneUrl,
         defaultBranch: existing.defaultBranch,
-        visibility: existing.visibility === RepoVisibility.private ? "private" : "public"
+        visibility: existing.visibility === RepoVisibility.private ? 'private' : 'public',
       };
     }
 
@@ -1131,18 +1182,18 @@ export class PrismaStore implements AppStore {
         userId,
         projectId: project.id,
         owner: user.githubAccount.login,
-        name: `nibras-${projectKey.replace("/", "-")}`,
+        name: `nibras-${projectKey.replace('/', '-')}`,
         defaultBranch: project.defaultBranch,
         visibility: RepoVisibility.private,
-        installStatus: "provisioned"
-      }
+        installStatus: 'provisioned',
+      },
     });
     return {
       owner: created.owner,
       name: created.name,
       cloneUrl: created.cloneUrl,
       defaultBranch: created.defaultBranch,
-      visibility: "private"
+      visibility: 'private',
     };
   }
 
@@ -1153,15 +1204,15 @@ export class PrismaStore implements AppStore {
     githubConfig: GitHubAppConfig
   ): Promise<RepoRecord> {
     const account = await this.prisma.githubAccount.findUnique({
-      where: { userId }
+      where: { userId },
     });
     const project = await this.prisma.project.findUnique({
-      where: { slug: projectKey }
+      where: { slug: projectKey },
     });
     if (!account?.userAccessToken || !project) {
-      throw new Error("GitHub account or project is not ready for provisioning.");
+      throw new Error('GitHub account or project is not ready for provisioning.');
     }
-    const repoName = `nibras-${projectKey.replace("/", "-")}`;
+    const repoName = `nibras-${projectKey.replace('/', '-')}`;
     const generated = await generateRepositoryFromTemplate(
       githubConfig,
       account.userAccessToken,
@@ -1172,8 +1223,8 @@ export class PrismaStore implements AppStore {
       where: {
         userId_projectId: {
           userId,
-          projectId: project.id
-        }
+          projectId: project.id,
+        },
       },
       update: {
         owner: account.login,
@@ -1181,7 +1232,7 @@ export class PrismaStore implements AppStore {
         cloneUrl: generated.cloneUrl,
         defaultBranch: project.defaultBranch,
         visibility: RepoVisibility.private,
-        installStatus: "provisioned"
+        installStatus: 'provisioned',
       },
       create: {
         userId,
@@ -1191,48 +1242,54 @@ export class PrismaStore implements AppStore {
         cloneUrl: generated.cloneUrl,
         defaultBranch: project.defaultBranch,
         visibility: RepoVisibility.private,
-        installStatus: "provisioned"
-      }
+        installStatus: 'provisioned',
+      },
     });
     return {
       owner: record.owner,
       name: record.name,
       cloneUrl: record.cloneUrl,
       defaultBranch: record.defaultBranch,
-      visibility: record.visibility === RepoVisibility.private ? "private" : "public"
+      visibility: record.visibility === RepoVisibility.private ? 'private' : 'public',
     };
   }
 
   async createOrReuseSubmission(
     apiBaseUrl: string,
-    payload: { userId: string; projectKey: string; commitSha: string; repoUrl: string; branch: string }
+    payload: {
+      userId: string;
+      projectKey: string;
+      commitSha: string;
+      repoUrl: string;
+      branch: string;
+    }
   ): Promise<SubmissionRecord> {
     await this.seed(apiBaseUrl);
     const project = await this.prisma.project.findUnique({
       where: { slug: payload.projectKey },
-      include: { releases: { orderBy: { createdAt: "desc" }, take: 1 } }
+      include: { releases: { orderBy: { createdAt: 'desc' }, take: 1 } },
     });
     if (!project || project.releases.length === 0) {
-      throw new Error("Project release not found.");
+      throw new Error('Project release not found.');
     }
     const repo = await this.prisma.userProjectRepo.findUnique({
       where: {
         userId_projectId: {
           userId: payload.userId,
-          projectId: project.id
-        }
-      }
+          projectId: project.id,
+        },
+      },
     });
     if (!repo) {
-      throw new Error("Provisioned repository not found for user.");
+      throw new Error('Provisioned repository not found for user.');
     }
     const existing = await this.prisma.submissionAttempt.findFirst({
       where: {
         userId: payload.userId,
         projectId: project.id,
-        commitSha: payload.commitSha
+        commitSha: payload.commitSha,
       },
-      include: { project: true }
+      include: { project: true },
     });
     if (existing) {
       return toSubmissionRecord(existing);
@@ -1250,41 +1307,41 @@ export class PrismaStore implements AppStore {
             repoUrl: payload.repoUrl,
             branch: payload.branch,
             status: SubmissionStatus.queued,
-            summary: "Submission queued for verification.",
+            summary: 'Submission queued for verification.',
             submissionType: TrackingSubmissionType.github,
             submissionValue: payload.repoUrl,
-            submittedAt: new Date()
+            submittedAt: new Date(),
           },
-          include: { project: true }
+          include: { project: true },
         });
         await tx.verificationRun.create({
           data: {
             submissionAttemptId: submission.id,
             attempt: 0,
             status: SubmissionStatus.queued,
-            log: "Queued"
-          }
+            log: 'Queued',
+          },
         });
         await tx.verificationJob.create({
           data: {
             submissionAttemptId: submission.id,
-            status: SubmissionStatus.queued
-          }
+            status: SubmissionStatus.queued,
+          },
         });
         return submission;
       });
       return toSubmissionRecord(created);
     } catch (error) {
-      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
         throw error;
       }
       const duplicate = await this.prisma.submissionAttempt.findFirst({
         where: {
           userId: payload.userId,
           projectId: project.id,
-          commitSha: payload.commitSha
+          commitSha: payload.commitSha,
         },
-        include: { project: true }
+        include: { project: true },
       });
       if (!duplicate) {
         throw error;
@@ -1305,8 +1362,8 @@ export class PrismaStore implements AppStore {
       where: { id: submissionId, userId: requesterUserId },
       data: {
         localTestExitCode: exitCode,
-        summary
-      }
+        summary,
+      },
     });
     if (updated.count === 0) {
       return null;
@@ -1314,11 +1371,15 @@ export class PrismaStore implements AppStore {
     return this.getSubmission(apiBaseUrl, submissionId, requesterUserId);
   }
 
-  async getSubmission(apiBaseUrl: string, submissionId: string, requesterUserId: string): Promise<SubmissionRecord | null> {
+  async getSubmission(
+    apiBaseUrl: string,
+    submissionId: string,
+    requesterUserId: string
+  ): Promise<SubmissionRecord | null> {
     await this.seed(apiBaseUrl);
     const submission = await this.prisma.submissionAttempt.findFirst({
       where: { id: submissionId, userId: requesterUserId },
-      include: { project: true }
+      include: { project: true },
     });
     if (!submission) {
       return null;
@@ -1326,11 +1387,14 @@ export class PrismaStore implements AppStore {
     return toSubmissionRecord(submission);
   }
 
-  async getSubmissionForAdmin(apiBaseUrl: string, submissionId: string): Promise<SubmissionRecord | null> {
+  async getSubmissionForAdmin(
+    apiBaseUrl: string,
+    submissionId: string
+  ): Promise<SubmissionRecord | null> {
     await this.seed(apiBaseUrl);
     const submission = await this.prisma.submissionAttempt.findUnique({
       where: { id: submissionId },
-      include: { project: true }
+      include: { project: true },
     });
     return submission ? toSubmissionRecord(submission) : null;
   }
@@ -1338,37 +1402,37 @@ export class PrismaStore implements AppStore {
   async overrideSubmissionStatus(
     apiBaseUrl: string,
     submissionId: string,
-    status: SubmissionRecord["status"],
+    status: SubmissionRecord['status'],
     summary: string,
     actorUserId: string
   ): Promise<SubmissionRecord | null> {
     await this.seed(apiBaseUrl);
     const existing = await this.prisma.submissionAttempt.findUnique({
       where: { id: submissionId },
-      include: { project: true }
+      include: { project: true },
     });
     if (!existing) {
       return null;
     }
     const nextAttempt = await this.prisma.verificationRun.count({
-      where: { submissionAttemptId: submissionId }
+      where: { submissionAttemptId: submissionId },
     });
     const updated = await this.prisma.$transaction(async (tx) => {
       const submission = await tx.submissionAttempt.update({
         where: { id: submissionId },
         data: {
           status: status as SubmissionStatus,
-          summary
+          summary,
         },
-        include: { project: true }
+        include: { project: true },
       });
       await tx.verificationJob.updateMany({
         where: { submissionAttemptId: submissionId },
         data: {
           status: status as SubmissionStatus,
           finishedAt: new Date(),
-          claimedAt: null
-        }
+          claimedAt: null,
+        },
       });
       await tx.verificationRun.create({
         data: {
@@ -1377,8 +1441,8 @@ export class PrismaStore implements AppStore {
           status: status as SubmissionStatus,
           log: `Manual override by ${actorUserId}: ${summary}`,
           startedAt: new Date(),
-          finishedAt: new Date()
-        }
+          finishedAt: new Date(),
+        },
       });
       await tx.auditLog.create({
         data: {
@@ -1387,34 +1451,40 @@ export class PrismaStore implements AppStore {
           projectId: existing.projectId,
           milestoneId: existing.milestoneId,
           submissionAttemptId: submissionId,
-          action: "submission.overridden",
-          targetType: "submission",
+          action: 'submission.overridden',
+          targetType: 'submission',
           targetId: submissionId,
           payload: {
             previousStatus: existing.status,
             nextStatus: status,
-            summary
-          } as Prisma.InputJsonValue
-        }
+            summary,
+          } as Prisma.InputJsonValue,
+        },
       });
       return submission;
     });
     return toSubmissionRecord(updated);
   }
 
-  async listSubmissionVerificationLogs(apiBaseUrl: string, submissionId: string): Promise<VerificationLogRecord[]> {
+  async listSubmissionVerificationLogs(
+    apiBaseUrl: string,
+    submissionId: string
+  ): Promise<VerificationLogRecord[]> {
     await this.seed(apiBaseUrl);
     const runs = await this.prisma.verificationRun.findMany({
       where: { submissionAttemptId: submissionId },
-      orderBy: [{ attempt: "desc" }, { createdAt: "desc" }]
+      orderBy: [{ attempt: 'desc' }, { createdAt: 'desc' }],
     });
     return runs.map(toVerificationLogRecord);
   }
 
-  async listCourseMemberships(apiBaseUrl: string, userId: string): Promise<CourseMembershipRecord[]> {
+  async listCourseMemberships(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<CourseMembershipRecord[]> {
     await this.seed(apiBaseUrl);
     const memberships = await this.prisma.courseMembership.findMany({
-      where: { userId }
+      where: { userId },
     });
     return memberships.map(toMembershipRecord);
   }
@@ -1425,14 +1495,14 @@ export class PrismaStore implements AppStore {
     if (user.systemRole === SystemRole.admin) {
       const courses = await this.prisma.course.findMany({
         where: { isActive: true },
-        orderBy: { createdAt: "desc" }
+        orderBy: { createdAt: 'desc' },
       });
       return courses.map(toCourseRecord);
     }
     const memberships = await this.prisma.courseMembership.findMany({
       where: { userId },
       include: { course: true },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: 'desc' },
     });
     return memberships.map((entry) => toCourseRecord(entry.course));
   }
@@ -1450,16 +1520,16 @@ export class PrismaStore implements AppStore {
           title: payload.title,
           termLabel: payload.termLabel,
           courseCode: payload.courseCode,
-          isActive: true
-        }
+          isActive: true,
+        },
       });
       // Automatically enroll the creator as instructor
       await tx.courseMembership.create({
         data: {
           courseId: created.id,
           userId,
-          role: CourseRole.instructor
-        }
+          role: CourseRole.instructor,
+        },
       });
       return created;
     });
@@ -1474,17 +1544,17 @@ export class PrismaStore implements AppStore {
     const memberships = await this.prisma.courseMembership.findMany({
       where: { courseId },
       include: { user: { include: { githubAccount: true } } },
-      orderBy: { createdAt: "asc" }
+      orderBy: { createdAt: 'asc' },
     });
     return memberships.map((m) => ({
       id: m.id,
       courseId: m.courseId,
       userId: m.userId,
-      role: m.role as CourseMembershipRecord["role"],
+      role: m.role as CourseMembershipRecord['role'],
       createdAt: m.createdAt.toISOString(),
       updatedAt: m.updatedAt.toISOString(),
       username: m.user.username,
-      githubLogin: m.user.githubAccount?.login || m.user.username
+      githubLogin: m.user.githubAccount?.login || m.user.username,
     }));
   }
 
@@ -1492,34 +1562,38 @@ export class PrismaStore implements AppStore {
     apiBaseUrl: string,
     courseId: string,
     githubLogin: string,
-    role: CourseMembershipRecord["role"]
+    role: CourseMembershipRecord['role']
   ): Promise<CourseMembershipRecord & { username: string; githubLogin: string }> {
     await this.seed(apiBaseUrl);
     const account = await this.prisma.githubAccount.findFirst({
       where: { login: githubLogin },
-      include: { user: true }
+      include: { user: true },
     });
     if (!account) {
-      throw Object.assign(new Error(`No user found with GitHub login "${githubLogin}".`), { statusCode: 404 });
+      throw Object.assign(new Error(`No user found with GitHub login "${githubLogin}".`), {
+        statusCode: 404,
+      });
     }
     const existing = await this.prisma.courseMembership.findFirst({
-      where: { courseId, userId: account.userId }
+      where: { courseId, userId: account.userId },
     });
     if (existing) {
-      throw Object.assign(new Error("User is already a member of this course."), { statusCode: 409 });
+      throw Object.assign(new Error('User is already a member of this course.'), {
+        statusCode: 409,
+      });
     }
     const membership = await this.prisma.courseMembership.create({
-      data: { courseId, userId: account.userId, role: role as CourseRole }
+      data: { courseId, userId: account.userId, role: role as CourseRole },
     });
     return {
       id: membership.id,
       courseId: membership.courseId,
       userId: membership.userId,
-      role: membership.role as CourseMembershipRecord["role"],
+      role: membership.role as CourseMembershipRecord['role'],
       createdAt: membership.createdAt.toISOString(),
       updatedAt: membership.updatedAt.toISOString(),
       username: account.user.username,
-      githubLogin: account.login
+      githubLogin: account.login,
     };
   }
 
@@ -1531,9 +1605,9 @@ export class PrismaStore implements AppStore {
   async createCourseInvite(
     apiBaseUrl: string,
     courseId: string,
-    role: CourseMembershipRecord["role"],
+    role: CourseMembershipRecord['role'],
     opts?: { maxUses?: number; expiresAt?: string | null }
-  ): Promise<import("./store").CourseInviteRecord> {
+  ): Promise<import('./store').CourseInviteRecord> {
     await this.seed(apiBaseUrl);
     const code = Math.random().toString(36).slice(2, 10).toUpperCase();
     const invite = await this.prisma.courseInvite.create({
@@ -1542,37 +1616,37 @@ export class PrismaStore implements AppStore {
         code,
         role: role as CourseRole,
         maxUses: opts?.maxUses ?? 0,
-        expiresAt: opts?.expiresAt ? new Date(opts.expiresAt) : null
-      }
+        expiresAt: opts?.expiresAt ? new Date(opts.expiresAt) : null,
+      },
     });
     return {
       id: invite.id,
       courseId: invite.courseId,
       code: invite.code,
-      role: invite.role as CourseMembershipRecord["role"],
+      role: invite.role as CourseMembershipRecord['role'],
       maxUses: invite.maxUses,
       useCount: invite.useCount,
       expiresAt: invite.expiresAt?.toISOString() ?? null,
       createdAt: invite.createdAt.toISOString(),
-      updatedAt: invite.updatedAt.toISOString()
+      updatedAt: invite.updatedAt.toISOString(),
     };
   }
 
   async getCourseInviteByCode(
     apiBaseUrl: string,
     code: string
-  ): Promise<(import("./store").CourseInviteRecord & { course: CourseRecord }) | null> {
+  ): Promise<(import('./store').CourseInviteRecord & { course: CourseRecord }) | null> {
     await this.seed(apiBaseUrl);
     const invite = await this.prisma.courseInvite.findUnique({
       where: { code },
-      include: { course: true }
+      include: { course: true },
     });
     if (!invite) return null;
     return {
       id: invite.id,
       courseId: invite.courseId,
       code: invite.code,
-      role: invite.role as CourseMembershipRecord["role"],
+      role: invite.role as CourseMembershipRecord['role'],
       maxUses: invite.maxUses,
       useCount: invite.useCount,
       expiresAt: invite.expiresAt?.toISOString() ?? null,
@@ -1586,8 +1660,8 @@ export class PrismaStore implements AppStore {
         courseCode: invite.course.courseCode,
         isActive: invite.course.isActive,
         createdAt: invite.course.createdAt.toISOString(),
-        updatedAt: invite.course.updatedAt.toISOString()
-      }
+        updatedAt: invite.course.updatedAt.toISOString(),
+      },
     };
   }
 
@@ -1599,43 +1673,45 @@ export class PrismaStore implements AppStore {
     await this.seed(apiBaseUrl);
     const invite = await this.prisma.courseInvite.findUnique({ where: { code } });
     if (!invite) {
-      throw Object.assign(new Error("Invalid or expired invite code."), { statusCode: 404 });
+      throw Object.assign(new Error('Invalid or expired invite code.'), { statusCode: 404 });
     }
     if (invite.expiresAt && invite.expiresAt < new Date()) {
-      throw Object.assign(new Error("This invite link has expired."), { statusCode: 410 });
+      throw Object.assign(new Error('This invite link has expired.'), { statusCode: 410 });
     }
     if (invite.maxUses > 0 && invite.useCount >= invite.maxUses) {
-      throw Object.assign(new Error("This invite link has reached its maximum uses."), { statusCode: 410 });
+      throw Object.assign(new Error('This invite link has reached its maximum uses.'), {
+        statusCode: 410,
+      });
     }
     const existing = await this.prisma.courseMembership.findFirst({
-      where: { courseId: invite.courseId, userId }
+      where: { courseId: invite.courseId, userId },
     });
     if (existing) {
       return {
         id: existing.id,
         courseId: existing.courseId,
         userId: existing.userId,
-        role: existing.role as CourseMembershipRecord["role"],
+        role: existing.role as CourseMembershipRecord['role'],
         createdAt: existing.createdAt.toISOString(),
-        updatedAt: existing.updatedAt.toISOString()
+        updatedAt: existing.updatedAt.toISOString(),
       };
     }
     const [membership] = await this.prisma.$transaction([
       this.prisma.courseMembership.create({
-        data: { courseId: invite.courseId, userId, role: invite.role }
+        data: { courseId: invite.courseId, userId, role: invite.role },
       }),
       this.prisma.courseInvite.update({
         where: { id: invite.id },
-        data: { useCount: { increment: 1 } }
-      })
+        data: { useCount: { increment: 1 } },
+      }),
     ]);
     return {
       id: membership.id,
       courseId: membership.courseId,
       userId: membership.userId,
-      role: membership.role as CourseMembershipRecord["role"],
+      role: membership.role as CourseMembershipRecord['role'],
       createdAt: membership.createdAt.toISOString(),
-      updatedAt: membership.updatedAt.toISOString()
+      updatedAt: membership.updatedAt.toISOString(),
     };
   }
 
@@ -1644,20 +1720,23 @@ export class PrismaStore implements AppStore {
     const projects = await this.prisma.project.findMany({
       where: { courseId },
       include: {
-        releases: { orderBy: { createdAt: "desc" }, take: 1 }
+        releases: { orderBy: { createdAt: 'desc' }, take: 1 },
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: 'desc' },
     });
     return projects.map(toProjectRecord);
   }
 
-  async getTrackingProjectById(apiBaseUrl: string, projectId: string): Promise<ProjectRecord | null> {
+  async getTrackingProjectById(
+    apiBaseUrl: string,
+    projectId: string
+  ): Promise<ProjectRecord | null> {
     await this.seed(apiBaseUrl);
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       include: {
-        releases: { orderBy: { createdAt: "desc" }, take: 1 }
-      }
+        releases: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
     });
     return project ? toProjectRecord(project) : null;
   }
@@ -1671,28 +1750,30 @@ export class PrismaStore implements AppStore {
       title: string;
       description: string;
       status: ProjectStatus;
-      deliveryMode: "individual" | "team";
+      deliveryMode: 'individual' | 'team';
       rubric: TrackingRubricItemRecord[];
       resources: TrackingResourceRecord[];
     }
   ): Promise<ProjectRecord> {
     await this.seed(apiBaseUrl);
-    const subject = await this.prisma.subject.findUniqueOrThrow({ where: { slug: payload.slug.split("/")[0] || "cs161" } }).catch(async () => {
-      return this.prisma.subject.findFirstOrThrow();
-    });
+    const subject = await this.prisma.subject
+      .findUniqueOrThrow({ where: { slug: payload.slug.split('/')[0] || 'cs161' } })
+      .catch(async () => {
+        return this.prisma.subject.findFirstOrThrow();
+      });
     const created = await this.prisma.project.create({
       data: {
         subjectId: subject.id,
         courseId: payload.courseId,
         slug: payload.slug,
         name: payload.title,
-        defaultBranch: "main",
+        defaultBranch: 'main',
         description: payload.description,
         status: payload.status as PrismaProjectStatus,
-        deliveryMode: payload.deliveryMode === "team" ? DeliveryMode.team : DeliveryMode.individual,
+        deliveryMode: payload.deliveryMode === 'team' ? DeliveryMode.team : DeliveryMode.individual,
         rubricJson: payload.rubric,
-        resourcesJson: payload.resources
-      }
+        resourcesJson: payload.resources,
+      },
     });
     await this.prisma.projectRelease.create({
       data: {
@@ -1701,26 +1782,26 @@ export class PrismaStore implements AppStore {
         taskText: `# ${payload.title}\n\n${payload.description}\n`,
         manifestJson: {
           ...defaultManifest(apiBaseUrl),
-          projectKey: payload.slug
+          projectKey: payload.slug,
         },
-        publicAssetRef: "public://tracking",
-        privateAssetRef: "private://tracking"
-      }
+        publicAssetRef: 'public://tracking',
+        privateAssetRef: 'private://tracking',
+      },
     });
     const hydrated = await this.prisma.project.findUniqueOrThrow({
       where: { id: created.id },
-      include: { releases: { orderBy: { createdAt: "desc" }, take: 1 } }
+      include: { releases: { orderBy: { createdAt: 'desc' }, take: 1 } },
     });
     await this.prisma.auditLog.create({
       data: {
         userId,
         courseId: payload.courseId,
         projectId: created.id,
-        action: "project.created",
-        targetType: "project",
+        action: 'project.created',
+        targetType: 'project',
         targetId: created.id,
-        payload: { title: payload.title }
-      }
+        payload: { title: payload.title },
+      },
     });
     return toProjectRecord(hydrated);
   }
@@ -1734,29 +1815,33 @@ export class PrismaStore implements AppStore {
       title: string;
       description: string;
       status: ProjectStatus;
-      deliveryMode: "individual" | "team";
+      deliveryMode: 'individual' | 'team';
       rubric: TrackingRubricItemRecord[];
       resources: TrackingResourceRecord[];
     }>
   ): Promise<ProjectRecord | null> {
     await this.seed(apiBaseUrl);
-    const updated = await this.prisma.project.update({
-      where: { id: projectId },
-      data: {
-        slug: payload.slug,
-        name: payload.title,
-        description: payload.description,
-        status: payload.status as PrismaProjectStatus | undefined,
-        deliveryMode: payload.deliveryMode
-          ? payload.deliveryMode === "team" ? DeliveryMode.team : DeliveryMode.individual
-          : undefined,
-        rubricJson: payload.rubric,
-        resourcesJson: payload.resources
-      },
-      include: {
-        releases: { orderBy: { createdAt: "desc" }, take: 1 }
-      }
-    }).catch(() => null);
+    const updated = await this.prisma.project
+      .update({
+        where: { id: projectId },
+        data: {
+          slug: payload.slug,
+          name: payload.title,
+          description: payload.description,
+          status: payload.status as PrismaProjectStatus | undefined,
+          deliveryMode: payload.deliveryMode
+            ? payload.deliveryMode === 'team'
+              ? DeliveryMode.team
+              : DeliveryMode.individual
+            : undefined,
+          rubricJson: payload.rubric,
+          resourcesJson: payload.resources,
+        },
+        include: {
+          releases: { orderBy: { createdAt: 'desc' }, take: 1 },
+        },
+      })
+      .catch(() => null);
     if (!updated) {
       return null;
     }
@@ -1765,15 +1850,20 @@ export class PrismaStore implements AppStore {
         userId,
         courseId: updated.courseId,
         projectId: updated.id,
-        action: "project.updated",
-        targetType: "project",
-        targetId: updated.id
-      }
+        action: 'project.updated',
+        targetType: 'project',
+        targetId: updated.id,
+      },
     });
     return toProjectRecord(updated);
   }
 
-  async setTrackingProjectStatus(apiBaseUrl: string, userId: string, projectId: string, status: ProjectStatus): Promise<ProjectRecord | null> {
+  async setTrackingProjectStatus(
+    apiBaseUrl: string,
+    userId: string,
+    projectId: string,
+    status: ProjectStatus
+  ): Promise<ProjectRecord | null> {
     return this.updateTrackingProject(apiBaseUrl, userId, projectId, { status });
   }
 
@@ -1781,15 +1871,18 @@ export class PrismaStore implements AppStore {
     await this.seed(apiBaseUrl);
     const milestones = await this.prisma.milestone.findMany({
       where: { projectId },
-      orderBy: { order: "asc" }
+      orderBy: { order: 'asc' },
     });
     return milestones.map(toMilestoneRecord);
   }
 
-  async getTrackingMilestone(apiBaseUrl: string, milestoneId: string): Promise<MilestoneRecord | null> {
+  async getTrackingMilestone(
+    apiBaseUrl: string,
+    milestoneId: string
+  ): Promise<MilestoneRecord | null> {
     await this.seed(apiBaseUrl);
     const milestone = await this.prisma.milestone.findUnique({
-      where: { id: milestoneId }
+      where: { id: milestoneId },
     });
     return milestone ? toMilestoneRecord(milestone) : null;
   }
@@ -1798,10 +1891,19 @@ export class PrismaStore implements AppStore {
     apiBaseUrl: string,
     userId: string,
     projectId: string,
-    payload: { title: string; description: string; order: number; dueAt: string | null; isFinal: boolean }
+    payload: {
+      title: string;
+      description: string;
+      order: number;
+      dueAt: string | null;
+      isFinal: boolean;
+    }
   ): Promise<MilestoneRecord> {
     await this.seed(apiBaseUrl);
-    const existing = await this.prisma.milestone.findMany({ where: { projectId }, select: { order: true } });
+    const existing = await this.prisma.milestone.findMany({
+      where: { projectId },
+      select: { order: true },
+    });
     const maxOrder = existing.length > 0 ? Math.max(...existing.map((m) => m.order)) : -1;
     const order = payload.order > maxOrder ? payload.order : maxOrder + 1;
     const created = await this.prisma.milestone.create({
@@ -1811,8 +1913,8 @@ export class PrismaStore implements AppStore {
         description: payload.description,
         order,
         dueAt: payload.dueAt ? new Date(payload.dueAt) : null,
-        isFinal: payload.isFinal
-      }
+        isFinal: payload.isFinal,
+      },
     });
     const project = await this.prisma.project.findUnique({ where: { id: projectId } });
     await this.prisma.auditLog.create({
@@ -1821,10 +1923,10 @@ export class PrismaStore implements AppStore {
         courseId: project?.courseId || null,
         projectId,
         milestoneId: created.id,
-        action: "milestone.created",
-        targetType: "milestone",
-        targetId: created.id
-      }
+        action: 'milestone.created',
+        targetType: 'milestone',
+        targetId: created.id,
+      },
     });
     return toMilestoneRecord(created);
   }
@@ -1833,19 +1935,32 @@ export class PrismaStore implements AppStore {
     apiBaseUrl: string,
     userId: string,
     milestoneId: string,
-    payload: Partial<{ title: string; description: string; order: number; dueAt: string | null; isFinal: boolean }>
+    payload: Partial<{
+      title: string;
+      description: string;
+      order: number;
+      dueAt: string | null;
+      isFinal: boolean;
+    }>
   ): Promise<MilestoneRecord | null> {
     await this.seed(apiBaseUrl);
-    const updated = await this.prisma.milestone.update({
-      where: { id: milestoneId },
-      data: {
-        title: payload.title,
-        description: payload.description,
-        order: payload.order,
-        dueAt: payload.dueAt === undefined ? undefined : payload.dueAt ? new Date(payload.dueAt) : null,
-        isFinal: payload.isFinal
-      }
-    }).catch(() => null);
+    const updated = await this.prisma.milestone
+      .update({
+        where: { id: milestoneId },
+        data: {
+          title: payload.title,
+          description: payload.description,
+          order: payload.order,
+          dueAt:
+            payload.dueAt === undefined
+              ? undefined
+              : payload.dueAt
+                ? new Date(payload.dueAt)
+                : null,
+          isFinal: payload.isFinal,
+        },
+      })
+      .catch(() => null);
     if (!updated) {
       return null;
     }
@@ -1856,15 +1971,19 @@ export class PrismaStore implements AppStore {
         courseId: project?.courseId || null,
         projectId: updated.projectId,
         milestoneId,
-        action: "milestone.updated",
-        targetType: "milestone",
-        targetId: milestoneId
-      }
+        action: 'milestone.updated',
+        targetType: 'milestone',
+        targetId: milestoneId,
+      },
     });
     return toMilestoneRecord(updated);
   }
 
-  async deleteTrackingMilestone(apiBaseUrl: string, userId: string, milestoneId: string): Promise<boolean> {
+  async deleteTrackingMilestone(
+    apiBaseUrl: string,
+    userId: string,
+    milestoneId: string
+  ): Promise<boolean> {
     await this.seed(apiBaseUrl);
     const milestone = await this.prisma.milestone.findUnique({ where: { id: milestoneId } });
     if (!milestone) {
@@ -1878,20 +1997,23 @@ export class PrismaStore implements AppStore {
         courseId: project?.courseId || null,
         projectId: milestone.projectId,
         milestoneId,
-        action: "milestone.deleted",
-        targetType: "milestone",
-        targetId: milestoneId
-      }
+        action: 'milestone.deleted',
+        targetType: 'milestone',
+        targetId: milestoneId,
+      },
     });
     return true;
   }
 
-  async listTrackingMilestoneSubmissions(apiBaseUrl: string, milestoneId: string): Promise<SubmissionRecord[]> {
+  async listTrackingMilestoneSubmissions(
+    apiBaseUrl: string,
+    milestoneId: string
+  ): Promise<SubmissionRecord[]> {
     await this.seed(apiBaseUrl);
     const submissions = await this.prisma.submissionAttempt.findMany({
       where: { milestoneId },
       include: { project: true },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: 'desc' },
     });
     return submissions.map(toSubmissionRecord);
   }
@@ -1912,14 +2034,14 @@ export class PrismaStore implements AppStore {
     await this.seed(apiBaseUrl);
     const milestone = await this.prisma.milestone.findUniqueOrThrow({
       where: { id: milestoneId },
-      include: { project: { include: { releases: { orderBy: { createdAt: "desc" }, take: 1 } } } }
+      include: { project: { include: { releases: { orderBy: { createdAt: 'desc' }, take: 1 } } } },
     });
     const parsedRepo = parseGitHubRepoUrl(payload.repoUrl || payload.submissionValue);
     let repo = await this.prisma.userProjectRepo.findFirst({
       where: {
         userId,
-        projectId: milestone.projectId
-      }
+        projectId: milestone.projectId,
+      },
     });
     if (!repo) {
       const account = await this.prisma.githubAccount.findUnique({ where: { userId } });
@@ -1927,13 +2049,13 @@ export class PrismaStore implements AppStore {
         data: {
           userId,
           projectId: milestone.projectId,
-          owner: parsedRepo?.owner || account?.login || "nibras-user",
-          name: parsedRepo?.name || `nibras-${milestone.project.slug.replace("/", "-")}`,
+          owner: parsedRepo?.owner || account?.login || 'nibras-user',
+          name: parsedRepo?.name || `nibras-${milestone.project.slug.replace('/', '-')}`,
           cloneUrl: payload.repoUrl || payload.submissionValue || null,
-          defaultBranch: payload.branch || "main",
+          defaultBranch: payload.branch || 'main',
           visibility: RepoVisibility.private,
-          installStatus: "provisioned"
-        }
+          installStatus: 'provisioned',
+        },
       });
     }
     const submission = await this.prisma.submissionAttempt.create({
@@ -1943,23 +2065,27 @@ export class PrismaStore implements AppStore {
         projectReleaseId: milestone.project.releases[0].id,
         userProjectRepoId: repo.id,
         milestoneId,
-        commitSha: payload.commitSha || (
-          payload.submissionType === "github"
+        commitSha:
+          payload.commitSha ||
+          (payload.submissionType === 'github'
             ? `github-pending-${randomUUID().slice(0, 8)}`
-            : `manual-${randomUUID().slice(0, 8)}`
-        ),
+            : `manual-${randomUUID().slice(0, 8)}`),
         repoUrl: payload.repoUrl || payload.submissionValue,
-        branch: payload.branch || "main",
-        status: payload.submissionType === "github" ? SubmissionStatus.running : SubmissionStatus.needs_review,
-        summary: payload.submissionType === "github"
-          ? "GitHub submission received. Waiting for webhook activity."
-          : "Submission received and queued for instructor review.",
+        branch: payload.branch || 'main',
+        status:
+          payload.submissionType === 'github'
+            ? SubmissionStatus.running
+            : SubmissionStatus.needs_review,
+        summary:
+          payload.submissionType === 'github'
+            ? 'GitHub submission received. Waiting for webhook activity.'
+            : 'Submission received and queued for instructor review.',
         submissionType: payload.submissionType as TrackingSubmissionType,
         submissionValue: payload.submissionValue,
         notes: payload.notes,
-        submittedAt: new Date()
+        submittedAt: new Date(),
       },
-      include: { project: true }
+      include: { project: true },
     });
     await this.prisma.auditLog.create({
       data: {
@@ -1968,10 +2094,10 @@ export class PrismaStore implements AppStore {
         projectId: milestone.projectId,
         milestoneId,
         submissionAttemptId: submission.id,
-        action: "submission.created",
-        targetType: "submission",
-        targetId: submission.id
-      }
+        action: 'submission.created',
+        targetType: 'submission',
+        targetId: submission.id,
+      },
     });
     return toSubmissionRecord(submission);
   }
@@ -1990,18 +2116,20 @@ export class PrismaStore implements AppStore {
     }>
   ): Promise<SubmissionRecord | null> {
     await this.seed(apiBaseUrl);
-    const updated = await this.prisma.submissionAttempt.update({
-      where: { id: submissionId },
-      data: {
-        submissionType: payload.submissionType as TrackingSubmissionType | undefined,
-        submissionValue: payload.submissionValue,
-        notes: payload.notes,
-        repoUrl: payload.repoUrl,
-        branch: payload.branch,
-        commitSha: payload.commitSha
-      },
-      include: { project: true }
-    }).catch(() => null);
+    const updated = await this.prisma.submissionAttempt
+      .update({
+        where: { id: submissionId },
+        data: {
+          submissionType: payload.submissionType as TrackingSubmissionType | undefined,
+          submissionValue: payload.submissionValue,
+          notes: payload.notes,
+          repoUrl: payload.repoUrl,
+          branch: payload.branch,
+          commitSha: payload.commitSha,
+        },
+        include: { project: true },
+      })
+      .catch(() => null);
     if (!updated) {
       return null;
     }
@@ -2011,10 +2139,10 @@ export class PrismaStore implements AppStore {
         projectId: updated.projectId,
         milestoneId: updated.milestoneId,
         submissionAttemptId: submissionId,
-        action: "submission.updated",
-        targetType: "submission",
-        targetId: submissionId
-      }
+        action: 'submission.updated',
+        targetType: 'submission',
+        targetId: submissionId,
+      },
     });
     return toSubmissionRecord(updated);
   }
@@ -2023,11 +2151,16 @@ export class PrismaStore implements AppStore {
     apiBaseUrl: string,
     userId: string,
     submissionId: string,
-    payload: { status: StoreReviewStatus; score: number | null; feedback: string; rubric: TrackingRubricItemRecord[] }
+    payload: {
+      status: StoreReviewStatus;
+      score: number | null;
+      feedback: string;
+      rubric: TrackingRubricItemRecord[];
+    }
   ): Promise<ReviewRecord> {
     await this.seed(apiBaseUrl);
     const submission = await this.prisma.submissionAttempt.findUniqueOrThrow({
-      where: { id: submissionId }
+      where: { id: submissionId },
     });
     const review = await this.prisma.review.create({
       data: {
@@ -2037,19 +2170,20 @@ export class PrismaStore implements AppStore {
         score: payload.score,
         feedback: payload.feedback,
         rubricJson: payload.rubric,
-        reviewedAt: new Date()
-      }
+        reviewedAt: new Date(),
+      },
     });
     await this.prisma.submissionAttempt.update({
       where: { id: submissionId },
       data: {
-        status: payload.status === "changes_requested"
-          ? SubmissionStatus.failed
-          : payload.status === "approved" || payload.status === "graded"
-            ? SubmissionStatus.passed
-            : SubmissionStatus.needs_review,
-        summary: payload.feedback || payload.status
-      }
+        status:
+          payload.status === 'changes_requested'
+            ? SubmissionStatus.failed
+            : payload.status === 'approved' || payload.status === 'graded'
+              ? SubmissionStatus.passed
+              : SubmissionStatus.needs_review,
+        summary: payload.feedback || payload.status,
+      },
     });
     await this.prisma.auditLog.create({
       data: {
@@ -2057,10 +2191,10 @@ export class PrismaStore implements AppStore {
         projectId: submission.projectId,
         milestoneId: submission.milestoneId,
         submissionAttemptId: submissionId,
-        action: "review.created",
-        targetType: "review",
-        targetId: review.id
-      }
+        action: 'review.created',
+        targetType: 'review',
+        targetId: review.id,
+      },
     });
     return toReviewRecord(review);
   }
@@ -2069,7 +2203,7 @@ export class PrismaStore implements AppStore {
     await this.seed(apiBaseUrl);
     const review = await this.prisma.review.findFirst({
       where: { submissionAttemptId: submissionId },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: 'desc' },
     });
     return review ? toReviewRecord(review) : null;
   }
@@ -2084,7 +2218,7 @@ export class PrismaStore implements AppStore {
 
   async listTrackingReviewQueue(
     apiBaseUrl: string,
-    filters?: { courseId?: string; projectId?: string; status?: SubmissionRecord["status"] }
+    filters?: { courseId?: string; projectId?: string; status?: SubmissionRecord['status'] }
   ): Promise<SubmissionRecord[]> {
     await this.seed(apiBaseUrl);
     const submissions = await this.prisma.submissionAttempt.findMany({
@@ -2092,10 +2226,10 @@ export class PrismaStore implements AppStore {
         milestoneId: { not: null },
         status: filters?.status as SubmissionStatus | undefined,
         projectId: filters?.projectId,
-        project: filters?.courseId ? { courseId: filters.courseId } : undefined
+        project: filters?.courseId ? { courseId: filters.courseId } : undefined,
       },
       include: { project: true },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: 'desc' },
     });
     return submissions.map(toSubmissionRecord);
   }
@@ -2106,13 +2240,10 @@ export class PrismaStore implements AppStore {
     const courseIds = courses.map((entry) => entry.id);
     const logs = await this.prisma.auditLog.findMany({
       where: {
-        OR: [
-          { courseId: { in: courseIds } },
-          { courseId: null }
-        ]
+        OR: [{ courseId: { in: courseIds } }, { courseId: null }],
       },
-      orderBy: { createdAt: "desc" },
-      take: 20
+      orderBy: { createdAt: 'desc' },
+      take: 20,
     });
     return logs.map((entry) => ({
       id: entry.id,
@@ -2123,15 +2254,21 @@ export class PrismaStore implements AppStore {
       submissionId: entry.submissionAttemptId,
       action: entry.action,
       summary: `${entry.action} on ${entry.targetType}`,
-      createdAt: entry.createdAt.toISOString()
+      createdAt: entry.createdAt.toISOString(),
     }));
   }
 
-  async getStudentTrackingDashboard(apiBaseUrl: string, userId: string, courseId?: string | null): Promise<StudentDashboardRecord> {
+  async getStudentTrackingDashboard(
+    apiBaseUrl: string,
+    userId: string,
+    courseId?: string | null
+  ): Promise<StudentDashboardRecord> {
     await this.seed(apiBaseUrl);
     const courses = await this.listTrackingCourses(apiBaseUrl, userId);
     const memberships = await this.listCourseMemberships(apiBaseUrl, userId);
-    const selected = courseId ? courses.find((entry) => entry.id === courseId) || null : courses[0] || null;
+    const selected = courseId
+      ? courses.find((entry) => entry.id === courseId) || null
+      : courses[0] || null;
     if (!selected) {
       return {
         course: null,
@@ -2141,10 +2278,12 @@ export class PrismaStore implements AppStore {
         activeProjectId: null,
         activity: [],
         statsByProject: {},
-        pageError: "No active course found for this account."
+        pageError: 'No active course found for this account.',
       };
     }
-    const projects = (await this.listTrackingProjects(apiBaseUrl, selected.id)).filter((entry) => entry.status === "published");
+    const projects = (await this.listTrackingProjects(apiBaseUrl, selected.id)).filter(
+      (entry) => entry.status === 'published'
+    );
     const milestonesByProject: Record<string, MilestoneRecord[]> = {};
     const statsByProject: Record<string, TrackingDashboardStats> = {};
     const reviews = await this.prisma.review.findMany({
@@ -2152,10 +2291,10 @@ export class PrismaStore implements AppStore {
         submissionAttempt: {
           userId,
           project: {
-            courseId: selected.id
-          }
-        }
-      }
+            courseId: selected.id,
+          },
+        },
+      },
     });
     const reviewRecords = reviews.map(toReviewRecord);
     for (const project of projects) {
@@ -2163,9 +2302,9 @@ export class PrismaStore implements AppStore {
       const submissions = await this.prisma.submissionAttempt.findMany({
         where: {
           userId,
-          projectId: project.id
+          projectId: project.id,
         },
-        include: { project: true }
+        include: { project: true },
       });
       const submissionRecords = submissions.map(toSubmissionRecord);
       milestonesByProject[project.id] = milestones;
@@ -2177,57 +2316,81 @@ export class PrismaStore implements AppStore {
       projects,
       milestonesByProject,
       activeProjectId: projects[0]?.id || null,
-      activity: (await this.listTrackingActivity(apiBaseUrl, userId)).filter((entry) => entry.courseId === selected.id),
+      activity: (await this.listTrackingActivity(apiBaseUrl, userId)).filter(
+        (entry) => entry.courseId === selected.id
+      ),
       statsByProject,
-      pageError: projects.length === 0 ? "No published projects found for this course yet." : null
+      pageError: projects.length === 0 ? 'No published projects found for this course yet.' : null,
     };
   }
 
-  async getInstructorTrackingDashboard(apiBaseUrl: string, userId: string): Promise<InstructorDashboardRecord> {
+  async getInstructorTrackingDashboard(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<InstructorDashboardRecord> {
     await this.seed(apiBaseUrl);
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    const courses = user.systemRole === SystemRole.admin
-      ? await this.listTrackingCourses(apiBaseUrl, userId)
-      : (await this.prisma.courseMembership.findMany({
-          where: {
-            userId,
-            role: { in: [CourseRole.instructor, CourseRole.ta] }
-          },
-          include: { course: true },
-          orderBy: { createdAt: "desc" }
-        })).map((entry) => toCourseRecord(entry.course));
+    const courses =
+      user.systemRole === SystemRole.admin
+        ? await this.listTrackingCourses(apiBaseUrl, userId)
+        : (
+            await this.prisma.courseMembership.findMany({
+              where: {
+                userId,
+                role: { in: [CourseRole.instructor, CourseRole.ta] },
+              },
+              include: { course: true },
+              orderBy: { createdAt: 'desc' },
+            })
+          ).map((entry) => toCourseRecord(entry.course));
     const courseIds = courses.map((entry) => entry.id);
     let reviewQueue: SubmissionRecord[] = [];
     if (user.systemRole === SystemRole.admin) {
       reviewQueue = await this.listTrackingReviewQueue(apiBaseUrl);
     } else if (courseIds.length > 0) {
-      const batches = await Promise.all(courseIds.map((courseId) => this.listTrackingReviewQueue(apiBaseUrl, { courseId })));
+      const batches = await Promise.all(
+        courseIds.map((courseId) => this.listTrackingReviewQueue(apiBaseUrl, { courseId }))
+      );
       reviewQueue = batches.flat();
     }
-    const activity = user.systemRole === SystemRole.admin
-      ? await this.listTrackingActivity(apiBaseUrl, userId)
-      : (await this.listTrackingActivity(apiBaseUrl, userId)).filter((entry) => entry.courseId === null || courseIds.includes(entry.courseId));
+    const activity =
+      user.systemRole === SystemRole.admin
+        ? await this.listTrackingActivity(apiBaseUrl, userId)
+        : (await this.listTrackingActivity(apiBaseUrl, userId)).filter(
+            (entry) => entry.courseId === null || courseIds.includes(entry.courseId)
+          );
     return {
       courses,
       reviewQueue,
-      activity
+      activity,
     };
   }
 
-  async getCourseTrackingDashboard(apiBaseUrl: string, userId: string, courseId: string): Promise<InstructorDashboardRecord> {
+  async getCourseTrackingDashboard(
+    apiBaseUrl: string,
+    userId: string,
+    courseId: string
+  ): Promise<InstructorDashboardRecord> {
     await this.seed(apiBaseUrl);
     return {
-      courses: (await this.listTrackingCourses(apiBaseUrl, userId)).filter((entry) => entry.id === courseId),
+      courses: (await this.listTrackingCourses(apiBaseUrl, userId)).filter(
+        (entry) => entry.id === courseId
+      ),
       reviewQueue: await this.listTrackingReviewQueue(apiBaseUrl, { courseId }),
-      activity: (await this.listTrackingActivity(apiBaseUrl, userId)).filter((entry) => entry.courseId === courseId)
+      activity: (await this.listTrackingActivity(apiBaseUrl, userId)).filter(
+        (entry) => entry.courseId === courseId
+      ),
     };
   }
 
-  async getTrackingSubmissionCommits(apiBaseUrl: string, submissionId: string): Promise<GithubDeliveryRecord[]> {
+  async getTrackingSubmissionCommits(
+    apiBaseUrl: string,
+    submissionId: string
+  ): Promise<GithubDeliveryRecord[]> {
     await this.seed(apiBaseUrl);
     const deliveries = await this.prisma.githubDelivery.findMany({
       where: { submissionAttemptId: submissionId },
-      orderBy: { receivedAt: "desc" }
+      orderBy: { receivedAt: 'desc' },
     });
     return deliveries.map(toGithubDeliveryRecord);
   }

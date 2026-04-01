@@ -1,6 +1,9 @@
 export function normalizeApiBaseUrl(value: string | null | undefined): string | null;
 export function isLoopbackUrl(value: string | null | undefined): boolean;
-export function shouldIgnoreStoredApiBaseUrlForOrigin(pageOrigin: string | null | undefined, value: string | null | undefined): boolean;
+export function shouldIgnoreStoredApiBaseUrlForOrigin(
+  pageOrigin: string | null | undefined,
+  value: string | null | undefined
+): boolean;
 export function buildApiBaseUrlCandidates(args: {
   pageOrigin: string | null | undefined;
   storedApiBaseUrl: string | null | undefined;

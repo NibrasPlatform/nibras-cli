@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 async function fetchText(url) {
   const res = await fetch(url);
@@ -12,7 +12,7 @@ async function fetchText(url) {
 async function loadTask({ cwd, slug, taskUrlBase, file, taskUrl }) {
   if (file) {
     const taskPath = path.isAbsolute(file) ? file : path.join(cwd, file);
-    return fs.readFileSync(taskPath, "utf8");
+    return fs.readFileSync(taskPath, 'utf8');
   }
 
   if (taskUrl) {
@@ -20,12 +20,12 @@ async function loadTask({ cwd, slug, taskUrlBase, file, taskUrl }) {
   }
 
   if (!taskUrlBase) {
-    throw new Error("taskUrlBase is required. Set it in .nibras.json or NIBRAS_TASK_URL_BASE.");
+    throw new Error('taskUrlBase is required. Set it in .nibras.json or NIBRAS_TASK_URL_BASE.');
   }
   if (!slug) {
-    throw new Error("slug is required. Set it in .nibras.json or NIBRAS_SLUG.");
+    throw new Error('slug is required. Set it in .nibras.json or NIBRAS_SLUG.');
   }
-  const url = `${taskUrlBase.replace(/\/$/, "")}/${slug}`;
+  const url = `${taskUrlBase.replace(/\/$/, '')}/${slug}`;
   return fetchText(url);
 }
 

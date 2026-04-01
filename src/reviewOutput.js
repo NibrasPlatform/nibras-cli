@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 function writeReviewOutput({ cwd, filePath, subject, project, summary }) {
   if (!filePath) return null;
@@ -21,10 +21,10 @@ function writeReviewOutput({ cwd, filePath, subject, project, summary }) {
       confidence: result.confidence,
       needsReview: result.needsReview,
       criterionScores: result.criterionScores || [],
-      reasoningSummary: result.reasoningSummary || "",
+      reasoningSummary: result.reasoningSummary || '',
       evidenceQuotes: result.evidenceQuotes || [],
-      answerPath: result.answerPath
-    }))
+      answerPath: result.answerPath,
+    })),
   };
   fs.writeFileSync(resolvedPath, JSON.stringify(payload, null, 2));
   return resolvedPath;

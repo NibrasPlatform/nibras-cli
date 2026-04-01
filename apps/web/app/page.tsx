@@ -1,24 +1,27 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import NibrasLogo from "./_components/nibras-logo";
-import { discoverApiBaseUrl } from "./lib/session";
-import styles from "./signin.module.css";
+import { useState } from 'react';
+import Image from 'next/image';
+import NibrasLogo from './_components/nibras-logo';
+import { discoverApiBaseUrl } from './lib/session';
+import styles from './signin.module.css';
 
 export default function HomePage() {
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSignIn() {
-    setError("");
+    setError('');
     setSubmitting(true);
     try {
       const apiBaseUrl = await discoverApiBaseUrl();
       const configRes = await fetch(`${apiBaseUrl}/v1/github/config`);
       if (configRes.ok) {
-        const config = await configRes.json() as { configured: boolean };
+        const config = (await configRes.json()) as { configured: boolean };
         if (!config.configured) {
-          setError("GitHub App is not configured. Set GITHUB_APP_ID, GITHUB_APP_CLIENT_ID, and related environment variables, then restart the API.");
+          setError(
+            'GitHub App is not configured. Set GITHUB_APP_ID, GITHUB_APP_CLIENT_ID, and related environment variables, then restart the API.'
+          );
           setSubmitting(false);
           return;
         }
@@ -43,52 +46,30 @@ export default function HomePage() {
 
       {/* Top nav */}
       <nav className={styles.nav}>
-        <NibrasLogo variant="inverse" width={110} />
-        <span className={styles.navBadge}>v1.0</span>
+        <div className={styles.navLogo} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Image src="/branding/nibras-icon.svg" alt="Nibras" width={28} height={28} priority />
+          <span style={{ fontWeight: 700, fontSize: 16, color: '#fff', letterSpacing: '-0.01em' }}>
+            Nibras
+          </span>
+        </div>
       </nav>
 
       {/* Hero */}
       <div className={styles.hero}>
-        {/* Big logo mark in hero */}
-        <div className={styles.heroMark}>
-          <svg width="72" height="72" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="hg" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#6366f1" />
-                <stop offset="100%" stopColor="#8b5cf6" />
-              </linearGradient>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="2" result="blur" />
-                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-            </defs>
-            <rect x="1" y="1" width="34" height="34" rx="9" fill="rgba(99,102,241,0.15)" stroke="rgba(99,102,241,0.6)" strokeWidth="1.2"/>
-            <path d="M10 26V10l16 16V10" stroke="url(#hg)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)"/>
-          </svg>
-        </div>
-
-        <div className={styles.heroBadge}>
-          <span className={styles.badgeDot} />
-          Platform v1.0 · Now Live
-        </div>
-
         <h1 className={styles.headline}>
-          <span className={styles.headlineBright}>The grading platform</span>
+          <span className={styles.headlineBright}>Ship. Learn. Dominate.</span>
           <br />
-          <span className={styles.headlineGrad}>built for real courses.</span>
+          <span className={styles.headlineMuted}>No excuses. Just results.</span>
         </h1>
 
-        <p className={styles.sub}>
-          GitHub-backed submissions, AI-assisted grading, and a student portal
-          that keeps everyone on track.
-        </p>
+        <p className={styles.sub}>The platform that helps you teach, track, and grow.</p>
       </div>
 
       {/* Sign-in card */}
       <div className={styles.cardWrap}>
         <div className={styles.formCard}>
           <div className={styles.formIntro}>
-            <NibrasLogo variant="inverse" width={100} />
+            <h2>Welcome back</h2>
             <p>Sign in with GitHub to access your dashboard, projects, and course activity.</p>
           </div>
 
@@ -101,15 +82,21 @@ export default function HomePage() {
               onClick={() => void handleSignIn()}
               disabled={submitting}
             >
-              <svg className={styles.githubIcon} viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              <svg
+                className={styles.githubIcon}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                fill="currentColor"
+              >
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
               </svg>
-              {submitting ? "Connecting…" : "Continue with GitHub"}
+              {submitting ? 'Connecting…' : 'Continue with GitHub'}
             </button>
           </div>
 
           <p className={styles.formHint}>
-            Your repositories are only accessed with your explicit permission.
+            By continuing you agree to connect your GitHub account to Nibras. Your repositories are
+            only accessed with your explicit permission.
           </p>
         </div>
       </div>
@@ -118,23 +105,23 @@ export default function HomePage() {
       <div className={styles.featureGrid}>
         <div className={styles.featureCard}>
           <span className={styles.featureIcon}>◫</span>
-          <strong>Live Dashboard</strong>
-          <p>Track projects and milestones at a glance.</p>
+          <strong>Dashboard</strong>
+          <p>Track account, projects, and milestones at a glance.</p>
         </div>
         <div className={styles.featureCard}>
           <span className={styles.featureIcon}>▣</span>
           <strong>GitHub-backed</strong>
-          <p>Commit-linked submissions with status checks.</p>
+          <p>Provision repos, link installs, and track submissions.</p>
         </div>
         <div className={styles.featureCard}>
           <span className={styles.featureIcon}>⊞</span>
           <strong>Instructor tools</strong>
-          <p>Courses, milestones, rubrics and grade export.</p>
+          <p>Manage courses, milestones, and grade with rubrics.</p>
         </div>
         <div className={styles.featureCard}>
           <span className={styles.featureIcon}>⬡</span>
-          <strong>AI grading</strong>
-          <p>Semantic scoring with human override.</p>
+          <strong>Student portal</strong>
+          <p>Join via invite and track progress every step.</p>
         </div>
       </div>
     </main>

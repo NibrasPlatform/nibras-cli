@@ -1,14 +1,14 @@
-const fs = require("fs");
-const path = require("path");
-const { fileURLToPath } = require("url");
-const { runCommand } = require("./exec");
+const fs = require('fs');
+const path = require('path');
+const { fileURLToPath } = require('url');
+const { runCommand } = require('./exec');
 
 async function downloadWithWget(url, outPath, cwd) {
-  return runCommand("wget", ["-O", outPath, url], { cwd });
+  return runCommand('wget', ['-O', outPath, url], { cwd });
 }
 
 async function downloadWithCurl(url, outPath, cwd) {
-  return runCommand("curl", ["-f", "-L", "-o", outPath, url], { cwd });
+  return runCommand('curl', ['-f', '-L', '-o', outPath, url], { cwd });
 }
 
 async function downloadFile(url, outPath, cwd) {
@@ -16,7 +16,7 @@ async function downloadFile(url, outPath, cwd) {
     const result = await downloadWithWget(url, outPath, cwd);
     if (result.code === 0) return result;
   } catch (err) {
-    if (!err || err.code !== "ENOENT") {
+    if (!err || err.code !== 'ENOENT') {
       throw err;
     }
   }
@@ -25,15 +25,15 @@ async function downloadFile(url, outPath, cwd) {
     const result = await downloadWithCurl(url, outPath, cwd);
     return result;
   } catch (err) {
-    if (err && err.code === "ENOENT") {
-      throw new Error("Neither wget nor curl is available. Install one to use setup.");
+    if (err && err.code === 'ENOENT') {
+      throw new Error('Neither wget nor curl is available. Install one to use setup.');
     }
     throw err;
   }
 }
 
 async function unzipFile(zipPath, cwd) {
-  return runCommand("unzip", ["-o", zipPath], { cwd });
+  return runCommand('unzip', ['-o', zipPath], { cwd });
 }
 
 function isHttpUrl(value) {
@@ -55,17 +55,13 @@ function resolveLocalPath(setupUrl, cwd) {
 }
 
 function isZipFile(filePath) {
-  const fd = fs.openSync(filePath, "r");
+  const fd = fs.openSync(filePath, 'r');
   try {
     const buffer = Buffer.alloc(4);
     const bytesRead = fs.readSync(fd, buffer, 0, 4, 0);
     if (bytesRead < 4) return false;
-    const signature = buffer.toString("binary");
-    return (
-      signature === "PK\x03\x04" ||
-      signature === "PK\x05\x06" ||
-      signature === "PK\x07\x08"
-    );
+    const signature = buffer.toString('binary');
+    return signature === 'PK\x03\x04' || signature === 'PK\x05\x06' || signature === 'PK\x07\x08';
   } finally {
     fs.closeSync(fd);
   }
@@ -73,17 +69,17 @@ function isZipFile(filePath) {
 
 function readFileSnippet(filePath, maxChars = 160) {
   try {
-    const content = fs.readFileSync(filePath, "utf8");
-    return content.replace(/\s+/g, " ").trim().slice(0, maxChars);
+    const content = fs.readFileSync(filePath, 'utf8');
+    return content.replace(/\s+/g, ' ').trim().slice(0, maxChars);
   } catch (err) {
-    return "";
+    return '';
   }
 }
 
 async function setupProject({ cwd, subject, project, projectConfig, subjectConfig }) {
   const setupUrl = projectConfig.setupUrl || subjectConfig.setupUrl;
   if (!setupUrl) {
-    throw new Error("setupUrl is required. Set it in .nibras.json for this project.");
+    throw new Error('setupUrl is required. Set it in .nibras.json for this project.');
   }
   const zipName = projectConfig.setupZipName || `${subject}-${project}.zip`;
   const destDir = projectConfig.setupDir || cwd;
@@ -106,19 +102,19 @@ async function setupProject({ cwd, subject, project, projectConfig, subjectConfi
   } else {
     const download = await downloadFile(setupUrl, zipPath, destPath);
     if (download.code !== 0) {
-      throw new Error(download.stderr || "Failed to download setup zip.");
+      throw new Error(download.stderr || 'Failed to download setup zip.');
     }
   }
 
   if (!isZipFile(zipPath)) {
     const snippet = readFileSnippet(zipPath);
-    const hint = snippet ? ` First bytes: ${snippet}` : "";
+    const hint = snippet ? ` First bytes: ${snippet}` : '';
     throw new Error(`Downloaded file is not a zip. Check setupUrl (${setupUrl}).${hint}`);
   }
 
   const unzip = await unzipFile(zipPath, destPath);
   if (unzip.code !== 0) {
-    throw new Error(unzip.stderr || "Failed to unzip setup archive.");
+    throw new Error(unzip.stderr || 'Failed to unzip setup archive.');
   }
 
   if (shouldDeleteZip) {

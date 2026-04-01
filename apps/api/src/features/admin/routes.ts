@@ -1,17 +1,17 @@
-import { FastifyInstance } from "fastify";
-import { AppStore, SubmissionWorkflowStatus } from "../../store";
-import { requireUser } from "../../lib/auth";
-import { requestBaseUrl } from "../../lib/request-base-url";
+import { FastifyInstance } from 'fastify';
+import { AppStore, SubmissionWorkflowStatus } from '../../store';
+import { requireUser } from '../../lib/auth';
+import { requestBaseUrl } from '../../lib/request-base-url';
 
-const OVERRIDE_STATUSES: SubmissionWorkflowStatus[] = ["passed", "failed", "needs_review"];
+const OVERRIDE_STATUSES: SubmissionWorkflowStatus[] = ['passed', 'failed', 'needs_review'];
 
 function requireAdmin(
   auth: Awaited<ReturnType<typeof requireUser>>,
   reply: Parameters<typeof requireUser>[1]
 ): auth is NonNullable<typeof auth> {
   if (!auth) return false;
-  if (auth.user.systemRole !== "admin") {
-    reply.code(403).send({ error: "Admin access required." });
+  if (auth.user.systemRole !== 'admin') {
+    reply.code(403).send({ error: 'Admin access required.' });
     return false;
   }
   return true;
@@ -23,7 +23,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
    * List all submissions with optional status/project filtering.
    * Admin only.
    */
-  app.get("/v1/admin/submissions", async (request, reply) => {
+  app.get('/v1/admin/submissions', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!requireAdmin(auth, reply)) return;
 
@@ -33,7 +33,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
     };
     const results = await store.listTrackingReviewQueue(requestBaseUrl(request), {
       status: query.status,
-      projectId: query.projectId
+      projectId: query.projectId,
     });
     return { submissions: results };
   });
@@ -44,7 +44,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
    * Allowed statuses: passed, failed, needs_review.
    * Admin only.
    */
-  app.patch("/v1/admin/submissions/:submissionId/status", async (request, reply) => {
+  app.patch('/v1/admin/submissions/:submissionId/status', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!requireAdmin(auth, reply)) return;
 
@@ -53,20 +53,25 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
 
     if (!body.status || !OVERRIDE_STATUSES.includes(body.status as SubmissionWorkflowStatus)) {
       return reply.code(400).send({
-        error: `status must be one of: ${OVERRIDE_STATUSES.join(", ")}`
+        error: `status must be one of: ${OVERRIDE_STATUSES.join(', ')}`,
       });
     }
 
-    const submission = await store.getSubmissionForAdmin(requestBaseUrl(request), params.submissionId);
+    const submission = await store.getSubmissionForAdmin(
+      requestBaseUrl(request),
+      params.submissionId
+    );
     if (!submission) {
-      return reply.code(404).send({ error: "Unknown submission." });
+      return reply.code(404).send({ error: 'Unknown submission.' });
     }
 
-    const summary = body.summary || (body.status === "passed"
-      ? "Manually marked as passed by admin."
-      : body.status === "needs_review"
-        ? "Manually flagged for review by admin."
-        : "Manually marked as failed by admin.");
+    const summary =
+      body.summary ||
+      (body.status === 'passed'
+        ? 'Manually marked as passed by admin.'
+        : body.status === 'needs_review'
+          ? 'Manually flagged for review by admin.'
+          : 'Manually marked as failed by admin.');
 
     const updated = await store.overrideSubmissionStatus(
       requestBaseUrl(request),
@@ -76,23 +81,34 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
       auth.user.id
     );
     if (!updated) {
-      return reply.code(404).send({ error: "Unknown submission." });
+      return reply.code(404).send({ error: 'Unknown submission.' });
     }
 
-    return { ok: true, submissionId: params.submissionId, status: updated.status, summary: updated.summary };
+    return {
+      ok: true,
+      submissionId: params.submissionId,
+      status: updated.status,
+      summary: updated.summary,
+    };
   });
 
-  app.get("/v1/admin/submissions/:submissionId/logs", async (request, reply) => {
+  app.get('/v1/admin/submissions/:submissionId/logs', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!requireAdmin(auth, reply)) return;
 
     const params = request.params as { submissionId: string };
-    const submission = await store.getSubmissionForAdmin(requestBaseUrl(request), params.submissionId);
+    const submission = await store.getSubmissionForAdmin(
+      requestBaseUrl(request),
+      params.submissionId
+    );
     if (!submission) {
-      return reply.code(404).send({ error: "Unknown submission." });
+      return reply.code(404).send({ error: 'Unknown submission.' });
     }
 
-    const logs = await store.listSubmissionVerificationLogs(requestBaseUrl(request), params.submissionId);
+    const logs = await store.listSubmissionVerificationLogs(
+      requestBaseUrl(request),
+      params.submissionId
+    );
     return { submissionId: params.submissionId, logs };
   });
 
@@ -128,7 +144,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
    * GET /v1/admin/projects
    * List all projects across all courses. Admin only.
    */
-  app.get("/v1/admin/projects", async (request, reply) => {
+  app.get('/v1/admin/projects', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!requireAdmin(auth, reply)) return;
 
@@ -146,20 +162,20 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
    * POST /v1/admin/projects/:projectId/archive
    * Archive a project. Admin only.
    */
-  app.post("/v1/admin/projects/:projectId/archive", async (request, reply) => {
+  app.post('/v1/admin/projects/:projectId/archive', async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!requireAdmin(auth, reply)) return;
 
     const params = request.params as { projectId: string };
     const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
     if (!project) {
-      return reply.code(404).send({ error: "Unknown project." });
+      return reply.code(404).send({ error: 'Unknown project.' });
     }
     const updated = await store.setTrackingProjectStatus(
       requestBaseUrl(request),
       auth!.user.id,
       params.projectId,
-      "archived"
+      'archived'
     );
     return { ok: true, project: updated };
   });

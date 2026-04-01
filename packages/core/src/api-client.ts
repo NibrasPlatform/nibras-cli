@@ -1,4 +1,4 @@
-import { readCliConfig, writeCliConfig } from "./config";
+import { readCliConfig, writeCliConfig } from './config';
 
 export class ApiError extends Error {
   statusCode: number;
@@ -7,7 +7,7 @@ export class ApiError extends Error {
 
   constructor(message: string, statusCode: number, bodyText: string) {
     super(message);
-    this.name = "ApiError";
+    this.name = 'ApiError';
     this.statusCode = statusCode;
     this.bodyText = bodyText;
   }
@@ -25,20 +25,20 @@ async function maybeRefreshToken(baseUrl: string): Promise<void> {
     return;
   }
   try {
-    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/v1/auth/refresh`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ refreshToken: config.refreshToken })
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ refreshToken: config.refreshToken }),
     });
     if (!response.ok) {
       return; // Silently skip; the original token may still be valid
     }
-    const data = await response.json() as { accessToken: string; refreshToken: string };
+    const data = (await response.json()) as { accessToken: string; refreshToken: string };
     writeCliConfig({
       ...config,
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,
-      tokenCreatedAt: new Date().toISOString()
+      tokenCreatedAt: new Date().toISOString(),
     });
   } catch {
     // Network error during refresh — proceed with existing token
@@ -58,16 +58,16 @@ export async function apiRequest<T>(
   // Re-read config after potential refresh
   const refreshedConfig = readCliConfig();
   const headers = new Headers(options.headers || {});
-  if (!headers.has("content-type") && options.body) {
-    headers.set("content-type", "application/json");
+  if (!headers.has('content-type') && options.body) {
+    headers.set('content-type', 'application/json');
   }
   if (refreshedConfig.accessToken) {
-    headers.set("authorization", `Bearer ${refreshedConfig.accessToken}`);
+    headers.set('authorization', `Bearer ${refreshedConfig.accessToken}`);
   }
 
-  const response = await fetch(`${baseUrl.replace(/\/$/, "")}${pathName}`, {
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}${pathName}`, {
     ...options,
-    headers
+    headers,
   });
   const bodyText = await response.text();
   if (!response.ok) {
@@ -77,5 +77,5 @@ export async function apiRequest<T>(
       bodyText
     );
   }
-  return bodyText ? JSON.parse(bodyText) as T : {} as T;
+  return bodyText ? (JSON.parse(bodyText) as T) : ({} as T);
 }

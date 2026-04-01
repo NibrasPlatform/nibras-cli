@@ -4,12 +4,12 @@ For the canonical manual validation sequence, use `TEST_SCENARIO.md`.
 
 ## Services
 
-| Service | Default port | Health check |
-|---------|-------------|--------------|
-| API | 4848 | `GET /healthz`, `GET /readyz` |
-| Worker | 9090 | `GET /healthz` |
-| Web | 3000 | Next.js built-in |
-| Postgres | 5432 | `pg_isready` |
+| Service  | Default port | Health check                  |
+| -------- | ------------ | ----------------------------- |
+| API      | 4848         | `GET /healthz`, `GET /readyz` |
+| Worker   | 9090         | `GET /healthz`                |
+| Web      | 3000         | Next.js built-in              |
+| Postgres | 5432         | `pg_isready`                  |
 
 ---
 
@@ -18,6 +18,7 @@ For the canonical manual validation sequence, use `TEST_SCENARIO.md`.
 Every API request emits a structured JSON log line with `reqId`. Every worker job logs `jobId` and `submissionAttemptId`.
 
 ### Step 1 — Find the submission in the DB
+
 ```sql
 SELECT id, status, summary, "createdAt", "updatedAt"
 FROM "SubmissionAttempt"
@@ -25,6 +26,7 @@ WHERE id = '<submissionId>';
 ```
 
 ### Step 2 — Find the verification job
+
 ```sql
 SELECT id, status, attempt, "claimedAt", "finishedAt"
 FROM "VerificationJob"
@@ -32,6 +34,7 @@ WHERE "submissionAttemptId" = '<submissionId>';
 ```
 
 ### Step 3 — Find the verification run log
+
 ```sql
 SELECT attempt, log, status, "startedAt", "finishedAt"
 FROM "VerificationRun"
@@ -41,11 +44,13 @@ LIMIT 5;
 ```
 
 ### Step 4 — Search API logs by request ID
+
 ```bash
 grep '"reqId":"req_abc123"' /var/log/nibras-api.log
 ```
 
 ### Step 5 — Search worker logs by job ID
+
 ```bash
 grep '"jobId":"<jobId>"' /var/log/nibras-worker.log
 ```
@@ -79,6 +84,7 @@ curl https://api.yourdomain.com/v1/admin/submissions/<submissionId>/logs \
 A job is "stuck" if `claimedAt` is set but `finishedAt` is null and the worker process is not running.
 
 **Detection:**
+
 ```sql
 SELECT id, "submissionAttemptId", attempt, "claimedAt"
 FROM "VerificationJob"
@@ -87,6 +93,7 @@ AND "claimedAt" < NOW() - INTERVAL '5 minutes';
 ```
 
 **Resolution (reset to queued so the worker re-claims it):**
+
 ```sql
 UPDATE "VerificationJob"
 SET status = 'queued', "claimedAt" = NULL
@@ -102,23 +109,28 @@ WHERE id = '<submissionAttemptId>';
 ## Secret Rotation
 
 ### CLI session tokens
+
 CLI sessions are stored in `CliSession`. To revoke an individual token:
+
 ```sql
 UPDATE "CliSession" SET "revokedAt" = NOW() WHERE "accessToken" = '<token>';
 ```
 
 To revoke all sessions for a user:
+
 ```sql
 UPDATE "CliSession" SET "revokedAt" = NOW()
 WHERE "userId" = '<userId>' AND "revokedAt" IS NULL;
 ```
 
 ### NIBRAS_ENCRYPTION_KEY rotation
+
 1. Generate a new key: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
 2. Write a one-time migration script that reads all `GithubAccount.userAccessToken` values, decrypts with the old key, re-encrypts with the new key, and updates the row.
 3. Update the key in `.env.prod` and restart all services.
 
 ### GitHub Webhook Secret
+
 1. Generate a new secret and update it in the GitHub App settings.
 2. Update `GITHUB_WEBHOOK_SECRET` in `.env.prod`.
 3. Restart the API. The old secret is immediately invalid.
@@ -159,6 +171,7 @@ curl http://worker:9090/healthz
 ## Metrics
 
 Prometheus-compatible metrics are available at:
+
 ```
 GET https://api.yourdomain.com/metrics
 ```
@@ -175,6 +188,7 @@ Key metrics:
 ## Deployment Reference
 
 ### Local dev
+
 ```bash
 cp .env.example .env
 npm run db:local:reset      # destructive local reset for operator testing
@@ -189,6 +203,7 @@ Use `npm run db:push` only for disposable development. Do not use it as the
 canonical manual-test path.
 
 ### Production
+
 ```bash
 cp .env.prod.example .env.prod
 # Fill in all CHANGEME values

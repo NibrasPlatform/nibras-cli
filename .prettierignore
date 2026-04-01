@@ -1,0 +1,15 @@
+# Build outputs
+**/dist/
+**/bundle/
+
+# Dependencies
+**/node_modules/
+
+# Database migrations (auto-generated)
+prisma/migrations/
+
+# Next.js build output
+**/.next/
+
+# Package lock (managed by npm)
+package-lock.json

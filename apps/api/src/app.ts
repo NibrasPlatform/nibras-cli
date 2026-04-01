@@ -1,16 +1,16 @@
-import Fastify, { FastifyInstance } from "fastify";
-import cors from "@fastify/cors";
-import rateLimit from "@fastify/rate-limit";
-import * as Sentry from "@sentry/node";
-import rawBodyPlugin from "fastify-raw-body";
-import { PrismaClient } from "@prisma/client";
-import { loadGitHubAppConfig } from "@nibras/github";
-import { PrismaStore } from "./prisma-store";
-import { AppStore, FileStore, getStorePath } from "./store";
-import { registerGitHubRoutes } from "./features/github/routes";
-import { registerHostedCliRoutes } from "./features/hosted-cli/routes";
-import { registerTrackingRoutes } from "./features/tracking/routes";
-import { registerAdminRoutes } from "./features/admin/routes";
+import Fastify, { FastifyInstance } from 'fastify';
+import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
+import * as Sentry from '@sentry/node';
+import rawBodyPlugin from 'fastify-raw-body';
+import { PrismaClient } from '@prisma/client';
+import { loadGitHubAppConfig } from '@nibras/github';
+import { PrismaStore } from './prisma-store';
+import { AppStore, FileStore, getStorePath } from './store';
+import { registerGitHubRoutes } from './features/github/routes';
+import { registerHostedCliRoutes } from './features/hosted-cli/routes';
+import { registerTrackingRoutes } from './features/tracking/routes';
+import { registerAdminRoutes } from './features/admin/routes';
 
 function normalizeOrigin(value: string | undefined): string | null {
   if (!value) {
@@ -26,12 +26,12 @@ function normalizeOrigin(value: string | undefined): string | null {
 function getAllowedCorsOrigins(): string[] {
   const configuredOrigins = process.env.NIBRAS_WEB_CORS_ORIGINS;
   const candidates = configuredOrigins
-    ? configuredOrigins.split(",")
+    ? configuredOrigins.split(',')
     : [
         process.env.NIBRAS_WEB_BASE_URL,
         process.env.NEXT_PUBLIC_NIBRAS_WEB_BASE_URL,
-        "http://127.0.0.1:3000",
-        "http://localhost:3000"
+        'http://127.0.0.1:3000',
+        'http://localhost:3000',
       ];
 
   const origins = new Set<string>();
@@ -54,64 +54,64 @@ function createDefaultStore(): AppStore {
 export function buildApp(store: AppStore = createDefaultStore()): FastifyInstance {
   const app = Fastify({
     logger: {
-      level: process.env.LOG_LEVEL || "info"
+      level: process.env.LOG_LEVEL || 'info',
     },
-    genReqId: () => `req_${Math.random().toString(36).slice(2, 10)}`
+    genReqId: () => `req_${Math.random().toString(36).slice(2, 10)}`,
   });
 
   const githubConfig = loadGitHubAppConfig();
   const allowedCorsOrigins = new Set(getAllowedCorsOrigins());
 
   // Propagate Request-Id to response for tracing
-  app.addHook("onSend", async (request, reply) => {
-    void reply.header("X-Request-Id", request.id);
+  app.addHook('onSend', async (request, reply) => {
+    void reply.header('X-Request-Id', request.id);
   });
 
   const globalRateMax = process.env.RATE_LIMIT_MAX ? parseInt(process.env.RATE_LIMIT_MAX, 10) : 100;
   void app.register(rateLimit, {
     global: true,
     max: globalRateMax,
-    timeWindow: "1 minute",
+    timeWindow: '1 minute',
     errorResponseBuilder: (_request, context) => ({
       error: `Too many requests. Retry after ${Math.ceil(context.ttl / 1000)} seconds.`,
-      statusCode: 429
-    })
+      statusCode: 429,
+    }),
   });
 
   void app.register(cors, {
     credentials: true,
-    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["authorization", "content-type", "x-request-id"],
-    exposedHeaders: ["x-request-id"],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['authorization', 'content-type', 'x-request-id'],
+    exposedHeaders: ['x-request-id'],
     origin(origin, callback) {
       if (!origin) {
         callback(null, true);
         return;
       }
       callback(null, allowedCorsOrigins.has(origin));
-    }
+    },
   });
 
   void app.register(rawBodyPlugin, {
-    field: "rawBody",
+    field: 'rawBody',
     global: false,
     encoding: false,
-    routes: ["/v1/github/webhooks"]
+    routes: ['/v1/github/webhooks'],
   });
 
   // ── Health & readiness ────────────────────────────────────────────────────
-  app.get("/healthz", async (_request, reply) => {
+  app.get('/healthz', async (_request, reply) => {
     return reply.send({ ok: true });
   });
 
-  app.get("/readyz", async (_request, reply) => {
+  app.get('/readyz', async (_request, reply) => {
     if (process.env.DATABASE_URL) {
       try {
         const prisma = new PrismaClient();
         await prisma.$queryRaw`SELECT 1`;
         await prisma.$disconnect();
       } catch {
-        return reply.status(503).send({ ok: false, reason: "database unavailable" });
+        return reply.status(503).send({ ok: false, reason: 'database unavailable' });
       }
     }
     return reply.send({ ok: true });
@@ -119,18 +119,18 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
 
   // ── Prometheus-compatible metrics ─────────────────────────────────────────
   const requestCounts: Record<string, number> = {};
-  app.addHook("onResponse", async (request, reply) => {
+  app.addHook('onResponse', async (request, reply) => {
     const key = `${request.method}_${reply.statusCode}`;
     requestCounts[key] = (requestCounts[key] || 0) + 1;
   });
 
-  app.get("/metrics", async (_request, reply) => {
+  app.get('/metrics', async (_request, reply) => {
     const lines: string[] = [
-      "# HELP nibras_http_requests_total Total HTTP requests by method and status",
-      "# TYPE nibras_http_requests_total counter"
+      '# HELP nibras_http_requests_total Total HTTP requests by method and status',
+      '# TYPE nibras_http_requests_total counter',
     ];
     for (const [key, count] of Object.entries(requestCounts)) {
-      const [method, status] = key.split("_");
+      const [method, status] = key.split('_');
       lines.push(`nibras_http_requests_total{method="${method}",status="${status}"} ${count}`);
     }
 
@@ -138,49 +138,49 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
       try {
         const prisma = new PrismaClient();
         const [queueDepth, passedCount, failedCount, reviewCount] = await Promise.all([
-          prisma.verificationJob.count({ where: { status: "queued" } }),
-          prisma.verificationJob.count({ where: { status: "passed" } }),
-          prisma.verificationJob.count({ where: { status: "failed" } }),
-          prisma.verificationJob.count({ where: { status: "needs_review" } })
+          prisma.verificationJob.count({ where: { status: 'queued' } }),
+          prisma.verificationJob.count({ where: { status: 'passed' } }),
+          prisma.verificationJob.count({ where: { status: 'failed' } }),
+          prisma.verificationJob.count({ where: { status: 'needs_review' } }),
         ]);
         await prisma.$disconnect();
         lines.push(
-          "",
-          "# HELP nibras_verification_queue_depth Number of queued verification jobs",
-          "# TYPE nibras_verification_queue_depth gauge",
+          '',
+          '# HELP nibras_verification_queue_depth Number of queued verification jobs',
+          '# TYPE nibras_verification_queue_depth gauge',
           `nibras_verification_queue_depth ${queueDepth}`,
-          "",
-          "# HELP nibras_verification_total Completed verifications by status",
-          "# TYPE nibras_verification_total counter",
+          '',
+          '# HELP nibras_verification_total Completed verifications by status',
+          '# TYPE nibras_verification_total counter',
           `nibras_verification_total{status="passed"} ${passedCount}`,
           `nibras_verification_total{status="failed"} ${failedCount}`,
           `nibras_verification_total{status="needs_review"} ${reviewCount}`
         );
       } catch {
-        lines.push("# ERROR: could not query DB for verification metrics");
+        lines.push('# ERROR: could not query DB for verification metrics');
       }
     }
 
     return reply
-      .header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-      .send(lines.join("\n") + "\n");
+      .header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
+      .send(lines.join('\n') + '\n');
   });
 
   // Capture unhandled errors in Sentry when DSN is configured
   app.setErrorHandler(async (error: { statusCode?: number; message?: string }, request, reply) => {
     if (process.env.SENTRY_DSN) {
       Sentry.withScope((scope) => {
-        scope.setTag("requestId", request.id);
-        scope.setTag("method", request.method);
-        scope.setTag("url", request.url);
+        scope.setTag('requestId', request.id);
+        scope.setTag('method', request.method);
+        scope.setTag('url', request.url);
         Sentry.captureException(error);
       });
     }
     const statusCode = error.statusCode || 500;
-    void reply.status(statusCode).send({ error: error.message || "Internal server error." });
+    void reply.status(statusCode).send({ error: error.message || 'Internal server error.' });
   });
 
-  app.addHook("onClose", async () => {
+  app.addHook('onClose', async () => {
     if (store.close) {
       await store.close();
     }

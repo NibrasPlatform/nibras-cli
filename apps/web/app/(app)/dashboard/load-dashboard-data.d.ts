@@ -1,10 +1,10 @@
 import type {
   GitHubConfigResponse,
   MeResponse,
-  StudentProjectsDashboardResponse
-} from "@nibras/contracts";
+  StudentProjectsDashboardResponse,
+} from '@nibras/contracts';
 
-export type GitHubAppStatus = "configured" | "unconfigured" | "unavailable";
+export type GitHubAppStatus = 'configured' | 'unconfigured' | 'unavailable';
 
 export type LoadDashboardDataResult = {
   me: MeResponse;

@@ -1,7 +1,7 @@
-import fs from "node:fs";
-import path from "node:path";
-import { randomUUID } from "node:crypto";
-import { ProjectManifest } from "@nibras/contracts";
+import fs from 'node:fs';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { ProjectManifest } from '@nibras/contracts';
 
 export type DeviceCodeRecord = {
   deviceCode: string;
@@ -9,7 +9,7 @@ export type DeviceCodeRecord = {
   expiresAt: string;
   intervalSeconds: number;
   userId: string | null;
-  status: "pending" | "authorized";
+  status: 'pending' | 'authorized';
 };
 
 export type SessionRecord = {
@@ -28,13 +28,13 @@ export type WebSessionRecord = {
   revokedAt: string | null;
 };
 
-export type SystemRole = "user" | "admin";
-export type MembershipRole = "student" | "instructor" | "ta";
-export type ProjectStatus = "draft" | "published" | "archived";
-export type DeliveryMode = "individual" | "team";
-export type SubmissionWorkflowStatus = "queued" | "running" | "passed" | "failed" | "needs_review";
-export type SubmissionType = "github" | "link" | "text";
-export type ReviewStatus = "pending" | "approved" | "changes_requested" | "graded";
+export type SystemRole = 'user' | 'admin';
+export type MembershipRole = 'student' | 'instructor' | 'ta';
+export type ProjectStatus = 'draft' | 'published' | 'archived';
+export type DeliveryMode = 'individual' | 'team';
+export type SubmissionWorkflowStatus = 'queued' | 'running' | 'passed' | 'failed' | 'needs_review';
+export type SubmissionType = 'github' | 'link' | 'text';
+export type ReviewStatus = 'pending' | 'approved' | 'changes_requested' | 'graded';
 
 export type UserRecord = {
   id: string;
@@ -81,7 +81,7 @@ export type RepoRecord = {
   name: string;
   cloneUrl: string | null;
   defaultBranch: string;
-  visibility: "private" | "public";
+  visibility: 'private' | 'public';
 };
 
 export type ProjectRecord = {
@@ -256,7 +256,10 @@ export type StoreData = {
 export interface AppStore {
   createDeviceCode(apiBaseUrl: string): Promise<DeviceCodeRecord>;
   authorizeDeviceCode(apiBaseUrl: string, userCode: string): Promise<DeviceCodeRecord | null>;
-  pollDeviceCode(apiBaseUrl: string, deviceCode: string): Promise<{ record: DeviceCodeRecord | null; session: SessionRecord | null }>;
+  pollDeviceCode(
+    apiBaseUrl: string,
+    deviceCode: string
+  ): Promise<{ record: DeviceCodeRecord | null; session: SessionRecord | null }>;
   getUserByToken(apiBaseUrl: string, accessToken: string): Promise<UserRecord | null>;
   refreshCliSession(apiBaseUrl: string, refreshToken: string): Promise<SessionRecord | null>;
   deleteSession(apiBaseUrl: string, accessToken: string): Promise<void>;
@@ -267,7 +270,13 @@ export interface AppStore {
   provisionProjectRepo(apiBaseUrl: string, projectKey: string, userId: string): Promise<RepoRecord>;
   createOrReuseSubmission(
     apiBaseUrl: string,
-    payload: { userId: string; projectKey: string; commitSha: string; repoUrl: string; branch: string }
+    payload: {
+      userId: string;
+      projectKey: string;
+      commitSha: string;
+      repoUrl: string;
+      branch: string;
+    }
   ): Promise<SubmissionRecord>;
   updateLocalTestResult(
     apiBaseUrl: string,
@@ -276,7 +285,11 @@ export interface AppStore {
     exitCode: number,
     summary: string
   ): Promise<SubmissionRecord | null>;
-  getSubmission(apiBaseUrl: string, submissionId: string, requesterUserId: string): Promise<SubmissionRecord | null>;
+  getSubmission(
+    apiBaseUrl: string,
+    submissionId: string,
+    requesterUserId: string
+  ): Promise<SubmissionRecord | null>;
   getSubmissionForAdmin(apiBaseUrl: string, submissionId: string): Promise<SubmissionRecord | null>;
   overrideSubmissionStatus(
     apiBaseUrl: string,
@@ -285,16 +298,43 @@ export interface AppStore {
     summary: string,
     actorUserId: string
   ): Promise<SubmissionRecord | null>;
-  listSubmissionVerificationLogs(apiBaseUrl: string, submissionId: string): Promise<VerificationLogRecord[]>;
+  listSubmissionVerificationLogs(
+    apiBaseUrl: string,
+    submissionId: string
+  ): Promise<VerificationLogRecord[]>;
   listCourseMemberships(apiBaseUrl: string, userId: string): Promise<CourseMembershipRecord[]>;
   listTrackingCourses(apiBaseUrl: string, userId: string): Promise<CourseRecord[]>;
-  createTrackingCourse(apiBaseUrl: string, userId: string, payload: { slug: string; title: string; termLabel: string; courseCode: string }): Promise<CourseRecord>;
-  listCourseMembersForInstructor(apiBaseUrl: string, courseId: string): Promise<Array<CourseMembershipRecord & { username: string; githubLogin: string }>>;
-  addCourseMember(apiBaseUrl: string, courseId: string, githubLogin: string, role: MembershipRole): Promise<CourseMembershipRecord & { username: string; githubLogin: string }>;
+  createTrackingCourse(
+    apiBaseUrl: string,
+    userId: string,
+    payload: { slug: string; title: string; termLabel: string; courseCode: string }
+  ): Promise<CourseRecord>;
+  listCourseMembersForInstructor(
+    apiBaseUrl: string,
+    courseId: string
+  ): Promise<Array<CourseMembershipRecord & { username: string; githubLogin: string }>>;
+  addCourseMember(
+    apiBaseUrl: string,
+    courseId: string,
+    githubLogin: string,
+    role: MembershipRole
+  ): Promise<CourseMembershipRecord & { username: string; githubLogin: string }>;
   removeCourseMember(apiBaseUrl: string, courseId: string, userId: string): Promise<void>;
-  createCourseInvite(apiBaseUrl: string, courseId: string, role: MembershipRole, opts?: { maxUses?: number; expiresAt?: string | null }): Promise<CourseInviteRecord>;
-  getCourseInviteByCode(apiBaseUrl: string, code: string): Promise<(CourseInviteRecord & { course: CourseRecord }) | null>;
-  redeemCourseInvite(apiBaseUrl: string, code: string, userId: string): Promise<CourseMembershipRecord>;
+  createCourseInvite(
+    apiBaseUrl: string,
+    courseId: string,
+    role: MembershipRole,
+    opts?: { maxUses?: number; expiresAt?: string | null }
+  ): Promise<CourseInviteRecord>;
+  getCourseInviteByCode(
+    apiBaseUrl: string,
+    code: string
+  ): Promise<(CourseInviteRecord & { course: CourseRecord }) | null>;
+  redeemCourseInvite(
+    apiBaseUrl: string,
+    code: string,
+    userId: string
+  ): Promise<CourseMembershipRecord>;
   listTrackingProjects(apiBaseUrl: string, courseId: string): Promise<ProjectRecord[]>;
   getTrackingProjectById(apiBaseUrl: string, projectId: string): Promise<ProjectRecord | null>;
   createTrackingProject(
@@ -325,23 +365,47 @@ export interface AppStore {
       resources: TrackingResourceRecord[];
     }>
   ): Promise<ProjectRecord | null>;
-  setTrackingProjectStatus(apiBaseUrl: string, userId: string, projectId: string, status: ProjectStatus): Promise<ProjectRecord | null>;
+  setTrackingProjectStatus(
+    apiBaseUrl: string,
+    userId: string,
+    projectId: string,
+    status: ProjectStatus
+  ): Promise<ProjectRecord | null>;
   listTrackingMilestones(apiBaseUrl: string, projectId: string): Promise<MilestoneRecord[]>;
   getTrackingMilestone(apiBaseUrl: string, milestoneId: string): Promise<MilestoneRecord | null>;
   createTrackingMilestone(
     apiBaseUrl: string,
     userId: string,
     projectId: string,
-    payload: { title: string; description: string; order: number; dueAt: string | null; isFinal: boolean }
+    payload: {
+      title: string;
+      description: string;
+      order: number;
+      dueAt: string | null;
+      isFinal: boolean;
+    }
   ): Promise<MilestoneRecord>;
   updateTrackingMilestone(
     apiBaseUrl: string,
     userId: string,
     milestoneId: string,
-    payload: Partial<{ title: string; description: string; order: number; dueAt: string | null; isFinal: boolean }>
+    payload: Partial<{
+      title: string;
+      description: string;
+      order: number;
+      dueAt: string | null;
+      isFinal: boolean;
+    }>
   ): Promise<MilestoneRecord | null>;
-  deleteTrackingMilestone(apiBaseUrl: string, userId: string, milestoneId: string): Promise<boolean>;
-  listTrackingMilestoneSubmissions(apiBaseUrl: string, milestoneId: string): Promise<SubmissionRecord[]>;
+  deleteTrackingMilestone(
+    apiBaseUrl: string,
+    userId: string,
+    milestoneId: string
+  ): Promise<boolean>;
+  listTrackingMilestoneSubmissions(
+    apiBaseUrl: string,
+    milestoneId: string
+  ): Promise<SubmissionRecord[]>;
   createTrackingSubmission(
     apiBaseUrl: string,
     userId: string,
@@ -372,7 +436,12 @@ export interface AppStore {
     apiBaseUrl: string,
     userId: string,
     submissionId: string,
-    payload: { status: ReviewStatus; score: number | null; feedback: string; rubric: TrackingRubricItemRecord[] }
+    payload: {
+      status: ReviewStatus;
+      score: number | null;
+      feedback: string;
+      rubric: TrackingRubricItemRecord[];
+    }
   ): Promise<ReviewRecord>;
   getTrackingReview(apiBaseUrl: string, submissionId: string): Promise<ReviewRecord | null>;
   getSubmissionStudentEmail(apiBaseUrl: string, submissionId: string): Promise<{ email: string; username: string } | null>;
@@ -381,10 +450,24 @@ export interface AppStore {
     filters?: { courseId?: string; projectId?: string; status?: SubmissionWorkflowStatus }
   ): Promise<SubmissionRecord[]>;
   listTrackingActivity(apiBaseUrl: string, userId: string): Promise<ActivityRecord[]>;
-  getStudentTrackingDashboard(apiBaseUrl: string, userId: string, courseId?: string | null): Promise<StudentDashboardRecord>;
-  getInstructorTrackingDashboard(apiBaseUrl: string, userId: string): Promise<InstructorDashboardRecord>;
-  getCourseTrackingDashboard(apiBaseUrl: string, userId: string, courseId: string): Promise<InstructorDashboardRecord>;
-  getTrackingSubmissionCommits(apiBaseUrl: string, submissionId: string): Promise<GithubDeliveryRecord[]>;
+  getStudentTrackingDashboard(
+    apiBaseUrl: string,
+    userId: string,
+    courseId?: string | null
+  ): Promise<StudentDashboardRecord>;
+  getInstructorTrackingDashboard(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<InstructorDashboardRecord>;
+  getCourseTrackingDashboard(
+    apiBaseUrl: string,
+    userId: string,
+    courseId: string
+  ): Promise<InstructorDashboardRecord>;
+  getTrackingSubmissionCommits(
+    apiBaseUrl: string,
+    submissionId: string
+  ): Promise<GithubDeliveryRecord[]>;
   handlePushWebhook(payload: {
     owner: string;
     repoName: string;
@@ -400,39 +483,32 @@ export interface AppStore {
 
 function defaultTask(): string {
   return [
-    "# CS161 / exam1",
-    "",
-    "This is the first hosted-style Nibras task.",
-    "",
-    "1. Run `nibras login` against the hosted API.",
-    "2. Run `nibras test` inside a provisioned project repo.",
-    "3. Run `nibras submit` to push and wait for verification."
-  ].join("\n");
+    '# CS161 / exam1',
+    '',
+    'This is the first hosted-style Nibras task.',
+    '',
+    '1. Run `nibras login` against the hosted API.',
+    '2. Run `nibras test` inside a provisioned project repo.',
+    '3. Run `nibras submit` to push and wait for verification.',
+  ].join('\n');
 }
 
 export function defaultManifest(apiBaseUrl: string): ProjectManifest {
   return {
-    projectKey: "cs161/exam1",
-    releaseVersion: "2026-03-01",
+    projectKey: 'cs161/exam1',
+    releaseVersion: '2026-03-01',
     apiBaseUrl,
-    defaultBranch: "main",
-    buildpack: { node: "20" },
+    defaultBranch: 'main',
+    buildpack: { node: '20' },
     test: {
-      mode: "public-grading",
-      command: "npm test",
-      supportsPrevious: true
+      mode: 'public-grading',
+      command: 'npm test',
+      supportsPrevious: true,
     },
     submission: {
-      allowedPaths: [
-        ".nibras/**",
-        "src/**",
-        "test/**",
-        "README.md",
-        "CS161.md",
-        "package.json"
-      ],
-      waitForVerificationSeconds: 30
-    }
+      allowedPaths: ['.nibras/**', 'src/**', 'test/**', 'README.md', 'CS161.md', 'package.json'],
+      waitForVerificationSeconds: 30,
+    },
   };
 }
 
@@ -445,57 +521,70 @@ function futureIso(days: number): string {
 }
 
 function formatDateLabel(value: string | null): string {
-  if (!value) return "No due date";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
+  if (!value) return 'No due date';
+  return new Date(value).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   });
 }
 
 function statusLabel(status: string): string {
-  return status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function branchNameFromRef(ref: string): string {
-  return ref.startsWith("refs/heads/") ? ref.slice("refs/heads/".length) : ref;
+  return ref.startsWith('refs/heads/') ? ref.slice('refs/heads/'.length) : ref;
 }
 
-function calculateProjectStats(milestones: MilestoneRecord[], submissions: SubmissionRecord[], reviews: ReviewRecord[]): TrackingDashboardStats {
-  const statuses = milestones.map((milestone) => milestoneProgress(milestone.id, submissions, reviews));
-  const approved = statuses.filter((value) => value === "approved" || value === "graded").length;
-  const underReview = statuses.filter((value) => value === "submitted").length;
+function calculateProjectStats(
+  milestones: MilestoneRecord[],
+  submissions: SubmissionRecord[],
+  reviews: ReviewRecord[]
+): TrackingDashboardStats {
+  const statuses = milestones.map((milestone) =>
+    milestoneProgress(milestone.id, submissions, reviews)
+  );
+  const approved = statuses.filter((value) => value === 'approved' || value === 'graded').length;
+  const underReview = statuses.filter((value) => value === 'submitted').length;
   const futureDates = milestones
     .map((entry) => entry.dueAt)
     .filter((entry): entry is string => Boolean(entry))
     .map((entry) => new Date(entry))
     .filter((entry) => entry.getTime() > Date.now());
-  const lastDue = futureDates.length > 0 ? new Date(Math.max(...futureDates.map((entry) => entry.getTime()))) : null;
+  const lastDue =
+    futureDates.length > 0
+      ? new Date(Math.max(...futureDates.map((entry) => entry.getTime())))
+      : null;
   return {
     approved,
     underReview,
     completion: milestones.length ? Math.round((approved / milestones.length) * 100) : 0,
     total: milestones.length,
-    daysRemaining: lastDue ? Math.ceil((lastDue.getTime() - Date.now()) / 86_400_000) : 0
+    daysRemaining: lastDue ? Math.ceil((lastDue.getTime() - Date.now()) / 86_400_000) : 0,
   };
 }
 
-function milestoneProgress(milestoneId: string, submissions: SubmissionRecord[], reviews: ReviewRecord[]): string {
+function milestoneProgress(
+  milestoneId: string,
+  submissions: SubmissionRecord[],
+  reviews: ReviewRecord[]
+): string {
   const milestoneSubmissions = submissions
     .filter((entry) => entry.milestoneId === milestoneId)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   if (milestoneSubmissions.length === 0) {
-    return "open";
+    return 'open';
   }
   const latestSubmission = milestoneSubmissions[0];
   const latestReview = reviews
     .filter((entry) => entry.submissionId === latestSubmission.id)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
   if (latestReview) {
-    if (latestReview.status === "graded") return "graded";
-    if (latestReview.status === "approved") return "approved";
+    if (latestReview.status === 'graded') return 'graded';
+    if (latestReview.status === 'approved') return 'approved';
   }
-  return "submitted";
+  return 'submitted';
 }
 
 function makeActivityRecord(args: {
@@ -516,69 +605,69 @@ function makeActivityRecord(args: {
     submissionId: args.submissionId,
     action: args.action,
     summary: args.summary,
-    createdAt: nowIso()
+    createdAt: nowIso(),
   };
 }
 
 function seedData(apiBaseUrl: string): StoreData {
   const createdAt = nowIso();
-  const courseId = "course_cs161";
-  const projectId = "project_cs161_exam1";
-  const instructorId = "user_instructor";
-  const studentId = "user_demo";
-  const milestone1Id = "milestone_exam1_design";
-  const milestone2Id = "milestone_exam1_final";
+  const courseId = 'course_cs161';
+  const projectId = 'project_cs161_exam1';
+  const instructorId = 'user_instructor';
+  const studentId = 'user_demo';
+  const milestone1Id = 'milestone_exam1_design';
+  const milestone2Id = 'milestone_exam1_final';
 
   return {
     users: [
       {
         id: studentId,
-        username: "demo",
-        email: "demo@nibras.dev",
-        githubLogin: "demo-user",
+        username: 'demo',
+        email: 'demo@nibras.dev',
+        githubLogin: 'demo-user',
         githubLinked: true,
         githubAppInstalled: true,
-        systemRole: "user"
+        systemRole: 'user',
       },
       {
         id: instructorId,
-        username: "instructor",
-        email: "instructor@nibras.dev",
-        githubLogin: "nibras-instructor",
+        username: 'instructor',
+        email: 'instructor@nibras.dev',
+        githubLogin: 'nibras-instructor',
         githubLinked: true,
         githubAppInstalled: true,
-        systemRole: "admin"
-      }
+        systemRole: 'admin',
+      },
     ],
     courses: [
       {
         id: courseId,
-        slug: "cs161",
-        title: "CS 161: Foundations of Systems",
-        termLabel: "Spring 2026",
-        courseCode: "CS161",
+        slug: 'cs161',
+        title: 'CS 161: Foundations of Systems',
+        termLabel: 'Spring 2026',
+        courseCode: 'CS161',
         isActive: true,
         createdAt,
-        updatedAt: createdAt
-      }
+        updatedAt: createdAt,
+      },
     ],
     courseMemberships: [
       {
-        id: "membership_demo_cs161",
+        id: 'membership_demo_cs161',
         courseId,
         userId: studentId,
-        role: "student",
+        role: 'student',
         createdAt,
-        updatedAt: createdAt
+        updatedAt: createdAt,
       },
       {
-        id: "membership_instructor_cs161",
+        id: 'membership_instructor_cs161',
         courseId,
         userId: instructorId,
-        role: "instructor",
+        role: 'instructor',
         createdAt,
-        updatedAt: createdAt
-      }
+        updatedAt: createdAt,
+      },
     ],
     deviceCodes: [],
     sessions: [],
@@ -588,53 +677,54 @@ function seedData(apiBaseUrl: string): StoreData {
     projects: [
       {
         id: projectId,
-        projectKey: "cs161/exam1",
-        slug: "cs161/exam1",
+        projectKey: 'cs161/exam1',
+        slug: 'cs161/exam1',
         courseId,
-        title: "Exam 1",
-        description: "Design, implement, and defend your solution for the first project milestone sequence.",
-        status: "published",
-        deliveryMode: "individual",
+        title: 'Exam 1',
+        description:
+          'Design, implement, and defend your solution for the first project milestone sequence.',
+        status: 'published',
+        deliveryMode: 'individual',
         rubric: [
-          { criterion: "Correctness", maxScore: 50 },
-          { criterion: "Clarity", maxScore: 30 },
-          { criterion: "Testing", maxScore: 20 }
+          { criterion: 'Correctness', maxScore: 50 },
+          { criterion: 'Clarity', maxScore: 30 },
+          { criterion: 'Testing', maxScore: 20 },
         ],
         resources: [
-          { label: "Task brief", url: "https://example.com/task-brief" },
-          { label: "Reference notes", url: "https://example.com/reference-notes" }
+          { label: 'Task brief', url: 'https://example.com/task-brief' },
+          { label: 'Reference notes', url: 'https://example.com/reference-notes' },
         ],
         instructorUserId: instructorId,
         manifest: defaultManifest(apiBaseUrl),
         task: defaultTask(),
         repoByUserId: {},
         createdAt,
-        updatedAt: createdAt
-      }
+        updatedAt: createdAt,
+      },
     ],
     milestones: [
       {
         id: milestone1Id,
         projectId,
-        title: "Design Review",
-        description: "Submit an initial design, edge cases, and implementation plan.",
+        title: 'Design Review',
+        description: 'Submit an initial design, edge cases, and implementation plan.',
         order: 1,
-        dueAt: "2026-03-27T17:00:00.000Z",
+        dueAt: '2026-03-27T17:00:00.000Z',
         isFinal: false,
         createdAt,
-        updatedAt: createdAt
+        updatedAt: createdAt,
       },
       {
         id: milestone2Id,
         projectId,
-        title: "Final Project Submission",
-        description: "Submit the final repository state and project write-up.",
+        title: 'Final Project Submission',
+        description: 'Submit the final repository state and project write-up.',
         order: 2,
-        dueAt: "2026-04-08T17:00:00.000Z",
+        dueAt: '2026-04-08T17:00:00.000Z',
         isFinal: true,
         createdAt,
-        updatedAt: createdAt
-      }
+        updatedAt: createdAt,
+      },
     ],
     reviews: [],
     githubDeliveries: [],
@@ -646,10 +736,10 @@ function seedData(apiBaseUrl: string): StoreData {
         projectId,
         milestoneId: null,
         submissionId: null,
-        action: "project.published",
-        summary: "Exam 1 is now published."
-      })
-    ]
+        action: 'project.published',
+        summary: 'Exam 1 is now published.',
+      }),
+    ],
   };
 }
 
@@ -662,10 +752,10 @@ export class FileStore implements AppStore {
 
   private ensureStore(apiBaseUrl: string): StoreData {
     try {
-      const raw = fs.readFileSync(this.storePath, "utf8");
+      const raw = fs.readFileSync(this.storePath, 'utf8');
       return JSON.parse(raw) as StoreData;
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
         throw err;
       }
       const initial = seedData(apiBaseUrl);
@@ -683,22 +773,27 @@ export class FileStore implements AppStore {
     fs.writeFileSync(this.storePath, `${JSON.stringify(data, null, 2)}\n`);
   }
 
-  private touchSubmissionLifecycle(data: StoreData, submission: SubmissionRecord): SubmissionRecord {
+  private touchSubmissionLifecycle(
+    data: StoreData,
+    submission: SubmissionRecord
+  ): SubmissionRecord {
     const ageMs = Date.now() - new Date(submission.createdAt).getTime();
     if (submission.milestoneId) {
       return submission;
     }
-    if (submission.status === "queued" && ageMs > 1200) {
-      submission.status = "running";
-      submission.summary = "Verification is running.";
+    if (submission.status === 'queued' && ageMs > 1200) {
+      submission.status = 'running';
+      submission.summary = 'Verification is running.';
       submission.updatedAt = nowIso();
       this.write(data);
     }
-    if (submission.status === "running" && ageMs > 2600) {
-      submission.status = submission.localTestExitCode && submission.localTestExitCode !== 0 ? "failed" : "passed";
-      submission.summary = submission.status === "passed"
-        ? "Verification passed."
-        : "Verification failed because the reported local tests failed.";
+    if (submission.status === 'running' && ageMs > 2600) {
+      submission.status =
+        submission.localTestExitCode && submission.localTestExitCode !== 0 ? 'failed' : 'passed';
+      submission.summary =
+        submission.status === 'passed'
+          ? 'Verification passed.'
+          : 'Verification failed because the reported local tests failed.';
       submission.updatedAt = nowIso();
       this.write(data);
     }
@@ -713,32 +808,38 @@ export class FileStore implements AppStore {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
       intervalSeconds: 2,
       userId: null,
-      status: "pending"
+      status: 'pending',
     };
     data.deviceCodes.push(record);
     this.write(data);
     return record;
   }
 
-  async authorizeDeviceCode(apiBaseUrl: string, userCode: string): Promise<DeviceCodeRecord | null> {
+  async authorizeDeviceCode(
+    apiBaseUrl: string,
+    userCode: string
+  ): Promise<DeviceCodeRecord | null> {
     const data = this.read(apiBaseUrl);
     const record = data.deviceCodes.find((entry) => entry.userCode === userCode);
     if (!record) {
       return null;
     }
-    record.status = "authorized";
-    record.userId = "user_demo";
+    record.status = 'authorized';
+    record.userId = 'user_demo';
     this.write(data);
     return record;
   }
 
-  async pollDeviceCode(apiBaseUrl: string, deviceCode: string): Promise<{ record: DeviceCodeRecord | null; session: SessionRecord | null }> {
+  async pollDeviceCode(
+    apiBaseUrl: string,
+    deviceCode: string
+  ): Promise<{ record: DeviceCodeRecord | null; session: SessionRecord | null }> {
     const data = this.read(apiBaseUrl);
     const record = data.deviceCodes.find((entry) => entry.deviceCode === deviceCode);
     if (!record) {
       return { record: null, session: null };
     }
-    if (record.status !== "authorized" || !record.userId) {
+    if (record.status !== 'authorized' || !record.userId) {
       return { record, session: null };
     }
     const existing = data.sessions.find((session) => session.userId === record.userId);
@@ -749,7 +850,7 @@ export class FileStore implements AppStore {
       accessToken: `access_${randomUUID()}`,
       refreshToken: `refresh_${randomUUID()}`,
       userId: record.userId,
-      createdAt: nowIso()
+      createdAt: nowIso(),
     };
     data.sessions.push(session);
     this.write(data);
@@ -776,7 +877,7 @@ export class FileStore implements AppStore {
       accessToken: `access_${randomUUID()}`,
       refreshToken: `refresh_${randomUUID()}`,
       userId: session.userId,
-      createdAt: nowIso()
+      createdAt: nowIso(),
     };
     data.sessions.push(next);
     this.write(data);
@@ -797,7 +898,7 @@ export class FileStore implements AppStore {
       createdAt: nowIso(),
       updatedAt: nowIso(),
       expiresAt: futureIso(30),
-      revokedAt: null
+      revokedAt: null,
     };
     data.webSessions.push(session);
     this.write(data);
@@ -832,12 +933,16 @@ export class FileStore implements AppStore {
     return data.projects.find((entry) => entry.projectKey === projectKey) || null;
   }
 
-  async provisionProjectRepo(apiBaseUrl: string, projectKey: string, userId: string): Promise<RepoRecord> {
+  async provisionProjectRepo(
+    apiBaseUrl: string,
+    projectKey: string,
+    userId: string
+  ): Promise<RepoRecord> {
     const data = this.read(apiBaseUrl);
     const project = data.projects.find((entry) => entry.projectKey === projectKey);
     const user = data.users.find((entry) => entry.id === userId);
     if (!project || !user) {
-      throw new Error("Project or user not found.");
+      throw new Error('Project or user not found.');
     }
     const existing = project.repoByUserId[userId];
     if (existing) {
@@ -845,10 +950,10 @@ export class FileStore implements AppStore {
     }
     const repo: RepoRecord = {
       owner: user.githubLogin,
-      name: `nibras-${projectKey.replace("/", "-")}`,
+      name: `nibras-${projectKey.replace('/', '-')}`,
       cloneUrl: null,
       defaultBranch: project.manifest.defaultBranch,
-      visibility: "private"
+      visibility: 'private',
     };
     project.repoByUserId[userId] = repo;
     this.write(data);
@@ -857,17 +962,24 @@ export class FileStore implements AppStore {
 
   async createOrReuseSubmission(
     apiBaseUrl: string,
-    payload: { userId: string; projectKey: string; commitSha: string; repoUrl: string; branch: string }
+    payload: {
+      userId: string;
+      projectKey: string;
+      commitSha: string;
+      repoUrl: string;
+      branch: string;
+    }
   ): Promise<SubmissionRecord> {
     const data = this.read(apiBaseUrl);
     const project = data.projects.find((entry) => entry.projectKey === payload.projectKey);
     if (!project) {
-      throw new Error("Project not found.");
+      throw new Error('Project not found.');
     }
-    const existing = data.submissions.find((entry) =>
-      entry.userId === payload.userId &&
-      entry.projectKey === payload.projectKey &&
-      entry.commitSha === payload.commitSha
+    const existing = data.submissions.find(
+      (entry) =>
+        entry.userId === payload.userId &&
+        entry.projectKey === payload.projectKey &&
+        entry.commitSha === payload.commitSha
     );
     if (existing) {
       return existing;
@@ -881,27 +993,27 @@ export class FileStore implements AppStore {
       commitSha: payload.commitSha,
       repoUrl: payload.repoUrl,
       branch: payload.branch,
-      status: "queued",
-      summary: "Submission queued for verification.",
-      submissionType: "github",
+      status: 'queued',
+      summary: 'Submission queued for verification.',
+      submissionType: 'github',
       submissionValue: payload.repoUrl,
       notes: null,
       createdAt: nowIso(),
       updatedAt: nowIso(),
       submittedAt: nowIso(),
-      localTestExitCode: null
+      localTestExitCode: null,
     };
     data.submissions.push(record);
     data.verificationLogs.push({
       id: randomUUID(),
       submissionId: record.id,
       attempt: 0,
-      status: "queued",
-      log: "Queued",
+      status: 'queued',
+      log: 'Queued',
       startedAt: null,
       finishedAt: null,
       createdAt: nowIso(),
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     });
     this.write(data);
     return record;
@@ -915,7 +1027,9 @@ export class FileStore implements AppStore {
     summary: string
   ): Promise<SubmissionRecord | null> {
     const data = this.read(apiBaseUrl);
-    const submission = data.submissions.find((entry) => entry.id === submissionId && entry.userId === requesterUserId);
+    const submission = data.submissions.find(
+      (entry) => entry.id === submissionId && entry.userId === requesterUserId
+    );
     if (!submission) {
       return null;
     }
@@ -926,16 +1040,25 @@ export class FileStore implements AppStore {
     return submission;
   }
 
-  async getSubmission(apiBaseUrl: string, submissionId: string, requesterUserId: string): Promise<SubmissionRecord | null> {
+  async getSubmission(
+    apiBaseUrl: string,
+    submissionId: string,
+    requesterUserId: string
+  ): Promise<SubmissionRecord | null> {
     const data = this.read(apiBaseUrl);
-    const submission = data.submissions.find((entry) => entry.id === submissionId && entry.userId === requesterUserId);
+    const submission = data.submissions.find(
+      (entry) => entry.id === submissionId && entry.userId === requesterUserId
+    );
     if (!submission) {
       return null;
     }
     return this.touchSubmissionLifecycle(data, submission);
   }
 
-  async getSubmissionForAdmin(apiBaseUrl: string, submissionId: string): Promise<SubmissionRecord | null> {
+  async getSubmissionForAdmin(
+    apiBaseUrl: string,
+    submissionId: string
+  ): Promise<SubmissionRecord | null> {
     const data = this.read(apiBaseUrl);
     const submission = data.submissions.find((entry) => entry.id === submissionId);
     if (!submission) {
@@ -969,28 +1092,37 @@ export class FileStore implements AppStore {
       startedAt: nowIso(),
       finishedAt: nowIso(),
       createdAt: nowIso(),
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     });
-    data.activity.unshift(makeActivityRecord({
-      actorUserId,
-      courseId: data.projects.find((entry) => entry.id === submission.projectId)?.courseId || null,
-      projectId: submission.projectId,
-      milestoneId: submission.milestoneId,
-      submissionId,
-      action: "submission.overridden",
-      summary: `Submission status changed from ${previousStatus} to ${status}.`
-    }));
+    data.activity.unshift(
+      makeActivityRecord({
+        actorUserId,
+        courseId:
+          data.projects.find((entry) => entry.id === submission.projectId)?.courseId || null,
+        projectId: submission.projectId,
+        milestoneId: submission.milestoneId,
+        submissionId,
+        action: 'submission.overridden',
+        summary: `Submission status changed from ${previousStatus} to ${status}.`,
+      })
+    );
     this.write(data);
     return submission;
   }
 
-  async listSubmissionVerificationLogs(apiBaseUrl: string, submissionId: string): Promise<VerificationLogRecord[]> {
-    return this.read(apiBaseUrl).verificationLogs
-      .filter((entry) => entry.submissionId === submissionId)
+  async listSubmissionVerificationLogs(
+    apiBaseUrl: string,
+    submissionId: string
+  ): Promise<VerificationLogRecord[]> {
+    return this.read(apiBaseUrl)
+      .verificationLogs.filter((entry) => entry.submissionId === submissionId)
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
 
-  async listCourseMemberships(apiBaseUrl: string, userId: string): Promise<CourseMembershipRecord[]> {
+  async listCourseMemberships(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<CourseMembershipRecord[]> {
     const data = this.read(apiBaseUrl);
     return data.courseMemberships.filter((entry) => entry.userId === userId);
   }
@@ -998,7 +1130,7 @@ export class FileStore implements AppStore {
   async listTrackingCourses(apiBaseUrl: string, userId: string): Promise<CourseRecord[]> {
     const data = this.read(apiBaseUrl);
     const user = data.users.find((entry) => entry.id === userId);
-    if (user?.systemRole === "admin") {
+    if (user?.systemRole === 'admin') {
       return data.courses.filter((entry) => entry.isActive);
     }
     const allowedCourseIds = new Set(
@@ -1021,7 +1153,7 @@ export class FileStore implements AppStore {
         return {
           ...m,
           username: user?.username || m.userId,
-          githubLogin: user?.githubLogin || m.userId
+          githubLogin: user?.githubLogin || m.userId,
         };
       });
   }
@@ -1035,11 +1167,17 @@ export class FileStore implements AppStore {
     const data = this.read(apiBaseUrl);
     const user = data.users.find((u) => u.githubLogin === githubLogin);
     if (!user) {
-      throw Object.assign(new Error(`No user found with GitHub login "${githubLogin}".`), { statusCode: 404 });
+      throw Object.assign(new Error(`No user found with GitHub login "${githubLogin}".`), {
+        statusCode: 404,
+      });
     }
-    const existing = data.courseMemberships.find((m) => m.courseId === courseId && m.userId === user.id);
+    const existing = data.courseMemberships.find(
+      (m) => m.courseId === courseId && m.userId === user.id
+    );
     if (existing) {
-      throw Object.assign(new Error("User is already a member of this course."), { statusCode: 409 });
+      throw Object.assign(new Error('User is already a member of this course.'), {
+        statusCode: 409,
+      });
     }
     const membership: CourseMembershipRecord = {
       id: randomUUID(),
@@ -1047,7 +1185,7 @@ export class FileStore implements AppStore {
       userId: user.id,
       role,
       createdAt: nowIso(),
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
     data.courseMemberships.push(membership);
     this.write(data);
@@ -1080,7 +1218,7 @@ export class FileStore implements AppStore {
       useCount: 0,
       expiresAt: opts?.expiresAt ?? null,
       createdAt: nowIso(),
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
     data.courseInvites.push(invite);
     this.write(data);
@@ -1109,13 +1247,15 @@ export class FileStore implements AppStore {
     if (!data.courseInvites) data.courseInvites = [];
     const invite = data.courseInvites.find((inv) => inv.code === code);
     if (!invite) {
-      throw Object.assign(new Error("Invalid or expired invite code."), { statusCode: 404 });
+      throw Object.assign(new Error('Invalid or expired invite code.'), { statusCode: 404 });
     }
     if (invite.expiresAt && new Date(invite.expiresAt) < new Date()) {
-      throw Object.assign(new Error("This invite link has expired."), { statusCode: 410 });
+      throw Object.assign(new Error('This invite link has expired.'), { statusCode: 410 });
     }
     if (invite.maxUses > 0 && invite.useCount >= invite.maxUses) {
-      throw Object.assign(new Error("This invite link has reached its maximum uses."), { statusCode: 410 });
+      throw Object.assign(new Error('This invite link has reached its maximum uses.'), {
+        statusCode: 410,
+      });
     }
     const existing = data.courseMemberships.find(
       (m) => m.courseId === invite.courseId && m.userId === userId
@@ -1129,7 +1269,7 @@ export class FileStore implements AppStore {
       userId,
       role: invite.role,
       createdAt: nowIso(),
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
     data.courseMemberships.push(membership);
     invite.useCount += 1;
@@ -1152,15 +1292,15 @@ export class FileStore implements AppStore {
       courseCode: payload.courseCode,
       isActive: true,
       createdAt: nowIso(),
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
     const membership: CourseMembershipRecord = {
       id: randomUUID(),
       courseId: course.id,
       userId,
-      role: "instructor",
+      role: 'instructor',
       createdAt: nowIso(),
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
     data.courses.push(course);
     data.courseMemberships.push(membership);
@@ -1170,10 +1310,15 @@ export class FileStore implements AppStore {
 
   async listTrackingProjects(apiBaseUrl: string, courseId: string): Promise<ProjectRecord[]> {
     const data = this.read(apiBaseUrl);
-    return data.projects.filter((entry) => entry.courseId === courseId).sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    return data.projects
+      .filter((entry) => entry.courseId === courseId)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
 
-  async getTrackingProjectById(apiBaseUrl: string, projectId: string): Promise<ProjectRecord | null> {
+  async getTrackingProjectById(
+    apiBaseUrl: string,
+    projectId: string
+  ): Promise<ProjectRecord | null> {
     const data = this.read(apiBaseUrl);
     return data.projects.find((entry) => entry.id === projectId) || null;
   }
@@ -1207,23 +1352,25 @@ export class FileStore implements AppStore {
       instructorUserId: userId,
       manifest: {
         ...defaultManifest(apiBaseUrl),
-        projectKey: payload.slug
+        projectKey: payload.slug,
       },
       task: `# ${payload.title}\n\n${payload.description}\n`,
       repoByUserId: {},
       createdAt: nowIso(),
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
     data.projects.push(record);
-    data.activity.unshift(makeActivityRecord({
-      actorUserId: userId,
-      courseId: payload.courseId,
-      projectId: record.id,
-      milestoneId: null,
-      submissionId: null,
-      action: "project.created",
-      summary: `${payload.title} was created.`
-    }));
+    data.activity.unshift(
+      makeActivityRecord({
+        actorUserId: userId,
+        courseId: payload.courseId,
+        projectId: record.id,
+        milestoneId: null,
+        submissionId: null,
+        action: 'project.created',
+        summary: `${payload.title} was created.`,
+      })
+    );
     this.write(data);
     return record;
   }
@@ -1259,34 +1406,43 @@ export class FileStore implements AppStore {
     if (payload.rubric !== undefined) project.rubric = payload.rubric;
     if (payload.resources !== undefined) project.resources = payload.resources;
     project.updatedAt = nowIso();
-    data.activity.unshift(makeActivityRecord({
-      actorUserId: userId,
-      courseId: project.courseId,
-      projectId: project.id,
-      milestoneId: null,
-      submissionId: null,
-      action: "project.updated",
-      summary: `${project.title} was updated.`
-    }));
+    data.activity.unshift(
+      makeActivityRecord({
+        actorUserId: userId,
+        courseId: project.courseId,
+        projectId: project.id,
+        milestoneId: null,
+        submissionId: null,
+        action: 'project.updated',
+        summary: `${project.title} was updated.`,
+      })
+    );
     this.write(data);
     return project;
   }
 
-  async setTrackingProjectStatus(apiBaseUrl: string, userId: string, projectId: string, status: ProjectStatus): Promise<ProjectRecord | null> {
+  async setTrackingProjectStatus(
+    apiBaseUrl: string,
+    userId: string,
+    projectId: string,
+    status: ProjectStatus
+  ): Promise<ProjectRecord | null> {
     const project = await this.updateTrackingProject(apiBaseUrl, userId, projectId, { status });
     if (!project) {
       return null;
     }
     const data = this.read(apiBaseUrl);
-    data.activity.unshift(makeActivityRecord({
-      actorUserId: userId,
-      courseId: project.courseId,
-      projectId: project.id,
-      milestoneId: null,
-      submissionId: null,
-      action: status === "published" ? "project.published" : "project.unpublished",
-      summary: `${project.title} is now ${status}.`
-    }));
+    data.activity.unshift(
+      makeActivityRecord({
+        actorUserId: userId,
+        courseId: project.courseId,
+        projectId: project.id,
+        milestoneId: null,
+        submissionId: null,
+        action: status === 'published' ? 'project.published' : 'project.unpublished',
+        summary: `${project.title} is now ${status}.`,
+      })
+    );
     this.write(data);
     return project;
   }
@@ -1298,7 +1454,10 @@ export class FileStore implements AppStore {
       .sort((left, right) => left.order - right.order);
   }
 
-  async getTrackingMilestone(apiBaseUrl: string, milestoneId: string): Promise<MilestoneRecord | null> {
+  async getTrackingMilestone(
+    apiBaseUrl: string,
+    milestoneId: string
+  ): Promise<MilestoneRecord | null> {
     const data = this.read(apiBaseUrl);
     return data.milestones.find((entry) => entry.id === milestoneId) || null;
   }
@@ -1307,12 +1466,18 @@ export class FileStore implements AppStore {
     apiBaseUrl: string,
     userId: string,
     projectId: string,
-    payload: { title: string; description: string; order: number; dueAt: string | null; isFinal: boolean }
+    payload: {
+      title: string;
+      description: string;
+      order: number;
+      dueAt: string | null;
+      isFinal: boolean;
+    }
   ): Promise<MilestoneRecord> {
     const data = this.read(apiBaseUrl);
     const project = data.projects.find((entry) => entry.id === projectId);
     if (!project) {
-      throw new Error("Project not found.");
+      throw new Error('Project not found.');
     }
     const milestone: MilestoneRecord = {
       id: randomUUID(),
@@ -1323,18 +1488,20 @@ export class FileStore implements AppStore {
       dueAt: payload.dueAt,
       isFinal: payload.isFinal,
       createdAt: nowIso(),
-      updatedAt: nowIso()
+      updatedAt: nowIso(),
     };
     data.milestones.push(milestone);
-    data.activity.unshift(makeActivityRecord({
-      actorUserId: userId,
-      courseId: project.courseId,
-      projectId,
-      milestoneId: milestone.id,
-      submissionId: null,
-      action: "milestone.created",
-      summary: `${milestone.title} was added to ${project.title}.`
-    }));
+    data.activity.unshift(
+      makeActivityRecord({
+        actorUserId: userId,
+        courseId: project.courseId,
+        projectId,
+        milestoneId: milestone.id,
+        submissionId: null,
+        action: 'milestone.created',
+        summary: `${milestone.title} was added to ${project.title}.`,
+      })
+    );
     this.write(data);
     return milestone;
   }
@@ -1343,7 +1510,13 @@ export class FileStore implements AppStore {
     apiBaseUrl: string,
     userId: string,
     milestoneId: string,
-    payload: Partial<{ title: string; description: string; order: number; dueAt: string | null; isFinal: boolean }>
+    payload: Partial<{
+      title: string;
+      description: string;
+      order: number;
+      dueAt: string | null;
+      isFinal: boolean;
+    }>
   ): Promise<MilestoneRecord | null> {
     const data = this.read(apiBaseUrl);
     const milestone = data.milestones.find((entry) => entry.id === milestoneId);
@@ -1357,20 +1530,26 @@ export class FileStore implements AppStore {
     if (payload.isFinal !== undefined) milestone.isFinal = payload.isFinal;
     milestone.updatedAt = nowIso();
     const project = data.projects.find((entry) => entry.id === milestone.projectId);
-    data.activity.unshift(makeActivityRecord({
-      actorUserId: userId,
-      courseId: project?.courseId || null,
-      projectId: milestone.projectId,
-      milestoneId,
-      submissionId: null,
-      action: "milestone.updated",
-      summary: `${milestone.title} was updated.`
-    }));
+    data.activity.unshift(
+      makeActivityRecord({
+        actorUserId: userId,
+        courseId: project?.courseId || null,
+        projectId: milestone.projectId,
+        milestoneId,
+        submissionId: null,
+        action: 'milestone.updated',
+        summary: `${milestone.title} was updated.`,
+      })
+    );
     this.write(data);
     return milestone;
   }
 
-  async deleteTrackingMilestone(apiBaseUrl: string, userId: string, milestoneId: string): Promise<boolean> {
+  async deleteTrackingMilestone(
+    apiBaseUrl: string,
+    userId: string,
+    milestoneId: string
+  ): Promise<boolean> {
     const data = this.read(apiBaseUrl);
     const milestone = data.milestones.find((entry) => entry.id === milestoneId);
     if (!milestone) {
@@ -1378,20 +1557,25 @@ export class FileStore implements AppStore {
     }
     data.milestones = data.milestones.filter((entry) => entry.id !== milestoneId);
     data.submissions = data.submissions.filter((entry) => entry.milestoneId !== milestoneId);
-    data.activity.unshift(makeActivityRecord({
-      actorUserId: userId,
-      courseId: data.projects.find((entry) => entry.id === milestone.projectId)?.courseId || null,
-      projectId: milestone.projectId,
-      milestoneId,
-      submissionId: null,
-      action: "milestone.deleted",
-      summary: `${milestone.title} was deleted.`
-    }));
+    data.activity.unshift(
+      makeActivityRecord({
+        actorUserId: userId,
+        courseId: data.projects.find((entry) => entry.id === milestone.projectId)?.courseId || null,
+        projectId: milestone.projectId,
+        milestoneId,
+        submissionId: null,
+        action: 'milestone.deleted',
+        summary: `${milestone.title} was deleted.`,
+      })
+    );
     this.write(data);
     return true;
   }
 
-  async listTrackingMilestoneSubmissions(apiBaseUrl: string, milestoneId: string): Promise<SubmissionRecord[]> {
+  async listTrackingMilestoneSubmissions(
+    apiBaseUrl: string,
+    milestoneId: string
+  ): Promise<SubmissionRecord[]> {
     const data = this.read(apiBaseUrl);
     return data.submissions
       .filter((entry) => entry.milestoneId === milestoneId)
@@ -1414,11 +1598,11 @@ export class FileStore implements AppStore {
     const data = this.read(apiBaseUrl);
     const milestone = data.milestones.find((entry) => entry.id === milestoneId);
     if (!milestone) {
-      throw new Error("Milestone not found.");
+      throw new Error('Milestone not found.');
     }
     const project = data.projects.find((entry) => entry.id === milestone.projectId);
     if (!project) {
-      throw new Error("Project not found.");
+      throw new Error('Project not found.');
     }
     const record: SubmissionRecord = {
       id: randomUUID(),
@@ -1426,33 +1610,38 @@ export class FileStore implements AppStore {
       projectId: project.id,
       projectKey: project.projectKey,
       milestoneId,
-      commitSha: payload.commitSha || (payload.submissionType === "github"
-        ? `github-pending-${randomUUID().slice(0, 8)}`
-        : `manual-${randomUUID().slice(0, 8)}`),
+      commitSha:
+        payload.commitSha ||
+        (payload.submissionType === 'github'
+          ? `github-pending-${randomUUID().slice(0, 8)}`
+          : `manual-${randomUUID().slice(0, 8)}`),
       repoUrl: payload.repoUrl || payload.submissionValue,
-      branch: payload.branch || "main",
-      status: payload.submissionType === "github" ? "running" : "needs_review",
-      summary: payload.submissionType === "github"
-        ? "GitHub submission received. Waiting for webhook activity."
-        : "Submission received and queued for instructor review.",
+      branch: payload.branch || 'main',
+      status: payload.submissionType === 'github' ? 'running' : 'needs_review',
+      summary:
+        payload.submissionType === 'github'
+          ? 'GitHub submission received. Waiting for webhook activity.'
+          : 'Submission received and queued for instructor review.',
       submissionType: payload.submissionType,
       submissionValue: payload.submissionValue,
       notes: payload.notes || null,
       createdAt: nowIso(),
       updatedAt: nowIso(),
       submittedAt: nowIso(),
-      localTestExitCode: null
+      localTestExitCode: null,
     };
     data.submissions.push(record);
-    data.activity.unshift(makeActivityRecord({
-      actorUserId: userId,
-      courseId: project.courseId,
-      projectId: project.id,
-      milestoneId,
-      submissionId: record.id,
-      action: "submission.created",
-      summary: `A ${payload.submissionType} submission was added for ${milestone.title}.`
-    }));
+    data.activity.unshift(
+      makeActivityRecord({
+        actorUserId: userId,
+        courseId: project.courseId,
+        projectId: project.id,
+        milestoneId,
+        submissionId: record.id,
+        action: 'submission.created',
+        summary: `A ${payload.submissionType} submission was added for ${milestone.title}.`,
+      })
+    );
     this.write(data);
     return record;
   }
@@ -1482,15 +1671,18 @@ export class FileStore implements AppStore {
     if (payload.branch !== undefined) submission.branch = payload.branch;
     if (payload.commitSha !== undefined) submission.commitSha = payload.commitSha;
     submission.updatedAt = nowIso();
-    data.activity.unshift(makeActivityRecord({
-      actorUserId: userId,
-      courseId: data.projects.find((entry) => entry.id === submission.projectId)?.courseId || null,
-      projectId: submission.projectId,
-      milestoneId: submission.milestoneId,
-      submissionId,
-      action: "submission.updated",
-      summary: "Submission details were updated."
-    }));
+    data.activity.unshift(
+      makeActivityRecord({
+        actorUserId: userId,
+        courseId:
+          data.projects.find((entry) => entry.id === submission.projectId)?.courseId || null,
+        projectId: submission.projectId,
+        milestoneId: submission.milestoneId,
+        submissionId,
+        action: 'submission.updated',
+        summary: 'Submission details were updated.',
+      })
+    );
     this.write(data);
     return submission;
   }
@@ -1499,12 +1691,17 @@ export class FileStore implements AppStore {
     apiBaseUrl: string,
     userId: string,
     submissionId: string,
-    payload: { status: ReviewStatus; score: number | null; feedback: string; rubric: TrackingRubricItemRecord[] }
+    payload: {
+      status: ReviewStatus;
+      score: number | null;
+      feedback: string;
+      rubric: TrackingRubricItemRecord[];
+    }
   ): Promise<ReviewRecord> {
     const data = this.read(apiBaseUrl);
     const submission = data.submissions.find((entry) => entry.id === submissionId);
     if (!submission) {
-      throw new Error("Submission not found.");
+      throw new Error('Submission not found.');
     }
     const review: ReviewRecord = {
       id: randomUUID(),
@@ -1523,34 +1720,40 @@ export class FileStore implements AppStore {
       aiCriterionScores: null,
       aiEvidenceQuotes: null,
       aiModel: null,
-      aiGradedAt: null
+      aiGradedAt: null,
     };
-    submission.status = payload.status === "changes_requested"
-      ? "failed"
-      : payload.status === "graded" || payload.status === "approved"
-        ? "passed"
-        : "needs_review";
+    submission.status =
+      payload.status === 'changes_requested'
+        ? 'failed'
+        : payload.status === 'graded' || payload.status === 'approved'
+          ? 'passed'
+          : 'needs_review';
     submission.summary = payload.feedback || statusLabel(payload.status);
     submission.updatedAt = nowIso();
     data.reviews.push(review);
-    data.activity.unshift(makeActivityRecord({
-      actorUserId: userId,
-      courseId: data.projects.find((entry) => entry.id === submission.projectId)?.courseId || null,
-      projectId: submission.projectId,
-      milestoneId: submission.milestoneId,
-      submissionId,
-      action: "review.created",
-      summary: `Review completed with status ${statusLabel(payload.status)}.`
-    }));
+    data.activity.unshift(
+      makeActivityRecord({
+        actorUserId: userId,
+        courseId:
+          data.projects.find((entry) => entry.id === submission.projectId)?.courseId || null,
+        projectId: submission.projectId,
+        milestoneId: submission.milestoneId,
+        submissionId,
+        action: 'review.created',
+        summary: `Review completed with status ${statusLabel(payload.status)}.`,
+      })
+    );
     this.write(data);
     return review;
   }
 
   async getTrackingReview(apiBaseUrl: string, submissionId: string): Promise<ReviewRecord | null> {
     const data = this.read(apiBaseUrl);
-    return data.reviews
-      .filter((entry) => entry.submissionId === submissionId)
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0] || null;
+    return (
+      data.reviews
+        .filter((entry) => entry.submissionId === submissionId)
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0] || null
+    );
   }
 
   async getSubmissionStudentEmail(apiBaseUrl: string, submissionId: string): Promise<{ email: string; username: string } | null> {
@@ -1580,10 +1783,16 @@ export class FileStore implements AppStore {
   async listTrackingActivity(apiBaseUrl: string, userId: string): Promise<ActivityRecord[]> {
     const courses = await this.listTrackingCourses(apiBaseUrl, userId);
     const allowedCourseIds = new Set(courses.map((entry) => entry.id));
-    return this.read(apiBaseUrl).activity.filter((entry) => !entry.courseId || allowedCourseIds.has(entry.courseId)).slice(0, 20);
+    return this.read(apiBaseUrl)
+      .activity.filter((entry) => !entry.courseId || allowedCourseIds.has(entry.courseId))
+      .slice(0, 20);
   }
 
-  async getStudentTrackingDashboard(apiBaseUrl: string, userId: string, courseId?: string | null): Promise<StudentDashboardRecord> {
+  async getStudentTrackingDashboard(
+    apiBaseUrl: string,
+    userId: string,
+    courseId?: string | null
+  ): Promise<StudentDashboardRecord> {
     const courses = await this.listTrackingCourses(apiBaseUrl, userId);
     const memberships = await this.listCourseMemberships(apiBaseUrl, userId);
     const selectedCourse = courseId
@@ -1598,17 +1807,23 @@ export class FileStore implements AppStore {
         activeProjectId: null,
         activity: [],
         statsByProject: {},
-        pageError: "No active course found for this account."
+        pageError: 'No active course found for this account.',
       };
     }
     const data = this.read(apiBaseUrl);
-    const projects = data.projects.filter((entry) => entry.courseId === selectedCourse.id && entry.status === "published");
+    const projects = data.projects.filter(
+      (entry) => entry.courseId === selectedCourse.id && entry.status === 'published'
+    );
     const milestonesByProject: Record<string, MilestoneRecord[]> = {};
     const statsByProject: Record<string, TrackingDashboardStats> = {};
     for (const project of projects) {
-      const milestones = data.milestones.filter((entry) => entry.projectId === project.id).sort((left, right) => left.order - right.order);
+      const milestones = data.milestones
+        .filter((entry) => entry.projectId === project.id)
+        .sort((left, right) => left.order - right.order);
       milestonesByProject[project.id] = milestones;
-      const submissions = data.submissions.filter((entry) => entry.projectId === project.id && entry.userId === userId);
+      const submissions = data.submissions.filter(
+        (entry) => entry.projectId === project.id && entry.userId === userId
+      );
       statsByProject[project.id] = calculateProjectStats(milestones, submissions, data.reviews);
     }
     return {
@@ -1619,35 +1834,53 @@ export class FileStore implements AppStore {
       activeProjectId: projects[0]?.id || null,
       activity: data.activity.filter((entry) => entry.courseId === selectedCourse.id).slice(0, 10),
       statsByProject,
-      pageError: projects.length === 0 ? "No published projects found for this course yet." : null
+      pageError: projects.length === 0 ? 'No published projects found for this course yet.' : null,
     };
   }
 
-  async getInstructorTrackingDashboard(apiBaseUrl: string, userId: string): Promise<InstructorDashboardRecord> {
+  async getInstructorTrackingDashboard(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<InstructorDashboardRecord> {
     const courses = (await this.listTrackingCourses(apiBaseUrl, userId)).filter((course) => {
-      const membership = this.read(apiBaseUrl).courseMemberships.find((entry) => entry.courseId === course.id && entry.userId === userId);
+      const membership = this.read(apiBaseUrl).courseMemberships.find(
+        (entry) => entry.courseId === course.id && entry.userId === userId
+      );
       const user = this.read(apiBaseUrl).users.find((entry) => entry.id === userId);
-      return user?.systemRole === "admin" || membership?.role === "instructor" || membership?.role === "ta";
+      return (
+        user?.systemRole === 'admin' ||
+        membership?.role === 'instructor' ||
+        membership?.role === 'ta'
+      );
     });
     const reviewQueue = await this.listTrackingReviewQueue(apiBaseUrl);
     const activity = await this.listTrackingActivity(apiBaseUrl, userId);
     return { courses, reviewQueue, activity };
   }
 
-  async getCourseTrackingDashboard(apiBaseUrl: string, userId: string, courseId: string): Promise<InstructorDashboardRecord> {
+  async getCourseTrackingDashboard(
+    apiBaseUrl: string,
+    userId: string,
+    courseId: string
+  ): Promise<InstructorDashboardRecord> {
     const courses = await this.listTrackingCourses(apiBaseUrl, userId);
-    const activity = (await this.listTrackingActivity(apiBaseUrl, userId)).filter((entry) => entry.courseId === courseId);
+    const activity = (await this.listTrackingActivity(apiBaseUrl, userId)).filter(
+      (entry) => entry.courseId === courseId
+    );
     const reviewQueue = await this.listTrackingReviewQueue(apiBaseUrl, { courseId });
     return {
       courses: courses.filter((entry) => entry.id === courseId),
       reviewQueue,
-      activity
+      activity,
     };
   }
 
-  async getTrackingSubmissionCommits(apiBaseUrl: string, submissionId: string): Promise<GithubDeliveryRecord[]> {
-    return this.read(apiBaseUrl).githubDeliveries
-      .filter((entry) => entry.submissionId === submissionId)
+  async getTrackingSubmissionCommits(
+    apiBaseUrl: string,
+    submissionId: string
+  ): Promise<GithubDeliveryRecord[]> {
+    return this.read(apiBaseUrl)
+      .githubDeliveries.filter((entry) => entry.submissionId === submissionId)
       .sort((left, right) => right.receivedAt.localeCompare(left.receivedAt));
   }
 
@@ -1661,27 +1894,35 @@ export class FileStore implements AppStore {
     repositoryUrl?: string;
     rawPayload?: Record<string, unknown>;
   }): Promise<void> {
-    const data = this.read("http://127.0.0.1");
-    const repoUrl = payload.repositoryUrl || `https://github.com/${payload.owner}/${payload.repoName}`;
+    const data = this.read('http://127.0.0.1');
+    const repoUrl =
+      payload.repositoryUrl || `https://github.com/${payload.owner}/${payload.repoName}`;
     const branch = branchNameFromRef(payload.ref);
     const project = data.projects.find((entry) =>
-      Object.values(entry.repoByUserId).some((repo) => repo.owner === payload.owner && repo.name === payload.repoName)
+      Object.values(entry.repoByUserId).some(
+        (repo) => repo.owner === payload.owner && repo.name === payload.repoName
+      )
     );
     if (!project) {
       return;
     }
-    const matchingSubmissions = data.submissions.filter((entry) =>
-      entry.projectId === project.id &&
-      (entry.repoUrl.includes(`/${payload.owner}/${payload.repoName}`) || entry.submissionValue?.includes(`/${payload.owner}/${payload.repoName}`)) &&
-      entry.submissionType === "github" &&
-      entry.branch === branch
-    ).sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-    const submission = matchingSubmissions.find((entry) => entry.commitSha === payload.after)
-      || matchingSubmissions.find((entry) => entry.commitSha.startsWith("github-pending-"));
+    const matchingSubmissions = data.submissions
+      .filter(
+        (entry) =>
+          entry.projectId === project.id &&
+          (entry.repoUrl.includes(`/${payload.owner}/${payload.repoName}`) ||
+            entry.submissionValue?.includes(`/${payload.owner}/${payload.repoName}`)) &&
+          entry.submissionType === 'github' &&
+          entry.branch === branch
+      )
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    const submission =
+      matchingSubmissions.find((entry) => entry.commitSha === payload.after) ||
+      matchingSubmissions.find((entry) => entry.commitSha.startsWith('github-pending-'));
     if (!submission) {
       return;
     }
-    submission.status = "running";
+    submission.status = 'running';
     submission.summary = `GitHub push received for ${payload.ref}. Verification is running.`;
     submission.commitSha = payload.after || submission.commitSha;
     submission.updatedAt = nowIso();
@@ -1689,26 +1930,28 @@ export class FileStore implements AppStore {
       id: randomUUID(),
       submissionId: submission.id,
       repoUrl,
-      eventType: payload.eventType || "push",
+      eventType: payload.eventType || 'push',
       deliveryId: payload.deliveryId || randomUUID(),
       ref: payload.ref,
       commitSha: payload.after,
       payload: payload.rawPayload || {},
-      receivedAt: nowIso()
+      receivedAt: nowIso(),
     });
-    data.activity.unshift(makeActivityRecord({
-      actorUserId: null,
-      courseId: project.courseId,
-      projectId: project.id,
-      milestoneId: submission.milestoneId,
-      submissionId: submission.id,
-      action: "github.delivery",
-      summary: `GitHub ${payload.eventType || "push"} received for ${project.title}.`
-    }));
+    data.activity.unshift(
+      makeActivityRecord({
+        actorUserId: null,
+        courseId: project.courseId,
+        projectId: project.id,
+        milestoneId: submission.milestoneId,
+        submissionId: submission.id,
+        action: 'github.delivery',
+        summary: `GitHub ${payload.eventType || 'push'} received for ${project.title}.`,
+      })
+    );
     this.write(data);
   }
 }
 
 export function getStorePath(): string {
-  return process.env.NIBRAS_API_STORE || path.join(process.cwd(), "tmp", "nibras-api-store.json");
+  return process.env.NIBRAS_API_STORE || path.join(process.cwd(), 'tmp', 'nibras-api-store.json');
 }

@@ -1,19 +1,21 @@
 function normalizeText(text) {
-  return String(text).replace(/\s+/g, " ").trim();
+  return String(text).replace(/\s+/g, ' ').trim();
 }
 
 function assertNonEmptyString(value, message) {
-  if (typeof value !== "string" || !value.trim()) {
+  if (typeof value !== 'string' || !value.trim()) {
     throw new Error(message);
   }
 }
 
 function validateCriterionScore(entry, rubricItem, questionId) {
-  if (!entry || typeof entry !== "object") {
+  if (!entry || typeof entry !== 'object') {
     throw new Error(`AI response criterion score must be an object for ${questionId}.`);
   }
   if (entry.id !== rubricItem.id) {
-    throw new Error(`AI response criterion id mismatch for ${questionId}: expected "${rubricItem.id}".`);
+    throw new Error(
+      `AI response criterion id mismatch for ${questionId}: expected "${rubricItem.id}".`
+    );
   }
   const points = Number(entry.points);
   const earned = Number(entry.earned);
@@ -31,7 +33,7 @@ function validateCriterionScore(entry, rubricItem, questionId) {
     id: rubricItem.id,
     points,
     earned,
-    justification: entry.justification.trim()
+    justification: entry.justification.trim(),
   };
 }
 
@@ -41,17 +43,22 @@ function validateEvidenceQuotes(evidenceQuotes, answerText, questionId) {
   }
   const normalizedAnswer = normalizeText(answerText);
   return evidenceQuotes.map((quote, index) => {
-    assertNonEmptyString(quote, `AI response evidence quote ${index} is invalid for ${questionId}.`);
+    assertNonEmptyString(
+      quote,
+      `AI response evidence quote ${index} is invalid for ${questionId}.`
+    );
     const normalizedQuote = normalizeText(quote);
     if (!normalizedAnswer.includes(normalizedQuote)) {
-      throw new Error(`AI response evidence quote ${index} was not found in the answer for ${questionId}.`);
+      throw new Error(
+        `AI response evidence quote ${index} was not found in the answer for ${questionId}.`
+      );
     }
     return quote.trim();
   });
 }
 
 function validateAiGradeResponse(raw, question, answerText) {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw new Error(`AI response must be an object for ${question.id}.`);
   }
 
@@ -60,13 +67,19 @@ function validateAiGradeResponse(raw, question, answerText) {
     throw new Error(`AI response confidence is invalid for ${question.id}.`);
   }
 
-  if (typeof raw.needsReview !== "boolean") {
+  if (typeof raw.needsReview !== 'boolean') {
     throw new Error(`AI response needsReview must be a boolean for ${question.id}.`);
   }
 
-  assertNonEmptyString(raw.reasoningSummary, `AI response reasoningSummary is required for ${question.id}.`);
+  assertNonEmptyString(
+    raw.reasoningSummary,
+    `AI response reasoningSummary is required for ${question.id}.`
+  );
 
-  if (!Array.isArray(raw.criterionScores) || raw.criterionScores.length !== question.rubric.length) {
+  if (
+    !Array.isArray(raw.criterionScores) ||
+    raw.criterionScores.length !== question.rubric.length
+  ) {
     throw new Error(`AI response criterionScores are incomplete for ${question.id}.`);
   }
 
@@ -94,31 +107,30 @@ function validateAiGradeResponse(raw, question, answerText) {
     needsReview: raw.needsReview,
     criterionScores,
     reasoningSummary: raw.reasoningSummary.trim(),
-    evidenceQuotes
+    evidenceQuotes,
   };
 }
 
 function buildSystemPrompt() {
   return [
-    "You are a grading assistant for written answers.",
+    'You are a grading assistant for written answers.',
     "Grade only from the rubric and the student's answer.",
-    "Do not invent facts or assume unstated intent.",
-    "Score each rubric criterion independently.",
-    "Return strict JSON only.",
-    "Set needsReview=true if the answer is ambiguous, contradictory, off-rubric, or unclear.",
-    "Each evidence quote must be copied from the student's answer."
-  ].join(" ");
+    'Do not invent facts or assume unstated intent.',
+    'Score each rubric criterion independently.',
+    'Return strict JSON only.',
+    'Set needsReview=true if the answer is ambiguous, contradictory, off-rubric, or unclear.',
+    "Each evidence quote must be copied from the student's answer.",
+  ].join(' ');
 }
 
 function buildUserPrompt({ subject, project, question, answerText }) {
   const rubric = question.rubric
     .map((item) => `- ${item.id} (${item.points} pts): ${item.description}`)
-    .join("\n");
-  const examples = Array.isArray(question.examples) && question.examples.length > 0
-    ? question.examples
-        .map((example) => `- ${example.label}: ${example.answer}`)
-        .join("\n")
-    : "None";
+    .join('\n');
+  const examples =
+    Array.isArray(question.examples) && question.examples.length > 0
+      ? question.examples.map((example) => `- ${example.label}: ${example.answer}`).join('\n')
+      : 'None';
 
   return [
     `Subject: ${subject}`,
@@ -126,94 +138,110 @@ function buildUserPrompt({ subject, project, question, answerText }) {
     `Question ID: ${question.id}`,
     `Question prompt: ${question.prompt}`,
     `Question max points: ${question.points}`,
-    "Rubric:",
+    'Rubric:',
     rubric,
-    "Examples:",
+    'Examples:',
     examples,
-    "Student answer:",
-    answerText
-  ].join("\n");
+    'Student answer:',
+    answerText,
+  ].join('\n');
 }
 
 function buildJsonSchema(question) {
   return {
-    name: "semantic_grade",
+    name: 'semantic_grade',
     strict: true,
     schema: {
-      type: "object",
+      type: 'object',
       additionalProperties: false,
       properties: {
-        score: { type: "number" },
-        confidence: { type: "number" },
-        needsReview: { type: "boolean" },
+        score: { type: 'number' },
+        confidence: { type: 'number' },
+        needsReview: { type: 'boolean' },
         criterionScores: {
-          type: "array",
+          type: 'array',
           items: {
-            type: "object",
+            type: 'object',
             additionalProperties: false,
             properties: {
-              id: { type: "string" },
-              points: { type: "number" },
-              earned: { type: "number" },
-              justification: { type: "string" }
+              id: { type: 'string' },
+              points: { type: 'number' },
+              earned: { type: 'number' },
+              justification: { type: 'string' },
             },
-            required: ["id", "points", "earned", "justification"]
-          }
+            required: ['id', 'points', 'earned', 'justification'],
+          },
         },
-        reasoningSummary: { type: "string" },
+        reasoningSummary: { type: 'string' },
         evidenceQuotes: {
-          type: "array",
-          items: { type: "string" }
-        }
+          type: 'array',
+          items: { type: 'string' },
+        },
       },
-      required: ["score", "confidence", "needsReview", "criterionScores", "reasoningSummary", "evidenceQuotes"]
-    }
+      required: [
+        'score',
+        'confidence',
+        'needsReview',
+        'criterionScores',
+        'reasoningSummary',
+        'evidenceQuotes',
+      ],
+    },
   };
 }
 
 function resolveBaseUrl(aiConfig) {
-  const baseUrl = aiConfig.baseUrl || "https://api.openai.com/v1";
-  return baseUrl.replace(/\/$/, "");
+  const baseUrl = aiConfig.baseUrl || 'https://api.openai.com/v1';
+  return baseUrl.replace(/\/$/, '');
 }
 
-async function callOpenAiCompatibleApi({ aiConfig, subject, project, question, answerText, timeoutMs }) {
+async function callOpenAiCompatibleApi({
+  aiConfig,
+  subject,
+  project,
+  question,
+  answerText,
+  timeoutMs,
+}) {
   if (!aiConfig.apiKey) {
-    throw new Error("NIBRAS_AI_API_KEY is required for semantic grading.");
+    throw new Error('NIBRAS_AI_API_KEY is required for semantic grading.');
   }
   if (!aiConfig.model) {
-    throw new Error("AI model is required for semantic grading. Set it in config, env, or --ai-model.");
+    throw new Error(
+      'AI model is required for semantic grading. Set it in config, env, or --ai-model.'
+    );
   }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(`${resolveBaseUrl(aiConfig)}/chat/completions`, {
-      method: "POST",
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${aiConfig.apiKey}`,
-        "Content-Type": "application/json"
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: aiConfig.model,
         temperature: 0,
         messages: [
-          { role: "system", content: buildSystemPrompt() },
+          { role: 'system', content: buildSystemPrompt() },
           {
-            role: "user",
-            content: buildUserPrompt({ subject, project, question, answerText })
-          }
+            role: 'user',
+            content: buildUserPrompt({ subject, project, question, answerText }),
+          },
         ],
         response_format: {
-          type: "json_schema",
-          json_schema: buildJsonSchema(question)
-        }
+          type: 'json_schema',
+          json_schema: buildJsonSchema(question),
+        },
       }),
-      signal: controller.signal
+      signal: controller.signal,
     });
 
     if (!response.ok) {
       const body = await response.text();
-      const detail = body ? ` ${body}` : "";
+      const detail = body ? ` ${body}` : '';
       const error = new Error(`AI provider request failed (${response.status}).${detail}`.trim());
       error.status = response.status;
       error.retryable = response.status === 429 || response.status >= 500;
@@ -222,12 +250,12 @@ async function callOpenAiCompatibleApi({ aiConfig, subject, project, question, a
 
     const json = await response.json();
     const content = json?.choices?.[0]?.message?.content;
-    if (typeof content !== "string" || !content.trim()) {
+    if (typeof content !== 'string' || !content.trim()) {
       throw new Error(`AI provider returned an empty response for ${question.id}.`);
     }
     return JSON.parse(content);
   } catch (err) {
-    if (err && err.name === "AbortError") {
+    if (err && err.name === 'AbortError') {
       const timeoutError = new Error(`AI provider request timed out after ${timeoutMs}ms.`);
       timeoutError.retryable = true;
       throw timeoutError;
@@ -242,12 +270,14 @@ async function callOpenAiCompatibleApi({ aiConfig, subject, project, question, a
 }
 
 async function gradeSemanticAnswer({ aiConfig, subject, project, question, answerText }) {
-  const provider = aiConfig.provider || "openai";
-  if (provider !== "openai") {
+  const provider = aiConfig.provider || 'openai';
+  if (provider !== 'openai') {
     throw new Error(`Unsupported AI provider "${provider}".`);
   }
 
-  const timeoutMs = Number.isFinite(Number(aiConfig.timeoutMs)) ? Number(aiConfig.timeoutMs) : 30000;
+  const timeoutMs = Number.isFinite(Number(aiConfig.timeoutMs))
+    ? Number(aiConfig.timeoutMs)
+    : 30000;
   const maxRetries = Number.isFinite(Number(aiConfig.maxRetries)) ? Number(aiConfig.maxRetries) : 2;
 
   let lastError = null;
@@ -259,7 +289,7 @@ async function gradeSemanticAnswer({ aiConfig, subject, project, question, answe
         project,
         question,
         answerText,
-        timeoutMs
+        timeoutMs,
       });
       return validateAiGradeResponse(raw, question, answerText);
     } catch (err) {
@@ -276,5 +306,5 @@ async function gradeSemanticAnswer({ aiConfig, subject, project, question, answe
 
 module.exports = {
   gradeSemanticAnswer,
-  validateAiGradeResponse
+  validateAiGradeResponse,
 };

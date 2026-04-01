@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { apiFetch } from "../../../lib/session";
-import styles from "../../instructor/instructor.module.css";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { apiFetch } from '../../../lib/session';
+import styles from '../../instructor/instructor.module.css';
 
 type Project = {
   id: string;
@@ -27,12 +27,12 @@ export default function AdminProjectsPage() {
   useEffect(() => {
     void (async () => {
       try {
-        const res = await apiFetch("/v1/admin/projects", { auth: true });
-        if (!res.ok) throw new Error("Failed to load projects.");
-        const data = await res.json() as { courses: CourseGroup[] };
+        const res = await apiFetch('/v1/admin/projects', { auth: true });
+        if (!res.ok) throw new Error('Failed to load projects.');
+        const data = (await res.json()) as { courses: CourseGroup[] };
         setGroups(data.courses || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error.");
+        setError(err instanceof Error ? err.message : 'Unknown error.');
       } finally {
         setLoading(false);
       }
@@ -40,32 +40,32 @@ export default function AdminProjectsPage() {
   }, []);
 
   async function handleArchive(projectId: string) {
-    if (!confirm("Archive this project? Students will no longer be able to submit.")) return;
+    if (!confirm('Archive this project? Students will no longer be able to submit.')) return;
     setArchiving(projectId);
     try {
       const res = await apiFetch(`/v1/admin/projects/${projectId}/archive`, {
-        method: "POST",
-        auth: true
+        method: 'POST',
+        auth: true,
       });
-      if (!res.ok) throw new Error("Archive failed.");
+      if (!res.ok) throw new Error('Archive failed.');
       setGroups((prev) =>
         prev.map((group) => ({
           ...group,
           projects: group.projects.map((p) =>
-            p.id === projectId ? { ...p, status: "archived" } : p
-          )
+            p.id === projectId ? { ...p, status: 'archived' } : p
+          ),
         }))
       );
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Archive failed.");
+      alert(err instanceof Error ? err.message : 'Archive failed.');
     } finally {
       setArchiving(null);
     }
   }
 
   function statusClass(status: string) {
-    if (status === "published") return styles.statusPublished;
-    if (status === "archived") return styles.statusArchived;
+    if (status === 'published') return styles.statusPublished;
+    if (status === 'archived') return styles.statusArchived;
     return styles.statusDraft;
   }
 
@@ -91,13 +91,17 @@ export default function AdminProjectsPage() {
         <div key={course.id} className={styles.panel}>
           <div className={styles.panelHeader}>
             <h2>
-              <span className={styles.courseCode}>{course.courseCode}</span>{" "}
-              {course.title}
-              <span className={styles.muted} style={{ marginLeft: 8, fontWeight: 400, fontSize: 13 }}>
+              <span className={styles.courseCode}>{course.courseCode}</span> {course.title}
+              <span
+                className={styles.muted}
+                style={{ marginLeft: 8, fontWeight: 400, fontSize: 13 }}
+              >
                 {course.termLabel}
               </span>
             </h2>
-            <span className={styles.muted}>{projects.length} project{projects.length !== 1 ? "s" : ""}</span>
+            <span className={styles.muted}>
+              {projects.length} project{projects.length !== 1 ? 's' : ''}
+            </span>
           </div>
 
           {projects.length === 0 ? (
@@ -115,7 +119,9 @@ export default function AdminProjectsPage() {
               <tbody>
                 {projects.map((project) => (
                   <tr key={project.id}>
-                    <td><strong>{project.title}</strong></td>
+                    <td>
+                      <strong>{project.title}</strong>
+                    </td>
                     <td className={styles.muted}>{project.deliveryMode}</td>
                     <td>
                       <span className={`${styles.statusBadge} ${statusClass(project.status)}`}>
@@ -123,14 +129,14 @@ export default function AdminProjectsPage() {
                       </span>
                     </td>
                     <td>
-                      {project.status !== "archived" && (
+                      {project.status !== 'archived' && (
                         <button
                           className={styles.btnSecondary}
-                          style={{ padding: "4px 10px", fontSize: "12px" }}
+                          style={{ padding: '4px 10px', fontSize: '12px' }}
                           disabled={archiving === project.id}
                           onClick={() => void handleArchive(project.id)}
                         >
-                          {archiving === project.id ? "Archiving…" : "Archive"}
+                          {archiving === project.id ? 'Archiving…' : 'Archive'}
                         </button>
                       )}
                     </td>

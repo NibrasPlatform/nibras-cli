@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { use } from "react";
-import { apiFetch } from "../../../../lib/session";
-import styles from "../../instructor.module.css";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { use } from 'react';
+import { apiFetch } from '../../../../lib/session';
+import styles from '../../instructor.module.css';
 
 type Project = {
   id: string;
   title: string;
-  status: "draft" | "published" | "archived";
+  status: 'draft' | 'published' | 'archived';
   deliveryMode: string;
 };
 
@@ -35,18 +35,18 @@ export default function CourseDetailPage({ params }: { params: Promise<{ courseI
       try {
         const [projRes, subRes] = await Promise.all([
           apiFetch(`/v1/tracking/courses/${courseId}/projects`, { auth: true }),
-          apiFetch(`/v1/tracking/review-queue?courseId=${courseId}`, { auth: true })
+          apiFetch(`/v1/tracking/review-queue?courseId=${courseId}`, { auth: true }),
         ]);
 
         if (projRes.ok) {
-          setProjects(await projRes.json() as Project[]);
+          setProjects((await projRes.json()) as Project[]);
         }
         if (subRes.ok) {
-          const data = await subRes.json() as { submissions: Submission[] };
+          const data = (await subRes.json()) as { submissions: Submission[] };
           setSubmissions(data.submissions || []);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load course data.");
+        setError(err instanceof Error ? err.message : 'Failed to load course data.');
       } finally {
         setLoading(false);
       }
@@ -54,8 +54,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ courseI
   }, [courseId]);
 
   function statusClass(status: string) {
-    if (status === "published") return styles.statusPublished;
-    if (status === "archived") return styles.statusArchived;
+    if (status === 'published') return styles.statusPublished;
+    if (status === 'archived') return styles.statusArchived;
     return styles.statusDraft;
   }
 
@@ -68,7 +68,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ courseI
           </p>
           <h1>Course Detail</h1>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
           <Link href={`/instructor/courses/${courseId}/members`} className={styles.btnSecondary}>
             Members
           </Link>
@@ -98,13 +98,13 @@ export default function CourseDetailPage({ params }: { params: Promise<{ courseI
                       key={project.id}
                       href={`/instructor/courses/${courseId}/projects/${project.id}`}
                       className={styles.projectRow}
-                      style={{ textDecoration: "none", color: "inherit" }}
+                      style={{ textDecoration: 'none', color: 'inherit' }}
                     >
                       <span className={`${styles.statusBadge} ${statusClass(project.status)}`}>
                         {project.status}
                       </span>
                       <strong>{project.title}</strong>
-                      <span className={styles.muted} style={{ marginLeft: "auto" }}>
+                      <span className={styles.muted} style={{ marginLeft: 'auto' }}>
                         {project.deliveryMode}
                       </span>
                     </Link>
@@ -118,14 +118,17 @@ export default function CourseDetailPage({ params }: { params: Promise<{ courseI
             <div className={styles.panel}>
               <div className={styles.panelHeader}>
                 <h2>Review Queue</h2>
-                <Link href={`/instructor/courses/${courseId}/submissions`} className={styles.backLink}>
+                <Link
+                  href={`/instructor/courses/${courseId}/submissions`}
+                  className={styles.backLink}
+                >
                   See all
                 </Link>
               </div>
               {submissions.length === 0 ? (
                 <p className={styles.muted}>No submissions pending review.</p>
               ) : (
-                <div style={{ overflowX: "auto" }}>
+                <div style={{ overflowX: 'auto' }}>
                   <table className={styles.submissionTable}>
                     <thead>
                       <tr>

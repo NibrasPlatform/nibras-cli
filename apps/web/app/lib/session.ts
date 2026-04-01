@@ -1,24 +1,24 @@
-"use client";
+'use client';
 
 import {
   apiFetchWith,
   buildApiBaseUrlCandidates,
   discoverApiBaseUrlWith,
   normalizeApiBaseUrl,
-  shouldIgnoreStoredApiBaseUrlForOrigin
-} from "./session-core.js";
+  shouldIgnoreStoredApiBaseUrlForOrigin,
+} from './session-core.js';
 
 let discoveryPromise: Promise<string> | null = null;
 
 function getWindowLocationOrigin(): string | null {
-  return typeof window === "undefined" ? null : window.location.origin;
+  return typeof window === 'undefined' ? null : window.location.origin;
 }
 
 export function getStoredApiBaseUrl(): string | null {
-  if (typeof window === "undefined") {
+  if (typeof window === 'undefined') {
     return null;
   }
-  return normalizeApiBaseUrl(window.localStorage.getItem("nibras.apiBaseUrl"));
+  return normalizeApiBaseUrl(window.localStorage.getItem('nibras.apiBaseUrl'));
 }
 
 export function getConfiguredApiBaseUrl(): string | null {
@@ -34,26 +34,27 @@ export function shouldIgnoreStoredApiBaseUrl(value: string): boolean {
 }
 
 export function resolveApiBaseUrl(): string {
-  return buildApiBaseUrlCandidates({
-    pageOrigin: getCurrentOriginCandidate(),
-    storedApiBaseUrl: getStoredApiBaseUrl(),
-    configuredApiBaseUrl: getConfiguredApiBaseUrl()
-  })[0] || "";
+  return (
+    buildApiBaseUrlCandidates({
+      pageOrigin: getCurrentOriginCandidate(),
+      storedApiBaseUrl: getStoredApiBaseUrl(),
+      configuredApiBaseUrl: getConfiguredApiBaseUrl(),
+    })[0] || ''
+  );
 }
 
 export function persistSessionValues(values: Record<string, string>) {
   for (const [key, value] of Object.entries(values)) {
-    const normalizedValue = key === "nibras.apiBaseUrl"
-      ? normalizeApiBaseUrl(value) || value
-      : value;
+    const normalizedValue =
+      key === 'nibras.apiBaseUrl' ? normalizeApiBaseUrl(value) || value : value;
     window.localStorage.setItem(key, normalizedValue);
   }
   discoveryPromise = null;
 }
 
 export async function discoverApiBaseUrl(): Promise<string> {
-  if (typeof window === "undefined") {
-    throw new Error("Browser session helpers require window.");
+  if (typeof window === 'undefined') {
+    throw new Error('Browser session helpers require window.');
   }
 
   if (!discoveryPromise) {
@@ -66,8 +67,8 @@ export async function discoverApiBaseUrl(): Promise<string> {
         return response.ok;
       },
       persistApiBaseUrl: async (candidate) => {
-        window.localStorage.setItem("nibras.apiBaseUrl", candidate);
-      }
+        window.localStorage.setItem('nibras.apiBaseUrl', candidate);
+      },
     }).catch((error) => {
       discoveryPromise = null;
       throw error;
@@ -77,9 +78,12 @@ export async function discoverApiBaseUrl(): Promise<string> {
   return discoveryPromise;
 }
 
-export async function apiFetch(path: string, init: RequestInit & { auth?: boolean } = {}): Promise<Response> {
-  if (typeof window === "undefined") {
-    throw new Error("Browser session helpers require window.");
+export async function apiFetch(
+  path: string,
+  init: RequestInit & { auth?: boolean } = {}
+): Promise<Response> {
+  if (typeof window === 'undefined') {
+    throw new Error('Browser session helpers require window.');
   }
 
   const { auth = false, ...requestInit } = init;
@@ -88,6 +92,6 @@ export async function apiFetch(path: string, init: RequestInit & { auth?: boolea
     init: requestInit,
     auth,
     discoverApiBaseUrl,
-    fetchImpl: (input, request) => fetch(input, request)
+    fetchImpl: (input, request) => fetch(input, request),
   });
 }

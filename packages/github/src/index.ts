@@ -1,5 +1,5 @@
-import crypto from "node:crypto";
-import { importPKCS8, SignJWT } from "jose";
+import crypto from 'node:crypto';
+import { importPKCS8, SignJWT } from 'jose';
 
 export type GitHubAppConfig = {
   appId: string;
@@ -65,66 +65,71 @@ export function loadGitHubAppConfig(): GitHubAppConfig | null {
     webBaseUrl: process.env.NIBRAS_WEB_BASE_URL,
     templateOwner: process.env.GITHUB_TEMPLATE_OWNER,
     templateRepo: process.env.GITHUB_TEMPLATE_REPO,
-    apiVersion: process.env.GITHUB_API_VERSION || "2022-11-28"
+    apiVersion: process.env.GITHUB_API_VERSION || '2022-11-28',
   };
 }
 
 async function importGitHubPrivateKey(privateKey: string) {
-  const normalized = privateKey.replace(/\\n/g, "\n");
-  if (normalized.includes("BEGIN RSA PRIVATE KEY")) {
+  const normalized = privateKey.replace(/\\n/g, '\n');
+  if (normalized.includes('BEGIN RSA PRIVATE KEY')) {
     const pkcs8 = crypto.createPrivateKey(normalized).export({
-      format: "pem",
-      type: "pkcs8"
+      format: 'pem',
+      type: 'pkcs8',
     });
-    return importPKCS8(pkcs8.toString(), "RS256");
+    return importPKCS8(pkcs8.toString(), 'RS256');
   }
-  return importPKCS8(normalized, "RS256");
+  return importPKCS8(normalized, 'RS256');
 }
 
 export async function createAppJwt(config: GitHubAppConfig): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const key = await importGitHubPrivateKey(config.privateKey);
   return new SignJWT({})
-    .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
     .setIssuedAt(now - 60)
-    .setExpirationTime(now + (9 * 60))
+    .setExpirationTime(now + 9 * 60)
     .setIssuer(config.appId)
     .sign(key);
 }
 
-async function githubRequest<T>(url: string, init: RequestInit = {}, token?: string, apiVersion = "2022-11-28"): Promise<T> {
+async function githubRequest<T>(
+  url: string,
+  init: RequestInit = {},
+  token?: string,
+  apiVersion = '2022-11-28'
+): Promise<T> {
   const headers = new Headers(init.headers || {});
-  headers.set("accept", "application/vnd.github+json");
-  headers.set("x-github-api-version", apiVersion);
+  headers.set('accept', 'application/vnd.github+json');
+  headers.set('x-github-api-version', apiVersion);
   if (token) {
-    headers.set("authorization", `Bearer ${token}`);
+    headers.set('authorization', `Bearer ${token}`);
   }
-  if (init.body && !headers.has("content-type")) {
-    headers.set("content-type", "application/json");
+  if (init.body && !headers.has('content-type')) {
+    headers.set('content-type', 'application/json');
   }
   const response = await fetch(url, { ...init, headers });
   const text = await response.text();
   if (!response.ok) {
     throw new Error(text || `GitHub request failed (${response.status}).`);
   }
-  return text ? JSON.parse(text) as T : {} as T;
+  return text ? (JSON.parse(text) as T) : ({} as T);
 }
 
 export async function startGitHubDeviceFlow(config: GitHubAppConfig): Promise<GitHubDeviceStart> {
   const params = new URLSearchParams({
-    client_id: config.clientId
+    client_id: config.clientId,
   });
-  const response = await fetch("https://github.com/login/device/code", {
-    method: "POST",
+  const response = await fetch('https://github.com/login/device/code', {
+    method: 'POST',
     headers: {
-      accept: "application/json",
-      "content-type": "application/x-www-form-urlencoded"
+      accept: 'application/json',
+      'content-type': 'application/x-www-form-urlencoded',
     },
-    body: params.toString()
+    body: params.toString(),
   });
-  const payload = await response.json() as Record<string, unknown>;
+  const payload = (await response.json()) as Record<string, unknown>;
   if (!response.ok) {
-    throw new Error(String(payload.error || "Failed to start GitHub device flow."));
+    throw new Error(String(payload.error || 'Failed to start GitHub device flow.'));
   }
   return {
     deviceCode: String(payload.device_code),
@@ -132,85 +137,111 @@ export async function startGitHubDeviceFlow(config: GitHubAppConfig): Promise<Gi
     verificationUri: String(payload.verification_uri),
     verificationUriComplete: String(payload.verification_uri_complete || payload.verification_uri),
     expiresIn: Number(payload.expires_in || 900),
-    interval: Number(payload.interval || 5)
+    interval: Number(payload.interval || 5),
   };
 }
 
-export async function pollGitHubDeviceFlow(config: GitHubAppConfig, deviceCode: string): Promise<GitHubTokenResponse | null> {
+export async function pollGitHubDeviceFlow(
+  config: GitHubAppConfig,
+  deviceCode: string
+): Promise<GitHubTokenResponse | null> {
   const params = new URLSearchParams({
     client_id: config.clientId,
     device_code: deviceCode,
-    grant_type: "urn:ietf:params:oauth:grant-type:device_code"
+    grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
   });
-  const response = await fetch("https://github.com/login/oauth/access_token", {
-    method: "POST",
+  const response = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
     headers: {
-      accept: "application/json",
-      "content-type": "application/x-www-form-urlencoded"
+      accept: 'application/json',
+      'content-type': 'application/x-www-form-urlencoded',
     },
-    body: params.toString()
+    body: params.toString(),
   });
-  const payload = await response.json() as Record<string, unknown>;
-  if (payload.error === "authorization_pending" || payload.error === "slow_down") {
+  const payload = (await response.json()) as Record<string, unknown>;
+  if (payload.error === 'authorization_pending' || payload.error === 'slow_down') {
     return null;
   }
   if (!response.ok || payload.error) {
-    throw new Error(String(payload.error_description || payload.error || "Failed to poll GitHub device flow."));
+    throw new Error(
+      String(payload.error_description || payload.error || 'Failed to poll GitHub device flow.')
+    );
   }
   return {
     accessToken: String(payload.access_token),
     refreshToken: payload.refresh_token ? String(payload.refresh_token) : undefined,
     expiresIn: payload.expires_in ? Number(payload.expires_in) : undefined,
-    refreshTokenExpiresIn: payload.refresh_token_expires_in ? Number(payload.refresh_token_expires_in) : undefined,
+    refreshTokenExpiresIn: payload.refresh_token_expires_in
+      ? Number(payload.refresh_token_expires_in)
+      : undefined,
     scope: payload.scope ? String(payload.scope) : undefined,
-    tokenType: payload.token_type ? String(payload.token_type) : undefined
+    tokenType: payload.token_type ? String(payload.token_type) : undefined,
   };
 }
 
-export async function exchangeGitHubOAuthCode(config: GitHubAppConfig, code: string): Promise<GitHubTokenResponse> {
+export async function exchangeGitHubOAuthCode(
+  config: GitHubAppConfig,
+  code: string
+): Promise<GitHubTokenResponse> {
   const params = new URLSearchParams({
     client_id: config.clientId,
     client_secret: config.clientSecret,
-    code
+    code,
   });
-  const response = await fetch("https://github.com/login/oauth/access_token", {
-    method: "POST",
+  const response = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
     headers: {
-      accept: "application/json",
-      "content-type": "application/x-www-form-urlencoded"
+      accept: 'application/json',
+      'content-type': 'application/x-www-form-urlencoded',
     },
-    body: params.toString()
+    body: params.toString(),
   });
-  const payload = await response.json() as Record<string, unknown>;
+  const payload = (await response.json()) as Record<string, unknown>;
   if (!response.ok || payload.error) {
-    throw new Error(String(payload.error_description || payload.error || "Failed to exchange GitHub OAuth code."));
+    throw new Error(
+      String(payload.error_description || payload.error || 'Failed to exchange GitHub OAuth code.')
+    );
   }
   return {
     accessToken: String(payload.access_token),
     refreshToken: payload.refresh_token ? String(payload.refresh_token) : undefined,
     expiresIn: payload.expires_in ? Number(payload.expires_in) : undefined,
-    refreshTokenExpiresIn: payload.refresh_token_expires_in ? Number(payload.refresh_token_expires_in) : undefined,
+    refreshTokenExpiresIn: payload.refresh_token_expires_in
+      ? Number(payload.refresh_token_expires_in)
+      : undefined,
     scope: payload.scope ? String(payload.scope) : undefined,
-    tokenType: payload.token_type ? String(payload.token_type) : undefined
+    tokenType: payload.token_type ? String(payload.token_type) : undefined,
   };
 }
 
-export async function getGitHubUser(config: GitHubAppConfig, userToken: string): Promise<GitHubUser> {
-  const payload = await githubRequest<Record<string, unknown>>("https://api.github.com/user", {}, userToken, config.apiVersion);
+export async function getGitHubUser(
+  config: GitHubAppConfig,
+  userToken: string
+): Promise<GitHubUser> {
+  const payload = await githubRequest<Record<string, unknown>>(
+    'https://api.github.com/user',
+    {},
+    userToken,
+    config.apiVersion
+  );
   let email = payload.email ? String(payload.email) : null;
 
   if (!email) {
     try {
       const emails = await githubRequest<Array<Record<string, unknown>>>(
-        "https://api.github.com/user/emails",
+        'https://api.github.com/user/emails',
         {},
         userToken,
         config.apiVersion
       );
-      const preferred = emails.find((entry) => entry.primary === true && entry.verified === true && typeof entry.email === "string")
-        || emails.find((entry) => entry.verified === true && typeof entry.email === "string")
-        || emails.find((entry) => entry.primary === true && typeof entry.email === "string")
-        || emails.find((entry) => typeof entry.email === "string");
+      const preferred =
+        emails.find(
+          (entry) =>
+            entry.primary === true && entry.verified === true && typeof entry.email === 'string'
+        ) ||
+        emails.find((entry) => entry.verified === true && typeof entry.email === 'string') ||
+        emails.find((entry) => entry.primary === true && typeof entry.email === 'string') ||
+        emails.find((entry) => typeof entry.email === 'string');
       email = preferred && preferred.email ? String(preferred.email) : null;
     } catch {
       email = null;
@@ -221,42 +252,50 @@ export async function getGitHubUser(config: GitHubAppConfig, userToken: string):
     id: Number(payload.id),
     login: String(payload.login),
     email,
-    name: payload.name ? String(payload.name) : null
+    name: payload.name ? String(payload.name) : null,
   };
 }
 
-export async function getGitHubUserInstallations(config: GitHubAppConfig, userToken: string): Promise<Array<{ id: number; accountLogin: string }>> {
+export async function getGitHubUserInstallations(
+  config: GitHubAppConfig,
+  userToken: string
+): Promise<Array<{ id: number; accountLogin: string }>> {
   const payload = await githubRequest<{ installations: Array<Record<string, unknown>> }>(
-    "https://api.github.com/user/installations",
+    'https://api.github.com/user/installations',
     {},
     userToken,
     config.apiVersion
   );
   return (payload.installations || []).map((installation) => ({
     id: Number(installation.id),
-    accountLogin: String((installation.account as Record<string, unknown> | undefined)?.login || "")
+    accountLogin: String(
+      (installation.account as Record<string, unknown> | undefined)?.login || ''
+    ),
   }));
 }
 
 export function buildGitHubInstallUrl(config: GitHubAppConfig, state: string): string {
   const url = new URL(`https://github.com/apps/${config.appName}/installations/new`);
-  url.searchParams.set("state", state);
+  url.searchParams.set('state', state);
   return url.toString();
 }
 
 export function buildGitHubOAuthUrl(config: GitHubAppConfig, state: string): string {
-  const url = new URL("https://github.com/login/oauth/authorize");
-  url.searchParams.set("client_id", config.clientId);
-  url.searchParams.set("state", state);
-  url.searchParams.set("allow_signup", "true");
+  const url = new URL('https://github.com/login/oauth/authorize');
+  url.searchParams.set('client_id', config.clientId);
+  url.searchParams.set('state', state);
+  url.searchParams.set('allow_signup', 'true');
   return url.toString();
 }
 
-export async function createInstallationAccessToken(config: GitHubAppConfig, installationId: string): Promise<string> {
+export async function createInstallationAccessToken(
+  config: GitHubAppConfig,
+  installationId: string
+): Promise<string> {
   const appJwt = await createAppJwt(config);
   const payload = await githubRequest<Record<string, unknown>>(
     `https://api.github.com/app/installations/${installationId}/access_tokens`,
-    { method: "POST", body: JSON.stringify({}) },
+    { method: 'POST', body: JSON.stringify({}) },
     appJwt,
     config.apiVersion
   );
@@ -270,18 +309,18 @@ export async function generateRepositoryFromTemplate(
   repoName: string
 ): Promise<{ cloneUrl: string | null; htmlUrl: string | null; fullName: string }> {
   if (!config.templateOwner || !config.templateRepo) {
-    throw new Error("Template repository is not configured.");
+    throw new Error('Template repository is not configured.');
   }
   const payload = await githubRequest<Record<string, unknown>>(
     `https://api.github.com/repos/${config.templateOwner}/${config.templateRepo}/generate`,
     {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({
         owner,
         name: repoName,
         private: true,
-        include_all_branches: false
-      })
+        include_all_branches: false,
+      }),
     },
     userToken,
     config.apiVersion
@@ -289,49 +328,61 @@ export async function generateRepositoryFromTemplate(
   return {
     cloneUrl: payload.clone_url ? String(payload.clone_url) : null,
     htmlUrl: payload.html_url ? String(payload.html_url) : null,
-    fullName: String(payload.full_name)
+    fullName: String(payload.full_name),
   };
 }
 
-export function createSignedState(secret: string, payload: Record<string, string>, options: SignedStateOptions = {}): string {
+export function createSignedState(
+  secret: string,
+  payload: Record<string, string>,
+  options: SignedStateOptions = {}
+): string {
   const ttlSeconds = options.ttlSeconds ?? 600;
   const now = Math.floor(Date.now() / 1000);
-  const body = Buffer.from(JSON.stringify({
-    payload,
-    iat: now,
-    exp: now + ttlSeconds
-  })).toString("base64url");
-  const signature = crypto.createHmac("sha256", secret).update(body).digest("base64url");
+  const body = Buffer.from(
+    JSON.stringify({
+      payload,
+      iat: now,
+      exp: now + ttlSeconds,
+    })
+  ).toString('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(body).digest('base64url');
   return `${body}.${signature}`;
 }
 
-export function verifySignedState(secret: string, signedState: string): Record<string, string> | null {
-  const [body, signature] = signedState.split(".");
+export function verifySignedState(
+  secret: string,
+  signedState: string
+): Record<string, string> | null {
+  const [body, signature] = signedState.split('.');
   if (!body || !signature) {
     return null;
   }
-  const expected = crypto.createHmac("sha256", secret).update(body).digest("base64url");
+  const expected = crypto.createHmac('sha256', secret).update(body).digest('base64url');
   const expectedBuffer = Buffer.from(expected);
   const providedBuffer = Buffer.from(signature);
-  if (expectedBuffer.length !== providedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, providedBuffer)) {
+  if (
+    expectedBuffer.length !== providedBuffer.length ||
+    !crypto.timingSafeEqual(expectedBuffer, providedBuffer)
+  ) {
     return null;
   }
 
   try {
-    const decoded = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as unknown;
+    const decoded = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as unknown;
 
-    if (decoded && typeof decoded === "object" && "payload" in decoded) {
+    if (decoded && typeof decoded === 'object' && 'payload' in decoded) {
       const envelope = decoded as { payload?: Record<string, string>; exp?: number };
-      if (!envelope.payload || typeof envelope.payload !== "object") {
+      if (!envelope.payload || typeof envelope.payload !== 'object') {
         return null;
       }
-      if (typeof envelope.exp === "number" && envelope.exp < Math.floor(Date.now() / 1000)) {
+      if (typeof envelope.exp === 'number' && envelope.exp < Math.floor(Date.now() / 1000)) {
         return null;
       }
       return envelope.payload;
     }
 
-    if (decoded && typeof decoded === "object") {
+    if (decoded && typeof decoded === 'object') {
       return decoded as Record<string, string>;
     }
     return null;
@@ -340,39 +391,16 @@ export function verifySignedState(secret: string, signedState: string): Record<s
   }
 }
 
-export type CommitStatusState = "pending" | "success" | "failure" | "error";
-
-export async function postCommitStatus(
-  config: GitHubAppConfig,
-  installationToken: string,
-  owner: string,
-  repo: string,
-  sha: string,
-  state: CommitStatusState,
-  options: { description?: string; targetUrl?: string; context?: string } = {}
-): Promise<void> {
-  await githubRequest<unknown>(
-    `https://api.github.com/repos/${owner}/${repo}/statuses/${sha}`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        state,
-        description: options.description,
-        target_url: options.targetUrl,
-        context: options.context ?? "nibras/verification"
-      })
-    },
-    installationToken,
-    config.apiVersion
-  );
-}
-
-export function verifyWebhookSignature(secret: string, body: Buffer, signatureHeader: string | undefined): boolean {
-  if (!signatureHeader || !signatureHeader.startsWith("sha256=")) {
+export function verifyWebhookSignature(
+  secret: string,
+  body: Buffer,
+  signatureHeader: string | undefined
+): boolean {
+  if (!signatureHeader || !signatureHeader.startsWith('sha256=')) {
     return false;
   }
-  const expected = crypto.createHmac("sha256", secret).update(body).digest("hex");
-  const actual = signatureHeader.slice("sha256=".length);
+  const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
+  const actual = signatureHeader.slice('sha256='.length);
   const expectedBuffer = Buffer.from(expected);
   const actualBuffer = Buffer.from(actual);
   if (expectedBuffer.length !== actualBuffer.length) {

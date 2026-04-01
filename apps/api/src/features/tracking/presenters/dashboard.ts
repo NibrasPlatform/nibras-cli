@@ -4,37 +4,47 @@ import {
   StudentProjectsDashboardResponse,
   StudentProjectsDashboardResponseSchema,
   TrackingMilestone,
-  TrackingProjectSummary
-} from "@nibras/contracts";
-import { MilestoneRecord, ProjectRecord, ReviewRecord, StudentDashboardRecord, SubmissionRecord } from "../../../store";
+  TrackingProjectSummary,
+} from '@nibras/contracts';
+import {
+  MilestoneRecord,
+  ProjectRecord,
+  ReviewRecord,
+  StudentDashboardRecord,
+  SubmissionRecord,
+} from '../../../store';
 
 function formatDateLabel(value: string | null): string {
-  if (!value) return "No due date";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
+  if (!value) return 'No due date';
+  return new Date(value).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   });
 }
 
 function statusLabel(status: string): string {
-  return status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function milestoneStatus(milestoneId: string, submissions: SubmissionRecord[], reviews: ReviewRecord[]): string {
+function milestoneStatus(
+  milestoneId: string,
+  submissions: SubmissionRecord[],
+  reviews: ReviewRecord[]
+): string {
   const latestSubmission = submissions
     .filter((entry) => entry.milestoneId === milestoneId)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
   if (!latestSubmission) {
-    return "open";
+    return 'open';
   }
   const latestReview = reviews
     .filter((entry) => entry.submissionId === latestSubmission.id)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
   if (!latestReview) {
-    return "submitted";
+    return 'submitted';
   }
-  return latestReview.status === "changes_requested" ? "submitted" : latestReview.status;
+  return latestReview.status === 'changes_requested' ? 'submitted' : latestReview.status;
 }
 
 export function presentMilestone(
@@ -43,18 +53,6 @@ export function presentMilestone(
   reviews: ReviewRecord[]
 ): TrackingMilestone {
   const status = milestoneStatus(milestone.id, submissions, reviews);
-
-  const milestoneSubmissions = submissions
-    .filter((entry) => entry.milestoneId === milestone.id)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-
-  const latestSub = milestoneSubmissions[0] ?? null;
-  const latestReviewRecord = latestSub
-    ? reviews
-        .filter((entry) => entry.submissionId === latestSub.id)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null
-    : null;
-
   return {
     id: milestone.id,
     projectId: milestone.projectId,
@@ -66,22 +64,6 @@ export function presentMilestone(
     status,
     statusLabel: statusLabel(status),
     isFinal: milestone.isFinal,
-    latestReview: latestReviewRecord
-      ? {
-          status: latestReviewRecord.status,
-          score: latestReviewRecord.score,
-          feedback: latestReviewRecord.feedback,
-          criterionScores: latestReviewRecord.aiCriterionScores ?? null,
-          evidenceQuotes: latestReviewRecord.aiEvidenceQuotes ?? null
-        }
-      : null,
-    submissionHistory: milestoneSubmissions.map((s) => ({
-      id: s.id,
-      status: s.status as "queued" | "running" | "passed" | "failed" | "needs_review",
-      commitSha: s.commitSha,
-      branch: s.branch,
-      createdAt: s.createdAt
-    }))
   };
 }
 
@@ -90,7 +72,7 @@ export function presentProject(project: ProjectRecord): TrackingProjectSummary {
   return {
     id: project.id,
     projectKey: project.projectKey,
-    courseId: project.courseId || "",
+    courseId: project.courseId || '',
     title: project.title,
     description: project.description,
     status: project.status,
@@ -98,11 +80,11 @@ export function presentProject(project: ProjectRecord): TrackingProjectSummary {
     gradeWeight: rubricTotal ? `${rubricTotal} pts rubric` : null,
     startDate: null,
     endDate: null,
-    instructorName: project.instructorUserId ? "Course Staff" : null,
-    type: project.deliveryMode === "team" ? "Team" : "Individual",
+    instructorName: project.instructorUserId ? 'Course Staff' : null,
+    type: project.deliveryMode === 'team' ? 'Team' : 'Individual',
     rubric: project.rubric,
     resources: project.resources,
-    team: []
+    team: [],
   };
 }
 
@@ -113,11 +95,13 @@ export function presentStudentDashboard(args: {
 }): StudentProjectsDashboardResponse {
   const milestonesByProject = Object.fromEntries(
     Object.entries(args.dashboard.milestonesByProject).map(([projectId, milestones]) => {
-      const rendered = milestones.map((milestone) => presentMilestone(
-        milestone,
-        args.submissionsByMilestone[milestone.id] || [],
-        args.reviewsByMilestone[milestone.id] || []
-      ));
+      const rendered = milestones.map((milestone) =>
+        presentMilestone(
+          milestone,
+          args.submissionsByMilestone[milestone.id] || [],
+          args.reviewsByMilestone[milestone.id] || []
+        )
+      );
       return [projectId, rendered];
     })
   );
@@ -127,17 +111,19 @@ export function presentStudentDashboard(args: {
     memberships: args.dashboard.memberships.map((entry) => ({
       courseId: entry.courseId,
       userId: entry.userId,
-      role: entry.role
+      role: entry.role,
     })),
     projects: args.dashboard.projects.map(presentProject),
     milestonesByProject,
     activeProjectId: args.dashboard.activeProjectId,
     activity: args.dashboard.activity,
     statsByProject: args.dashboard.statsByProject,
-    pageError: args.dashboard.pageError
+    pageError: args.dashboard.pageError,
   });
 }
 
-export function presentInstructorDashboard(value: InstructorDashboardResponse): InstructorDashboardResponse {
+export function presentInstructorDashboard(
+  value: InstructorDashboardResponse
+): InstructorDashboardResponse {
   return InstructorDashboardResponseSchema.parse(value);
 }
