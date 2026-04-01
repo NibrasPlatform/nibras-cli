@@ -25,7 +25,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
    * List all submissions with optional status/project filtering.
    * Admin only.
    */
-  app.get('/v1/admin/submissions', async (request, reply) => {
+  app.get('/v1/admin/submissions', { schema: { tags: ['admin'], summary: 'List all submissions (admin)' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!requireAdmin(auth, reply)) return;
 
@@ -46,7 +46,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
    * Allowed statuses: passed, failed, needs_review.
    * Admin only.
    */
-  app.patch('/v1/admin/submissions/:submissionId/status', async (request, reply) => {
+  app.patch('/v1/admin/submissions/:submissionId/status', { schema: { tags: ['admin'], summary: 'Override submission verification status' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!requireAdmin(auth, reply)) return;
 
@@ -93,7 +93,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
     };
   });
 
-  app.get('/v1/admin/submissions/:submissionId/logs', async (request, reply) => {
+  app.get('/v1/admin/submissions/:submissionId/logs', { schema: { tags: ['admin'], summary: 'Get submission verification logs' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!requireAdmin(auth, reply)) return;
 
@@ -118,7 +118,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
    * POST /v1/admin/submissions/:submissionId/retry
    * Re-queue a submission for verification. Admin only.
    */
-  app.post("/v1/admin/submissions/:submissionId/retry", async (request, reply) => {
+  app.post("/v1/admin/submissions/:submissionId/retry", { schema: { tags: ['admin'], summary: 'Re-queue submission for verification' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!requireAdmin(auth, reply)) return;
 
@@ -147,7 +147,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
    * GET /v1/admin/projects
    * List all projects across all courses. Admin only.
    */
-  app.get('/v1/admin/projects', async (request, reply) => {
+  app.get('/v1/admin/projects', { schema: { tags: ['admin'], summary: 'List all projects across all courses' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!requireAdmin(auth, reply)) return;
 
@@ -165,7 +165,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
    * POST /v1/admin/projects/:projectId/archive
    * Archive a project. Admin only.
    */
-  app.post('/v1/admin/projects/:projectId/archive', async (request, reply) => {
+  app.post('/v1/admin/projects/:projectId/archive', { schema: { tags: ['admin'], summary: 'Archive a project' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!requireAdmin(auth, reply)) return;
 

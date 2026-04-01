@@ -25,9 +25,16 @@ export function registerHostedCliRoutes(
   store: AppStore,
   githubConfig: GitHubAppConfig | null
 ): void {
-  app.get('/v1/health', async () => ({ ok: true }));
+  app.get(
+    '/v1/health',
+    { schema: { tags: ['system'], summary: 'API health check' } },
+    async () => ({ ok: true })
+  );
 
-  app.get('/v1/ping', async (request) => {
+  app.get(
+    '/v1/ping',
+    { schema: { tags: ['system'], summary: 'Ping — checks auth and GitHub link status' } },
+    async (request) => {
     const authHeader = request.headers.authorization;
     const token =
       authHeader && authHeader.startsWith('Bearer ')
@@ -45,7 +52,10 @@ export function registerHostedCliRoutes(
 
   app.post(
     '/v1/auth/refresh',
-    { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } },
+    {
+      config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+      schema: { tags: ['auth'], summary: 'Refresh CLI access token' },
+    },
     async (request, reply) => {
       const payload = TokenRefreshRequestSchema.parse(request.body);
       const session = await store.refreshCliSession(requestBaseUrl(request), payload.refreshToken);
@@ -60,7 +70,10 @@ export function registerHostedCliRoutes(
     }
   );
 
-  app.post('/v1/logout', async (request, reply) => {
+  app.post(
+    '/v1/logout',
+    { schema: { tags: ['auth'], summary: 'Revoke CLI session' } },
+    async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (auth.authKind === 'bearer') {
@@ -72,7 +85,10 @@ export function registerHostedCliRoutes(
     return { ok: true };
   });
 
-  app.get('/v1/me', async (request, reply) => {
+  app.get(
+    '/v1/me',
+    { schema: { tags: ['auth'], summary: 'Get current authenticated user' } },
+    async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     return MeResponseSchema.parse({
@@ -81,7 +97,10 @@ export function registerHostedCliRoutes(
     });
   });
 
-  app.get('/v1/web/session', async (request, reply) => {
+  app.get(
+    '/v1/web/session',
+    { schema: { tags: ['auth'], summary: 'Get current web session user' } },
+    async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     return MeResponseSchema.parse({
@@ -90,7 +109,10 @@ export function registerHostedCliRoutes(
     });
   });
 
-  app.post('/v1/web/logout', async (request, reply) => {
+  app.post(
+    '/v1/web/logout',
+    { schema: { tags: ['auth'], summary: 'Revoke web session cookie' } },
+    async (request, reply) => {
     const sessionToken = getWebSessionToken(request);
     if (sessionToken) {
       await store.deleteWebSession(requestBaseUrl(request), sessionToken);
@@ -99,7 +121,10 @@ export function registerHostedCliRoutes(
     return { ok: true };
   });
 
-  app.get('/v1/projects/:projectKey/manifest', async (request, reply) => {
+  app.get(
+    '/v1/projects/:projectKey/manifest',
+    { schema: { tags: ['projects'], summary: 'Get project manifest' } },
+    async (request, reply) => {
     const params = request.params as { projectKey: string };
     const project = await store.getProject(requestBaseUrl(request), params.projectKey);
     if (!project) {
@@ -110,7 +135,10 @@ export function registerHostedCliRoutes(
     return project.manifest;
   });
 
-  app.get('/v1/projects/:projectKey/task', async (request, reply) => {
+  app.get(
+    '/v1/projects/:projectKey/task',
+    { schema: { tags: ['projects'], summary: 'Get project task instructions' } },
+    async (request, reply) => {
     const params = request.params as { projectKey: string };
     const project = await store.getProject(requestBaseUrl(request), params.projectKey);
     if (!project) {
@@ -123,7 +151,10 @@ export function registerHostedCliRoutes(
     });
   });
 
-  app.post('/v1/projects/:projectKey/setup', async (request, reply) => {
+  app.post(
+    '/v1/projects/:projectKey/setup',
+    { schema: { tags: ['projects'], summary: 'Provision student project repo' } },
+    async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectKey: string };
@@ -161,7 +192,10 @@ export function registerHostedCliRoutes(
     });
   });
 
-  app.post('/v1/submissions/prepare', async (request, reply) => {
+  app.post(
+    '/v1/submissions/prepare',
+    { schema: { tags: ['projects'], summary: 'Create or reuse a submission' } },
+    async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const payload = SubmissionPrepareRequestSchema.parse(request.body);
@@ -175,7 +209,10 @@ export function registerHostedCliRoutes(
     });
   });
 
-  app.post('/v1/submissions/:submissionId/local-test-result', async (request, reply) => {
+  app.post(
+    '/v1/submissions/:submissionId/local-test-result',
+    { schema: { tags: ['projects'], summary: 'Record local test result' } },
+    async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
@@ -199,7 +236,10 @@ export function registerHostedCliRoutes(
     return { ok: true };
   });
 
-  app.get('/v1/submissions/:submissionId', async (request, reply) => {
+  app.get(
+    '/v1/submissions/:submissionId',
+    { schema: { tags: ['projects'], summary: 'Get submission status' } },
+    async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };

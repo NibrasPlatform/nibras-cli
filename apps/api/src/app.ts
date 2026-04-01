@@ -2,6 +2,8 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import * as Sentry from '@sentry/node';
 import rawBodyPlugin from 'fastify-raw-body';
 import { PrismaClient } from '@prisma/client';
@@ -70,6 +72,57 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
   // Security headers — registered first so they apply to all routes
   void app.register(helmet, { contentSecurityPolicy: false });
 
+  // ── OpenAPI / Swagger ────────────────────────────────────────────────────
+  // Docs available at /docs (UI) and /docs/json (raw spec).
+  // Disabled in production unless NIBRAS_SWAGGER_ENABLED=true is explicitly set.
+  const swaggerEnabled =
+    process.env.NODE_ENV !== 'production' || process.env.NIBRAS_SWAGGER_ENABLED === 'true';
+
+  if (swaggerEnabled) {
+    void app.register(swagger, {
+      openapi: {
+        openapi: '3.0.3',
+        info: {
+          title: 'Nibras API',
+          description:
+            'REST API for the Nibras educational submission and verification platform.',
+          version: '1.0.0',
+        },
+        servers: [{ url: process.env.NIBRAS_API_BASE_URL || 'http://127.0.0.1:4848' }],
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: 'http',
+              scheme: 'bearer',
+              description: 'CLI session token obtained via device flow.',
+            },
+            cookieAuth: {
+              type: 'apiKey',
+              in: 'cookie',
+              name: 'nibras_session',
+              description: 'Web session cookie set after GitHub OAuth.',
+            },
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        tags: [
+          { name: 'auth', description: 'Device login, token refresh, logout' },
+          { name: 'github', description: 'GitHub App OAuth and webhooks' },
+          { name: 'projects', description: 'Project setup and submission' },
+          { name: 'tracking', description: 'Courses, milestones, and student progress' },
+          { name: 'admin', description: 'Admin-only operations' },
+          { name: 'system', description: 'Health, readiness, and metrics' },
+        ],
+      },
+    });
+
+    void app.register(swaggerUi, {
+      routePrefix: '/docs',
+      uiConfig: { docExpansion: 'list', deepLinking: true },
+      staticCSP: false,
+    });
+  }
+
   // Propagate Request-Id to response for tracing
   app.addHook('onSend', async (request, reply) => {
     void reply.header('X-Request-Id', request.id);
@@ -115,11 +168,11 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
   });
 
   // ── Health & readiness ────────────────────────────────────────────────────
-  app.get('/healthz', async (_request, reply) => {
+  app.get('/healthz', { schema: { tags: ['system'], summary: 'Liveness probe' } }, async (_request, reply) => {
     return reply.send({ ok: true });
   });
 
-  app.get('/readyz', async (_request, reply) => {
+  app.get('/readyz', { schema: { tags: ['system'], summary: 'Readiness probe — checks DB connectivity' } }, async (_request, reply) => {
     if (process.env.DATABASE_URL) {
       try {
         const prisma = new PrismaClient();
@@ -139,7 +192,7 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
     requestCounts[key] = (requestCounts[key] || 0) + 1;
   });
 
-  app.get('/metrics', async (request, reply) => {
+  app.get('/metrics', { schema: { tags: ['system'], summary: 'Prometheus-compatible metrics' } }, async (request, reply) => {
     // Optional static bearer token to protect the metrics endpoint.
     // Set NIBRAS_METRICS_TOKEN in production; leave unset for local dev.
     const metricsToken = process.env.NIBRAS_METRICS_TOKEN;

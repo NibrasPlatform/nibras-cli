@@ -54,7 +54,7 @@ function parsePaginationOpts(query: { limit?: string; offset?: string }): Pagina
 }
 
 export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): void {
-  app.get('/v1/tracking/courses', async (request, reply) => {
+  app.get('/v1/tracking/courses', { schema: { tags: ['tracking'], summary: 'List courses for the current user' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const query = request.query as { limit?: string; offset?: string };
@@ -67,7 +67,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return courses;
   });
 
-  app.get('/v1/tracking/courses/:courseId/members', async (request, reply) => {
+  app.get('/v1/tracking/courses/:courseId/members', { schema: { tags: ['tracking'], summary: 'List course members' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
@@ -83,7 +83,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return members.map((m) => CourseMemberSchema.parse(m));
   });
 
-  app.post('/v1/tracking/courses/:courseId/members', async (request, reply) => {
+  app.post('/v1/tracking/courses/:courseId/members', { schema: { tags: ['tracking'], summary: 'Add a member to a course' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
@@ -110,7 +110,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     }
   });
 
-  app.delete('/v1/tracking/courses/:courseId/members/:userId', async (request, reply) => {
+  app.delete('/v1/tracking/courses/:courseId/members/:userId', { schema: { tags: ['tracking'], summary: 'Remove a member from a course' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string; userId: string };
@@ -124,7 +124,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return { ok: true };
   });
 
-  app.post('/v1/tracking/courses', async (request, reply) => {
+  app.post('/v1/tracking/courses', { schema: { tags: ['tracking'], summary: 'Create a new course' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (auth.user.systemRole !== 'admin' && !hasAnyInstructorAccess(auth)) {
@@ -137,7 +137,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingCourseSummarySchema.parse(course);
   });
 
-  app.get('/v1/tracking/courses/:courseId/projects', async (request, reply) => {
+  app.get('/v1/tracking/courses/:courseId/projects', { schema: { tags: ['tracking'], summary: 'List projects in a course' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { courseId: string };
@@ -156,7 +156,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return projects.map(presentProject);
   });
 
-  app.post('/v1/tracking/projects', async (request, reply) => {
+  app.post('/v1/tracking/projects', { schema: { tags: ['tracking'], summary: 'Create a new project' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const payload = CreateTrackingProjectRequestSchema.parse(request.body);
@@ -173,7 +173,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingProjectSummarySchema.parse(presentProject(created));
   });
 
-  app.get('/v1/tracking/projects/:projectId', async (request, reply) => {
+  app.get('/v1/tracking/projects/:projectId', { schema: { tags: ['tracking'], summary: 'Get project details' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
@@ -194,7 +194,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     });
   });
 
-  app.patch('/v1/tracking/projects/:projectId', async (request, reply) => {
+  app.patch('/v1/tracking/projects/:projectId', { schema: { tags: ['tracking'], summary: 'Update a project' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
@@ -218,7 +218,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingProjectSummarySchema.parse(presentProject(updated));
   });
 
-  app.post('/v1/tracking/projects/:projectId/publish', async (request, reply) => {
+  app.post('/v1/tracking/projects/:projectId/publish', { schema: { tags: ['tracking'], summary: 'Publish a project' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
@@ -237,7 +237,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingProjectSummarySchema.parse(presentProject(updated || project));
   });
 
-  app.post('/v1/tracking/projects/:projectId/unpublish', async (request, reply) => {
+  app.post('/v1/tracking/projects/:projectId/unpublish', { schema: { tags: ['tracking'], summary: 'Unpublish a project' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
@@ -256,7 +256,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingProjectSummarySchema.parse(presentProject(updated || project));
   });
 
-  app.get('/v1/tracking/projects/:projectId/milestones', async (request, reply) => {
+  app.get('/v1/tracking/projects/:projectId/milestones', { schema: { tags: ['tracking'], summary: 'List project milestones' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
@@ -275,7 +275,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     );
   });
 
-  app.post('/v1/tracking/projects/:projectId/milestones', async (request, reply) => {
+  app.post('/v1/tracking/projects/:projectId/milestones', { schema: { tags: ['tracking'], summary: 'Create a milestone' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { projectId: string };
@@ -296,7 +296,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingMilestoneSchema.parse(presentMilestone(milestone, [], []));
   });
 
-  app.get('/v1/tracking/milestones/:milestoneId', async (request, reply) => {
+  app.get('/v1/tracking/milestones/:milestoneId', { schema: { tags: ['tracking'], summary: 'Get milestone with submissions' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
@@ -328,7 +328,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingMilestoneSchema.parse(presentMilestone(milestone, submissions, reviews));
   });
 
-  app.patch('/v1/tracking/milestones/:milestoneId', async (request, reply) => {
+  app.patch('/v1/tracking/milestones/:milestoneId', { schema: { tags: ['tracking'], summary: 'Update a milestone' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
@@ -356,7 +356,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingMilestoneSchema.parse(presentMilestone(updated || milestone, [], []));
   });
 
-  app.delete('/v1/tracking/milestones/:milestoneId', async (request, reply) => {
+  app.delete('/v1/tracking/milestones/:milestoneId', { schema: { tags: ['tracking'], summary: 'Delete a milestone' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
@@ -378,7 +378,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return { ok: true };
   });
 
-  app.get('/v1/tracking/milestones/:milestoneId/submissions', async (request, reply) => {
+  app.get('/v1/tracking/milestones/:milestoneId/submissions', { schema: { tags: ['tracking'], summary: 'List milestone submissions' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
@@ -413,7 +413,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       .map((entry) => TrackingSubmissionSchema.parse(entry));
   });
 
-  app.post('/v1/tracking/milestones/:milestoneId/submissions', async (request, reply) => {
+  app.post('/v1/tracking/milestones/:milestoneId/submissions', { schema: { tags: ['tracking'], summary: 'Create a milestone submission' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { milestoneId: string };
@@ -442,7 +442,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingSubmissionSchema.parse(created);
   });
 
-  app.get('/v1/tracking/submissions/:submissionId', async (request, reply) => {
+  app.get('/v1/tracking/submissions/:submissionId', { schema: { tags: ['tracking'], summary: 'Get a submission' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
@@ -466,7 +466,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingSubmissionSchema.parse(submission);
   });
 
-  app.patch('/v1/tracking/submissions/:submissionId', async (request, reply) => {
+  app.patch('/v1/tracking/submissions/:submissionId', { schema: { tags: ['tracking'], summary: 'Update a submission' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
@@ -494,7 +494,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingSubmissionSchema.parse(updated || existing);
   });
 
-  app.get('/v1/tracking/submissions/:submissionId/review', async (request, reply) => {
+  app.get('/v1/tracking/submissions/:submissionId/review', { schema: { tags: ['tracking'], summary: 'Get submission review' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };
@@ -523,7 +523,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     return TrackingReviewSchema.parse(review);
   });
 
-  app.post('/v1/tracking/submissions/:submissionId/review', async (request, reply) => {
+  app.post('/v1/tracking/submissions/:submissionId/review', { schema: { tags: ['tracking'], summary: 'Create a submission review' } }, async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     const params = request.params as { submissionId: string };

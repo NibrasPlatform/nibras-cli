@@ -67,17 +67,23 @@ export function registerGitHubRoutes(
   store: AppStore,
   githubConfig: GitHubAppConfig | null
 ): void {
-  app.get('/v1/github/config', async () =>
-    GitHubConfigResponseSchema.parse({
-      configured: Boolean(githubConfig),
-      appName: githubConfig?.appName,
-      webBaseUrl: githubConfig?.webBaseUrl,
-    })
+  app.get(
+    '/v1/github/config',
+    { schema: { tags: ['github'], summary: 'Get GitHub App configuration' } },
+    async () =>
+      GitHubConfigResponseSchema.parse({
+        configured: Boolean(githubConfig),
+        appName: githubConfig?.appName,
+        webBaseUrl: githubConfig?.webBaseUrl,
+      })
   );
 
   app.post(
     '/v1/device/start',
-    { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    {
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      schema: { tags: ['auth'], summary: 'Start GitHub device flow' },
+    },
     async (request) => {
       if (githubConfig && store instanceof PrismaStore) {
         const device = await startGitHubDeviceFlow(githubConfig);
@@ -104,7 +110,10 @@ export function registerGitHubRoutes(
     }
   );
 
-  app.get('/dev/approve', async (request, reply) => {
+  app.get(
+    '/dev/approve',
+    { schema: { tags: ['auth'], summary: 'Approve device login (dev mode)' } },
+    async (request, reply) => {
     const query = request.query as { user_code?: string };
     if (!query.user_code) {
       reply.code(400).type('text/html').send('<h1>Missing user_code</h1>');
@@ -122,7 +131,10 @@ export function registerGitHubRoutes(
 
   app.post(
     '/v1/device/poll',
-    { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    {
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      schema: { tags: ['auth'], summary: 'Poll device flow for authorization' },
+    },
     async (request, reply) => {
       const body = request.body as { deviceCode?: string };
       if (!body?.deviceCode) {
@@ -178,7 +190,10 @@ export function registerGitHubRoutes(
     }
   );
 
-  app.get('/v1/github/oauth/start', async (request, reply) => {
+  app.get(
+    '/v1/github/oauth/start',
+    { schema: { tags: ['github'], summary: 'Begin GitHub OAuth web login' } },
+    async (request, reply) => {
     if (!githubConfig) {
       reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));
       return;
@@ -199,7 +214,10 @@ export function registerGitHubRoutes(
     reply.redirect(buildGitHubOAuthUrl(githubConfig, statePayload));
   });
 
-  app.get('/v1/github/oauth/callback', async (request, reply) => {
+  app.get(
+    '/v1/github/oauth/callback',
+    { schema: { tags: ['github'], summary: 'Handle GitHub OAuth callback' } },
+    async (request, reply) => {
     if (!githubConfig || !(store instanceof PrismaStore)) {
       reply
         .code(503)
@@ -243,7 +261,10 @@ export function registerGitHubRoutes(
     reply.redirect(redirectUrl);
   });
 
-  app.get('/v1/github/install-url', async (request, reply) => {
+  app.get(
+    '/v1/github/install-url',
+    { schema: { tags: ['github'], summary: 'Get GitHub App installation URL' } },
+    async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (!githubConfig) {
@@ -266,7 +287,10 @@ export function registerGitHubRoutes(
     });
   });
 
-  app.post('/v1/github/setup/complete', async (request, reply) => {
+  app.post(
+    '/v1/github/setup/complete',
+    { schema: { tags: ['github'], summary: 'Link GitHub App installation to account' } },
+    async (request, reply) => {
     const auth = await requireUser(request, reply, store);
     if (!auth) return;
     if (!githubConfig || !(store instanceof PrismaStore)) {
@@ -317,7 +341,10 @@ export function registerGitHubRoutes(
 
   app.post(
     '/v1/github/webhooks',
-    { config: { rateLimit: { max: 50, timeWindow: '1 minute' } } },
+    {
+      config: { rateLimit: { max: 50, timeWindow: '1 minute' } },
+      schema: { tags: ['github'], summary: 'Receive GitHub webhook events' },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!githubConfig) {
         reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));

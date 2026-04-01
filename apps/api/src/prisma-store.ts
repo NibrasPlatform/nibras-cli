@@ -1605,6 +1605,16 @@ export class PrismaStore implements AppStore {
     const membership = await this.prisma.courseMembership.create({
       data: { courseId, userId: account.userId, role: role as CourseRole },
     });
+    await this.prisma.auditLog.create({
+      data: {
+        userId: account.userId,
+        courseId,
+        action: 'member.added',
+        targetType: 'courseMembership',
+        targetId: membership.id,
+        payload: { githubLogin, role } as Prisma.InputJsonValue,
+      },
+    });
     return {
       id: membership.id,
       courseId: membership.courseId,
@@ -1620,6 +1630,16 @@ export class PrismaStore implements AppStore {
   async removeCourseMember(apiBaseUrl: string, courseId: string, userId: string): Promise<void> {
     await this.seed(apiBaseUrl);
     await this.prisma.courseMembership.deleteMany({ where: { courseId, userId } });
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        courseId,
+        action: 'member.removed',
+        targetType: 'courseMembership',
+        targetId: `${courseId}:${userId}`,
+        payload: { removedUserId: userId } as Prisma.InputJsonValue,
+      },
+    });
   }
 
   async createCourseInvite(
