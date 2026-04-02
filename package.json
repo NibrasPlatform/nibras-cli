@@ -32,7 +32,11 @@
     "manual:preflight": "npm test && npm run web:build",
     "test": "npm run build && node --test test/*.js",
     "lint": "eslint . && prettier --check .",
-    "lint:fix": "eslint . --fix && prettier --write ."
+    "lint:fix": "eslint . --fix && prettier --write .",
+    "validate:env": "node scripts/validate-env.js"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
   },
   "files": [
     "apps",
@@ -61,6 +65,7 @@
     "prettier": "^3.0.0",
     "prisma": "^6.5.0",
     "typescript": "^5.8.3",
+    "tsx": "^4.19.2",
     "typescript-eslint": "^8.0.0"
   },
   "engines": {

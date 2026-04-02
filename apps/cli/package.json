@@ -16,7 +16,8 @@
     "nibras": "bundle/index.js"
   },
   "files": [
-    "bundle"
+    "bundle",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && ncc build dist/index.js -o bundle --no-source-map-register"
