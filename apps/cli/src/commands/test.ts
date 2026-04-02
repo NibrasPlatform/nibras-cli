@@ -27,9 +27,7 @@ export async function commandTest(args: string[], plain: boolean): Promise<void>
 
   if (!plain && process.stdout.isTTY) {
     console.log();
-    console.log(
-      `  ${picocolors.dim('Running')}  ${picocolors.cyan(cmd)}`
-    );
+    console.log(`  ${picocolors.dim('Running')}  ${picocolors.cyan(cmd)}`);
     console.log();
   }
 

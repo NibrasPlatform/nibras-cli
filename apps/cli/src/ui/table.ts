@@ -13,9 +13,7 @@ export function printTable(rows: TableRow[], plain: boolean): void {
     const pad = ' '.repeat(labelWidth - row.label.length);
     const label = plain ? row.label : picocolors.dim(row.label);
     const value = plain ? row.value : picocolors.white(row.value);
-    const hint = row.hint
-      ? '  ' + (plain ? row.hint : picocolors.dim(row.hint))
-      : '';
+    const hint = row.hint ? '  ' + (plain ? row.hint : picocolors.dim(row.hint)) : '';
     console.log(`  ${label}${pad}${value}${hint}`);
   }
 }

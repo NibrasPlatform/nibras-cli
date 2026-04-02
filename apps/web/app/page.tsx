@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import NibrasLogo from './_components/nibras-logo';
 import { discoverApiBaseUrl } from './lib/session';
 import styles from './signin.module.css';
 
@@ -55,9 +54,15 @@ export default function HomePage() {
           <span className={styles.navBadge}>Platform</span>
         </div>
         <div className={styles.navLinks}>
-          <a href="#features" className={styles.navLink}>Features</a>
-          <a href="#how-it-works" className={styles.navLink}>How it works</a>
-          <a href="#cli" className={styles.navLink}>CLI</a>
+          <a href="#features" className={styles.navLink}>
+            Features
+          </a>
+          <a href="#how-it-works" className={styles.navLink}>
+            How it works
+          </a>
+          <a href="#cli" className={styles.navLink}>
+            CLI
+          </a>
           <button
             className={styles.navSignIn}
             onClick={() => void handleSignIn()}
@@ -84,8 +89,8 @@ export default function HomePage() {
         </h1>
 
         <p className={styles.sub}>
-          GitHub-backed submissions, automated grading, and real-time progress tracking — all from
-          a single CLI and web dashboard.
+          GitHub-backed submissions, automated grading, and real-time progress tracking — all from a
+          single CLI and web dashboard.
         </p>
 
         <div className={styles.heroCtas}>
@@ -184,7 +189,9 @@ export default function HomePage() {
       <section id="how-it-works" className={styles.section}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionEyebrow}>How it works</span>
-          <h2 className={styles.sectionTitle}>From course creation to graded submission in minutes</h2>
+          <h2 className={styles.sectionTitle}>
+            From course creation to graded submission in minutes
+          </h2>
         </div>
 
         <div className={styles.timeline}>
@@ -234,7 +241,8 @@ export default function HomePage() {
           <span className={styles.sectionEyebrow}>CLI</span>
           <h2 className={styles.sectionTitle}>A terminal experience worth loving</h2>
           <p className={styles.sectionSub}>
-            Spinners, progress bars, coloured output, and clear error messages — no more cryptic logs.
+            Spinners, progress bars, coloured output, and clear error messages — no more cryptic
+            logs.
           </p>
         </div>
 
@@ -266,7 +274,7 @@ export default function HomePage() {
                 <span className={styles.termHighlight}>a3f7c1d</span>
               </div>
               <div className={styles.termLine}>
-                <span className={styles.termProgress}>  Verifying  </span>
+                <span className={styles.termProgress}> Verifying </span>
                 <span className={styles.termBar}>██████████████░░░░░░</span>
                 <span className={styles.termMuted}> 70%</span>
               </div>
@@ -275,12 +283,12 @@ export default function HomePage() {
               </div>
               <div className={styles.termLine}>
                 <span className={styles.termBoxSide}>│</span>
-                <span className={styles.termSuccess}> ✓  Submission passed               </span>
+                <span className={styles.termSuccess}> ✓ Submission passed </span>
                 <span className={styles.termBoxSide}>│</span>
               </div>
               <div className={styles.termLine}>
                 <span className={styles.termBoxSide}>│</span>
-                <span className={styles.termDimText}>  Status:  passed                   </span>
+                <span className={styles.termDimText}> Status: passed </span>
                 <span className={styles.termBoxSide}>│</span>
               </div>
               <div className={styles.termLine}>
@@ -293,8 +301,16 @@ export default function HomePage() {
             {[
               { icon: '⠋', label: 'Live spinners', desc: 'Real-time feedback on every async step' },
               { icon: '█', label: 'Progress bars', desc: 'Visual verification polling with ETA' },
-              { icon: '╭', label: 'Framed summaries', desc: 'Boxed pass/fail cards with coloured borders' },
-              { icon: '∿', label: 'Gradient banner', desc: 'Indigo-to-cyan ASCII art on every launch' },
+              {
+                icon: '╭',
+                label: 'Framed summaries',
+                desc: 'Boxed pass/fail cards with coloured borders',
+              },
+              {
+                icon: '∿',
+                label: 'Gradient banner',
+                desc: 'Indigo-to-cyan ASCII art on every launch',
+              },
             ].map((f) => (
               <div key={f.label} className={styles.cliFeat}>
                 <span className={styles.cliFeatIcon}>{f.icon}</span>
@@ -333,7 +349,7 @@ export default function HomePage() {
             },
             {
               quote:
-                'The instructor dashboard is gorgeous. I can see every student\'s progress at a glance without digging through spreadsheets.',
+                "The instructor dashboard is gorgeous. I can see every student's progress at a glance without digging through spreadsheets.",
               name: 'Priya Nair',
               role: 'Data Science Professor',
               initials: 'PN',
@@ -404,7 +420,11 @@ export default function HomePage() {
             <div className={styles.footerCol}>
               <span className={styles.footerColTitle}>Developers</span>
               <a href="/instructor/onboarding">CLI Setup Guide</a>
-              <a href="https://github.com/nibras-platform/nibras-cli" target="_blank" rel="noreferrer">
+              <a
+                href="https://github.com/nibras-platform/nibras-cli"
+                target="_blank"
+                rel="noreferrer"
+              >
                 GitHub
               </a>
             </div>
@@ -412,7 +432,14 @@ export default function HomePage() {
               <span className={styles.footerColTitle}>Account</span>
               <button
                 onClick={() => void handleSignIn()}
-                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'inherit',
+                  cursor: 'pointer',
+                  padding: 0,
+                  font: 'inherit',
+                }}
               >
                 Sign in
               </button>

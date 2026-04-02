@@ -508,7 +508,15 @@ async function processBullJob(
         });
       }
     }
-    await finalizeJob(jobId, submissionAttemptId, attempt, exitCode, verificationLog, aiResult, prisma);
+    await finalizeJob(
+      jobId,
+      submissionAttemptId,
+      attempt,
+      exitCode,
+      verificationLog,
+      aiResult,
+      prisma
+    );
     log('info', 'BullMQ job completed', { jobId, exitCode, aiRan: aiResult !== null });
     transaction?.setStatus({ code: 1, message: 'ok' });
   } catch (err) {

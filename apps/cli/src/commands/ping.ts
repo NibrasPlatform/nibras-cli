@@ -20,14 +20,10 @@ function renderPlain(rows: CheckRow[]): void {
 function renderBox(rows: CheckRow[]): void {
   const labelWidth = Math.max(...rows.map((r) => r.label.length)) + 2;
   const lines = rows.map((row) => {
-    const icon = row.ok
-      ? picocolors.green('✓')
-      : picocolors.red('✗');
+    const icon = row.ok ? picocolors.green('✓') : picocolors.red('✗');
     const pad = ' '.repeat(labelWidth - row.label.length);
     const label = picocolors.dim(row.label + ':');
-    const value = row.ok
-      ? picocolors.green(row.value)
-      : picocolors.red(row.value);
+    const value = row.ok ? picocolors.green(row.value) : picocolors.red(row.value);
     return `${icon}  ${label}${pad}${value}`;
   });
 

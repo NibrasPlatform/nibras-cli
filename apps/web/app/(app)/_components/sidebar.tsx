@@ -177,11 +177,7 @@ export default function Sidebar({
                 href={item.href}
                 className={`navLink ${isActive ? 'navLinkActive navLinkAccentBorder' : ''}`}
                 title={collapsed ? item.label : undefined}
-                style={
-                  collapsed
-                    ? { justifyContent: 'center', padding: '9px 0' }
-                    : undefined
-                }
+                style={collapsed ? { justifyContent: 'center', padding: '9px 0' } : undefined}
               >
                 <span className="navIcon" aria-hidden="true">
                   {NAV_ICONS[item.label] ?? '•'}

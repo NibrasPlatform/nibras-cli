@@ -94,8 +94,8 @@ test('modern CLI help renders the new command surface', async () => {
   const result = await runCli(['--plain']);
   assert.equal(result.status, 0);
   assert.match(result.stdout, /CLI to interact with Nibras/);
-  assert.match(result.stdout, /login:/);
-  assert.match(result.stdout, /legacy:/);
+  assert.match(result.stdout, /login\s/);
+  assert.match(result.stdout, /legacy\s/);
 });
 
 test('API uses forwarded host and protocol when building public URLs', async () => {
@@ -161,8 +161,8 @@ test('modern CLI whoami and ping use the hosted auth/session flow', async () => 
       env: { XDG_CONFIG_HOME: configRoot },
     });
     assert.equal(whoami.status, 0, whoami.stderr);
-    assert.match(whoami.stdout, /User: demo/);
-    assert.match(whoami.stdout, /GitHub: demo-user/);
+    assert.match(whoami.stdout, /User:\s+demo/);
+    assert.match(whoami.stdout, /GitHub:\s+demo-user/);
 
     const ping = await runCli(['ping', '--plain'], {
       env: { XDG_CONFIG_HOME: configRoot },
@@ -255,7 +255,8 @@ test('modern CLI submit commits, pushes, and waits for verification', async () =
     });
 
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /passed: Verification passed\./);
+    assert.match(result.stdout, /Submission passed/);
+    assert.match(result.stdout, /Summary:.*Verification passed\./);
 
     const remoteHead = spawnSync('git', ['--git-dir', remote, 'rev-parse', 'refs/heads/main'], {
       encoding: 'utf8',

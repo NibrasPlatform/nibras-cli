@@ -48,4 +48,8 @@ export const pageTitles: Record<string, { title: string; subtitle: string }> = {
     title: 'GitHub App',
     subtitle: 'Finish linking the installation to unlock repository provisioning.',
   },
+  '/instructor/onboarding': {
+    title: 'CLI Setup Guide',
+    subtitle: 'Install the Nibras CLI, authenticate, and submit your first project.',
+  },
 };

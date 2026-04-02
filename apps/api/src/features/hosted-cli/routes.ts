@@ -35,20 +35,21 @@ export function registerHostedCliRoutes(
     '/v1/ping',
     { schema: { tags: ['system'], summary: 'Ping — checks auth and GitHub link status' } },
     async (request) => {
-    const authHeader = request.headers.authorization;
-    const token =
-      authHeader && authHeader.startsWith('Bearer ')
-        ? authHeader.slice('Bearer '.length).trim()
-        : null;
-    const user = token ? await store.getUserByToken(requestBaseUrl(request), token) : null;
-    return PingResponseSchema.parse({
-      ok: true,
-      api: 'reachable',
-      auth: token ? (user ? 'valid' : 'invalid') : 'missing',
-      github: user?.githubLinked ? 'linked' : 'missing',
-      githubApp: user?.githubAppInstalled ? 'installed' : 'missing',
-    });
-  });
+      const authHeader = request.headers.authorization;
+      const token =
+        authHeader && authHeader.startsWith('Bearer ')
+          ? authHeader.slice('Bearer '.length).trim()
+          : null;
+      const user = token ? await store.getUserByToken(requestBaseUrl(request), token) : null;
+      return PingResponseSchema.parse({
+        ok: true,
+        api: 'reachable',
+        auth: token ? (user ? 'valid' : 'invalid') : 'missing',
+        github: user?.githubLinked ? 'linked' : 'missing',
+        githubApp: user?.githubAppInstalled ? 'installed' : 'missing',
+      });
+    }
+  );
 
   app.post(
     '/v1/auth/refresh',
@@ -74,28 +75,30 @@ export function registerHostedCliRoutes(
     '/v1/logout',
     { schema: { tags: ['auth'], summary: 'Revoke CLI session' } },
     async (request, reply) => {
-    const auth = await requireUser(request, reply, store);
-    if (!auth) return;
-    if (auth.authKind === 'bearer') {
-      await store.deleteSession(requestBaseUrl(request), auth.token);
-    } else {
-      await store.deleteWebSession(requestBaseUrl(request), auth.token);
-      void reply.header('Set-Cookie', clearWebSessionCookie(request));
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      if (auth.authKind === 'bearer') {
+        await store.deleteSession(requestBaseUrl(request), auth.token);
+      } else {
+        await store.deleteWebSession(requestBaseUrl(request), auth.token);
+        void reply.header('Set-Cookie', clearWebSessionCookie(request));
+      }
+      return { ok: true };
     }
-    return { ok: true };
-  });
+  );
 
   app.get(
     '/v1/me',
     { schema: { tags: ['auth'], summary: 'Get current authenticated user' } },
     async (request, reply) => {
-    const auth = await requireUser(request, reply, store);
-    if (!auth) return;
-    return MeResponseSchema.parse({
-      user: auth.user,
-      apiBaseUrl: requestBaseUrl(request),
-    });
-  });
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      return MeResponseSchema.parse({
+        user: auth.user,
+        apiBaseUrl: requestBaseUrl(request),
+      });
+    }
+  );
 
   /**
    * GET /v1/me/submissions
@@ -139,140 +142,149 @@ export function registerHostedCliRoutes(
     '/v1/web/session',
     { schema: { tags: ['auth'], summary: 'Get current web session user' } },
     async (request, reply) => {
-    const auth = await requireUser(request, reply, store);
-    if (!auth) return;
-    return MeResponseSchema.parse({
-      user: auth.user,
-      apiBaseUrl: requestBaseUrl(request),
-    });
-  });
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      return MeResponseSchema.parse({
+        user: auth.user,
+        apiBaseUrl: requestBaseUrl(request),
+      });
+    }
+  );
 
   app.post(
     '/v1/web/logout',
     { schema: { tags: ['auth'], summary: 'Revoke web session cookie' } },
     async (request, reply) => {
-    const sessionToken = getWebSessionToken(request);
-    if (sessionToken) {
-      await store.deleteWebSession(requestBaseUrl(request), sessionToken);
+      const sessionToken = getWebSessionToken(request);
+      if (sessionToken) {
+        await store.deleteWebSession(requestBaseUrl(request), sessionToken);
+      }
+      void reply.header('Set-Cookie', clearWebSessionCookie(request));
+      return { ok: true };
     }
-    void reply.header('Set-Cookie', clearWebSessionCookie(request));
-    return { ok: true };
-  });
+  );
 
   app.get(
     '/v1/projects/:projectKey/manifest',
     { schema: { tags: ['projects'], summary: 'Get project manifest' } },
     async (request, reply) => {
-    const params = request.params as { projectKey: string };
-    const project = await store.getProject(requestBaseUrl(request), params.projectKey);
-    if (!project) {
-      reply.code(404).send(Errors.notFound('Project'));
-      return;
+      const params = request.params as { projectKey: string };
+      const project = await store.getProject(requestBaseUrl(request), params.projectKey);
+      if (!project) {
+        reply.code(404).send(Errors.notFound('Project'));
+        return;
+      }
+      project.manifest.apiBaseUrl = requestBaseUrl(request);
+      return project.manifest;
     }
-    project.manifest.apiBaseUrl = requestBaseUrl(request);
-    return project.manifest;
-  });
+  );
 
   app.get(
     '/v1/projects/:projectKey/task',
     { schema: { tags: ['projects'], summary: 'Get project task instructions' } },
     async (request, reply) => {
-    const params = request.params as { projectKey: string };
-    const project = await store.getProject(requestBaseUrl(request), params.projectKey);
-    if (!project) {
-      reply.code(404).send(Errors.notFound('Project'));
-      return;
+      const params = request.params as { projectKey: string };
+      const project = await store.getProject(requestBaseUrl(request), params.projectKey);
+      if (!project) {
+        reply.code(404).send(Errors.notFound('Project'));
+        return;
+      }
+      return ProjectTaskResponseSchema.parse({
+        projectKey: project.projectKey,
+        task: project.task,
+      });
     }
-    return ProjectTaskResponseSchema.parse({
-      projectKey: project.projectKey,
-      task: project.task,
-    });
-  });
+  );
 
   app.post(
     '/v1/projects/:projectKey/setup',
     { schema: { tags: ['projects'], summary: 'Provision student project repo' } },
     async (request, reply) => {
-    const auth = await requireUser(request, reply, store);
-    if (!auth) return;
-    const params = request.params as { projectKey: string };
-    const project = await store.getProject(requestBaseUrl(request), params.projectKey);
-    if (!project) {
-      reply.code(404).send(Errors.notFound('Project'));
-      return;
-    }
-    let repo = await store.provisionProjectRepo(
-      requestBaseUrl(request),
-      params.projectKey,
-      auth.user.id
-    );
-    if (githubConfig && store instanceof PrismaStore) {
-      const account = await store.getGithubAccountForUser(auth.user.id);
-      if (account?.userAccessToken && account.installationId) {
-        try {
-          repo = await store.provisionProjectRepoFromGitHub(
-            requestBaseUrl(request),
-            params.projectKey,
-            auth.user.id,
-            githubConfig
-          );
-        } catch {
-          // Keep the DB-backed fallback record if GitHub template provisioning is not configured yet.
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { projectKey: string };
+      const project = await store.getProject(requestBaseUrl(request), params.projectKey);
+      if (!project) {
+        reply.code(404).send(Errors.notFound('Project'));
+        return;
+      }
+      let repo = await store.provisionProjectRepo(
+        requestBaseUrl(request),
+        params.projectKey,
+        auth.user.id
+      );
+      if (githubConfig && store instanceof PrismaStore) {
+        const account = await store.getGithubAccountForUser(auth.user.id);
+        if (account?.userAccessToken && account.installationId) {
+          try {
+            repo = await store.provisionProjectRepoFromGitHub(
+              requestBaseUrl(request),
+              params.projectKey,
+              auth.user.id,
+              githubConfig
+            );
+          } catch {
+            // Keep the DB-backed fallback record if GitHub template provisioning is not configured yet.
+          }
         }
       }
+      project.manifest.apiBaseUrl = requestBaseUrl(request);
+      return ProjectSetupResponseSchema.parse({
+        projectKey: project.projectKey,
+        repo,
+        manifest: project.manifest,
+        task: project.task,
+      });
     }
-    project.manifest.apiBaseUrl = requestBaseUrl(request);
-    return ProjectSetupResponseSchema.parse({
-      projectKey: project.projectKey,
-      repo,
-      manifest: project.manifest,
-      task: project.task,
-    });
-  });
+  );
 
   app.post(
     '/v1/submissions/prepare',
     { schema: { tags: ['projects'], summary: 'Create or reuse a submission' } },
     async (request, reply) => {
-    const auth = await requireUser(request, reply, store);
-    if (!auth) return;
-    const payload = SubmissionPrepareRequestSchema.parse(request.body);
-    const submission = await store.createOrReuseSubmission(requestBaseUrl(request), {
-      ...payload,
-      userId: auth.user.id,
-    });
-    return SubmissionPrepareResponseSchema.parse({
-      submissionId: submission.id,
-      status: submission.status,
-    });
-  });
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const payload = SubmissionPrepareRequestSchema.parse(request.body);
+      const submission = await store.createOrReuseSubmission(requestBaseUrl(request), {
+        ...payload,
+        userId: auth.user.id,
+      });
+      return SubmissionPrepareResponseSchema.parse({
+        submissionId: submission.id,
+        status: submission.status,
+      });
+    }
+  );
 
   app.post(
     '/v1/submissions/:submissionId/local-test-result',
     { schema: { tags: ['projects'], summary: 'Record local test result' } },
     async (request, reply) => {
-    const auth = await requireUser(request, reply, store);
-    if (!auth) return;
-    const params = request.params as { submissionId: string };
-    if (!validateId(params.submissionId, reply, 'submissionId')) return;
-    const payload = LocalTestResultRequestSchema.parse(request.body);
-    const submission = await store.updateLocalTestResult(
-      requestBaseUrl(request),
-      params.submissionId,
-      auth.user.id,
-      payload.exitCode,
-      payload.summary
-    );
-    if (!submission) {
-      const existing = await store.getSubmissionForAdmin(
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { submissionId: string };
+      if (!validateId(params.submissionId, reply, 'submissionId')) return;
+      const payload = LocalTestResultRequestSchema.parse(request.body);
+      const submission = await store.updateLocalTestResult(
         requestBaseUrl(request),
-        params.submissionId
+        params.submissionId,
+        auth.user.id,
+        payload.exitCode,
+        payload.summary
       );
-      existing ? reply.code(403).send(Errors.forbidden()) : reply.code(404).send(Errors.notFound('Submission'));
-      return;
+      if (!submission) {
+        const existing = await store.getSubmissionForAdmin(
+          requestBaseUrl(request),
+          params.submissionId
+        );
+        existing
+          ? reply.code(403).send(Errors.forbidden())
+          : reply.code(404).send(Errors.notFound('Submission'));
+        return;
+      }
+      return { ok: true };
     }
-    return { ok: true };
-  });
+  );
 
   app.get(
     '/v1/submissions/:submissionId/stream',
@@ -314,16 +326,23 @@ export function registerHostedCliRoutes(
         );
         if (!submission) {
           // Try admin fetch for instructors
-          const any = await store.getSubmissionForAdmin(requestBaseUrl(request), params.submissionId);
+          const any = await store.getSubmissionForAdmin(
+            requestBaseUrl(request),
+            params.submissionId
+          );
           if (!any) {
             send('error', { error: 'Submission not found.' });
             reply.raw.end();
             return;
           }
           // Check access
-          const project = await store.getTrackingProjectById(requestBaseUrl(request), any.projectId);
+          const project = await store.getTrackingProjectById(
+            requestBaseUrl(request),
+            any.projectId
+          );
           const { canManageProject } = await import('../tracking/policies/access');
-          const hasAccess = auth.user.systemRole === 'admin' || (project && canManageProject(auth, project));
+          const hasAccess =
+            auth.user.systemRole === 'admin' || (project && canManageProject(auth, project));
           if (!hasAccess) {
             send('error', { error: 'Forbidden.' });
             reply.raw.end();
@@ -341,7 +360,11 @@ export function registerHostedCliRoutes(
         } else {
           if (submission.status !== lastStatus) {
             lastStatus = submission.status;
-            send('status', { submissionId: submission.id, status: submission.status, summary: submission.summary });
+            send('status', {
+              submissionId: submission.id,
+              status: submission.status,
+              summary: submission.summary,
+            });
           }
           if (TERMINAL.has(submission.status)) {
             send('done', { submissionId: submission.id, status: submission.status });
@@ -366,33 +389,36 @@ export function registerHostedCliRoutes(
     '/v1/submissions/:submissionId',
     { schema: { tags: ['projects'], summary: 'Get submission status' } },
     async (request, reply) => {
-    const auth = await requireUser(request, reply, store);
-    if (!auth) return;
-    const params = request.params as { submissionId: string };
-    if (!validateId(params.submissionId, reply, 'submissionId')) return;
-    const submission = await store.getSubmission(
-      requestBaseUrl(request),
-      params.submissionId,
-      auth.user.id
-    );
-    if (!submission) {
-      const existing = await store.getSubmissionForAdmin(
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { submissionId: string };
+      if (!validateId(params.submissionId, reply, 'submissionId')) return;
+      const submission = await store.getSubmission(
         requestBaseUrl(request),
-        params.submissionId
+        params.submissionId,
+        auth.user.id
       );
-      existing ? reply.code(403).send(Errors.forbidden()) : reply.code(404).send(Errors.notFound('Submission'));
-      return;
+      if (!submission) {
+        const existing = await store.getSubmissionForAdmin(
+          requestBaseUrl(request),
+          params.submissionId
+        );
+        existing
+          ? reply.code(403).send(Errors.forbidden())
+          : reply.code(404).send(Errors.notFound('Submission'));
+        return;
+      }
+      return SubmissionStatusResponseSchema.parse({
+        submissionId: submission.id,
+        projectKey: submission.projectKey,
+        status: submission.status,
+        commitSha: submission.commitSha,
+        summary: submission.summary,
+        createdAt: submission.createdAt,
+        updatedAt: submission.updatedAt,
+      });
     }
-    return SubmissionStatusResponseSchema.parse({
-      submissionId: submission.id,
-      projectKey: submission.projectKey,
-      status: submission.status,
-      commitSha: submission.commitSha,
-      summary: submission.summary,
-      createdAt: submission.createdAt,
-      updatedAt: submission.updatedAt,
-    });
-  });
+  );
 
   /**
    * DELETE /v1/me/account

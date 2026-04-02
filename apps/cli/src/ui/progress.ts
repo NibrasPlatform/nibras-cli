@@ -44,9 +44,7 @@ export function createPollProgress(totalSeconds: number, plain: boolean): PollPr
     },
     finish: (success) => {
       bar.update(totalTicks, {
-        status: success
-          ? picocolors.green('passed ✓')
-          : picocolors.red('failed ✗'),
+        status: success ? picocolors.green('passed ✓') : picocolors.red('failed ✗'),
       });
       bar.stop();
     },

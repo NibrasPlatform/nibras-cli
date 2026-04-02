@@ -85,8 +85,7 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
         openapi: '3.0.3',
         info: {
           title: 'Nibras API',
-          description:
-            'REST API for the Nibras educational submission and verification platform.',
+          description: 'REST API for the Nibras educational submission and verification platform.',
           version: '1.0.0',
         },
         servers: [{ url: process.env.NIBRAS_API_BASE_URL || 'http://127.0.0.1:4848' }],
@@ -158,7 +157,13 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['authorization', 'content-type', 'x-request-id'],
-    exposedHeaders: ['x-request-id', 'x-total-count', 'x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset'],
+    exposedHeaders: [
+      'x-request-id',
+      'x-total-count',
+      'x-ratelimit-limit',
+      'x-ratelimit-remaining',
+      'x-ratelimit-reset',
+    ],
     origin(origin, callback) {
       if (!origin) {
         callback(null, true);
@@ -176,22 +181,30 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
   });
 
   // ── Health & readiness ────────────────────────────────────────────────────
-  app.get('/healthz', { schema: { tags: ['system'], summary: 'Liveness probe' } }, async (_request, reply) => {
-    return reply.send({ ok: true });
-  });
-
-  app.get('/readyz', { schema: { tags: ['system'], summary: 'Readiness probe — checks DB connectivity' } }, async (_request, reply) => {
-    if (process.env.DATABASE_URL) {
-      try {
-        const prisma = new PrismaClient();
-        await prisma.$queryRaw`SELECT 1`;
-        await prisma.$disconnect();
-      } catch {
-        return reply.status(503).send({ ok: false, reason: 'database unavailable' });
-      }
+  app.get(
+    '/healthz',
+    { schema: { tags: ['system'], summary: 'Liveness probe' } },
+    async (_request, reply) => {
+      return reply.send({ ok: true });
     }
-    return reply.send({ ok: true });
-  });
+  );
+
+  app.get(
+    '/readyz',
+    { schema: { tags: ['system'], summary: 'Readiness probe — checks DB connectivity' } },
+    async (_request, reply) => {
+      if (process.env.DATABASE_URL) {
+        try {
+          const prisma = new PrismaClient();
+          await prisma.$queryRaw`SELECT 1`;
+          await prisma.$disconnect();
+        } catch {
+          return reply.status(503).send({ ok: false, reason: 'database unavailable' });
+        }
+      }
+      return reply.send({ ok: true });
+    }
+  );
 
   // ── Prometheus-compatible metrics ─────────────────────────────────────────
   // Use a fresh per-app Registry so multiple buildApp() calls (e.g. in tests)
@@ -210,53 +223,56 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
     httpRequestsTotal.inc({ method: request.method, status: String(reply.statusCode) });
   });
 
-  app.get('/metrics', { schema: { tags: ['system'], summary: 'Prometheus-compatible metrics' } }, async (request, reply) => {
-    // Optional static bearer token to protect the metrics endpoint.
-    // Set NIBRAS_METRICS_TOKEN in production; leave unset for local dev.
-    const metricsToken = process.env.NIBRAS_METRICS_TOKEN;
-    if (metricsToken) {
-      const auth = request.headers.authorization;
-      if (auth !== `Bearer ${metricsToken}`) {
-        return reply.code(401).send({ error: 'Unauthorized.', code: 'AUTH_REQUIRED' });
+  app.get(
+    '/metrics',
+    { schema: { tags: ['system'], summary: 'Prometheus-compatible metrics' } },
+    async (request, reply) => {
+      // Optional static bearer token to protect the metrics endpoint.
+      // Set NIBRAS_METRICS_TOKEN in production; leave unset for local dev.
+      const metricsToken = process.env.NIBRAS_METRICS_TOKEN;
+      if (metricsToken) {
+        const auth = request.headers.authorization;
+        if (auth !== `Bearer ${metricsToken}`) {
+          return reply.code(401).send({ error: 'Unauthorized.', code: 'AUTH_REQUIRED' });
+        }
       }
-    }
 
-    // prom-client handles nibras_http_requests_total + all default process metrics.
-    let output = await promRegistry.metrics();
+      // prom-client handles nibras_http_requests_total + all default process metrics.
+      let output = await promRegistry.metrics();
 
-    // DB-sourced gauges appended as raw Prometheus text — always fresh from the DB,
-    // not subject to counter-reset issues on process restart.
-    if (process.env.DATABASE_URL) {
-      try {
-        const prisma = new PrismaClient();
-        const [queueDepth, passedCount, failedCount, reviewCount] = await Promise.all([
-          prisma.verificationJob.count({ where: { status: 'queued' } }),
-          prisma.verificationJob.count({ where: { status: 'passed' } }),
-          prisma.verificationJob.count({ where: { status: 'failed' } }),
-          prisma.verificationJob.count({ where: { status: 'needs_review' } }),
-        ]);
-        await prisma.$disconnect();
-        output += [
-          '',
-          '# HELP nibras_verification_queue_depth Number of queued verification jobs',
-          '# TYPE nibras_verification_queue_depth gauge',
-          `nibras_verification_queue_depth ${queueDepth}`,
-          '',
-          '# HELP nibras_verification_by_status Verifications grouped by final status',
-          '# TYPE nibras_verification_by_status gauge',
-          `nibras_verification_by_status{status="passed"} ${passedCount}`,
-          `nibras_verification_by_status{status="failed"} ${failedCount}`,
-          `nibras_verification_by_status{status="needs_review"} ${reviewCount}`,
-        ].join('\n') + '\n';
-      } catch {
-        output += '# ERROR: could not query DB for verification metrics\n';
+      // DB-sourced gauges appended as raw Prometheus text — always fresh from the DB,
+      // not subject to counter-reset issues on process restart.
+      if (process.env.DATABASE_URL) {
+        try {
+          const prisma = new PrismaClient();
+          const [queueDepth, passedCount, failedCount, reviewCount] = await Promise.all([
+            prisma.verificationJob.count({ where: { status: 'queued' } }),
+            prisma.verificationJob.count({ where: { status: 'passed' } }),
+            prisma.verificationJob.count({ where: { status: 'failed' } }),
+            prisma.verificationJob.count({ where: { status: 'needs_review' } }),
+          ]);
+          await prisma.$disconnect();
+          output +=
+            [
+              '',
+              '# HELP nibras_verification_queue_depth Number of queued verification jobs',
+              '# TYPE nibras_verification_queue_depth gauge',
+              `nibras_verification_queue_depth ${queueDepth}`,
+              '',
+              '# HELP nibras_verification_by_status Verifications grouped by final status',
+              '# TYPE nibras_verification_by_status gauge',
+              `nibras_verification_by_status{status="passed"} ${passedCount}`,
+              `nibras_verification_by_status{status="failed"} ${failedCount}`,
+              `nibras_verification_by_status{status="needs_review"} ${reviewCount}`,
+            ].join('\n') + '\n';
+        } catch {
+          output += '# ERROR: could not query DB for verification metrics\n';
+        }
       }
-    }
 
-    return reply
-      .header('Content-Type', promRegistry.contentType)
-      .send(output);
-  });
+      return reply.header('Content-Type', promRegistry.contentType).send(output);
+    }
+  );
 
   // Capture unhandled errors in Sentry when DSN is configured
   app.setErrorHandler(async (error: { statusCode?: number; message?: string }, request, reply) => {
@@ -269,7 +285,8 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
       });
     }
     const statusCode = error.statusCode || 500;
-    const code = statusCode === 429 ? 'RATE_LIMITED' : statusCode >= 500 ? 'INTERNAL_ERROR' : 'INTERNAL_ERROR';
+    const code =
+      statusCode === 429 ? 'RATE_LIMITED' : statusCode >= 500 ? 'INTERNAL_ERROR' : 'INTERNAL_ERROR';
     void reply.status(statusCode).send({ error: error.message || 'Internal server error.', code });
   });
 

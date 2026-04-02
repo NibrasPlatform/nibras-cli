@@ -20,9 +20,7 @@ function renderMarkdownLine(line: string, plain: boolean): string {
     return picocolors.dim(line);
   }
   // Bold **text**
-  return line.replace(/\*\*(.+?)\*\*/g, (_, inner: string) =>
-    picocolors.bold(inner)
-  );
+  return line.replace(/\*\*(.+?)\*\*/g, (_, inner: string) => picocolors.bold(inner));
 }
 
 export async function commandTask(plain: boolean): Promise<void> {

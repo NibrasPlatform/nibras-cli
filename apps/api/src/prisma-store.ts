@@ -869,7 +869,7 @@ export class PrismaStore implements AppStore {
     // Deduplicate: GitHub retries deliveries on failure, skip if already processed
     if (payload.deliveryId) {
       const existing = await this.prisma.githubDelivery.findUnique({
-        where: { deliveryId: payload.deliveryId }
+        where: { deliveryId: payload.deliveryId },
       });
       if (existing) return;
     }
@@ -1059,7 +1059,11 @@ export class PrismaStore implements AppStore {
     return users.map(toUserRecord);
   }
 
-  async setUserSystemRole(apiBaseUrl: string, userId: string, role: SystemRole): Promise<UserRecord | null> {
+  async setUserSystemRole(
+    apiBaseUrl: string,
+    userId: string,
+    role: SystemRole
+  ): Promise<UserRecord | null> {
     await this.seed(apiBaseUrl);
     const updated = await this.prisma.user
       .update({
@@ -2182,7 +2186,10 @@ export class PrismaStore implements AppStore {
     return submissions.map(toSubmissionRecord);
   }
 
-  async countTrackingMilestoneSubmissions(apiBaseUrl: string, milestoneId: string): Promise<number> {
+  async countTrackingMilestoneSubmissions(
+    apiBaseUrl: string,
+    milestoneId: string
+  ): Promise<number> {
     await this.seed(apiBaseUrl);
     return this.prisma.submissionAttempt.count({ where: { milestoneId } });
   }
@@ -2377,10 +2384,13 @@ export class PrismaStore implements AppStore {
     return review ? toReviewRecord(review) : null;
   }
 
-  async getSubmissionStudentEmail(_apiBaseUrl: string, submissionId: string): Promise<{ email: string; username: string } | null> {
+  async getSubmissionStudentEmail(
+    _apiBaseUrl: string,
+    submissionId: string
+  ): Promise<{ email: string; username: string } | null> {
     const attempt = await this.prisma.submissionAttempt.findUnique({
       where: { id: submissionId },
-      select: { user: { select: { email: true, username: true } } }
+      select: { user: { select: { email: true, username: true } } },
     });
     return attempt ? attempt.user : null;
   }
@@ -2609,15 +2619,17 @@ export class PrismaStore implements AppStore {
   async exportCourseGrades(
     apiBaseUrl: string,
     courseId: string
-  ): Promise<Array<{
-    githubLogin: string;
-    username: string;
-    milestoneTitle: string;
-    projectKey: string;
-    status: string;
-    submittedAt: string | null;
-    commitSha: string;
-  }>> {
+  ): Promise<
+    Array<{
+      githubLogin: string;
+      username: string;
+      milestoneTitle: string;
+      projectKey: string;
+      status: string;
+      submittedAt: string | null;
+      commitSha: string;
+    }>
+  > {
     await this.seed(apiBaseUrl);
     const memberships = await this.prisma.courseMembership.findMany({
       where: { courseId, role: CourseRole.student },

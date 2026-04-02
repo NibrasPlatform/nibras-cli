@@ -89,10 +89,7 @@ export async function commandSubmit(plain: boolean): Promise<void> {
       if (success) {
         printBox(
           'Submission passed ✓',
-          [
-            `Status:  ${status.status}`,
-            `Summary: ${status.summary ?? 'All checks passed'}`,
-          ],
+          [`Status:  ${status.status}`, `Summary: ${status.summary ?? 'All checks passed'}`],
           'success',
           plain
         );

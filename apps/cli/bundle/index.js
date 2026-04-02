@@ -10147,14 +10147,10 @@ function renderPlain(rows) {
 function renderBox(rows) {
     const labelWidth = Math.max(...rows.map((r) => r.label.length)) + 2;
     const lines = rows.map((row) => {
-        const icon = row.ok
-            ? picocolors_1.default.green('✓')
-            : picocolors_1.default.red('✗');
+        const icon = row.ok ? picocolors_1.default.green('✓') : picocolors_1.default.red('✗');
         const pad = ' '.repeat(labelWidth - row.label.length);
         const label = picocolors_1.default.dim(row.label + ':');
-        const value = row.ok
-            ? picocolors_1.default.green(row.value)
-            : picocolors_1.default.red(row.value);
+        const value = row.ok ? picocolors_1.default.green(row.value) : picocolors_1.default.red(row.value);
         return `${icon}  ${label}${pad}${value}`;
     });
     const allOk = rows.every((r) => r.ok);
@@ -10322,10 +10318,7 @@ async function commandSubmit(plain) {
             const success = status.status === 'passed';
             pollProgress.finish(success);
             if (success) {
-                (0, box_1.printBox)('Submission passed ✓', [
-                    `Status:  ${status.status}`,
-                    `Summary: ${status.summary ?? 'All checks passed'}`,
-                ], 'success', plain);
+                (0, box_1.printBox)('Submission passed ✓', [`Status:  ${status.status}`, `Summary: ${status.summary ?? 'All checks passed'}`], 'success', plain);
             }
             else {
                 (0, box_1.printBox)(status.status === 'needs_review' ? 'Under review' : 'Submission failed', [
@@ -10544,7 +10537,10 @@ function printHelp(plain) {
         { name: 'logout', description: 'Clear the local CLI session' },
         { name: 'whoami', description: 'Show the signed-in user and linked GitHub account' },
         { name: 'test', description: 'Run project-local public tests' },
-        { name: 'submit', description: 'Commit tracked solution files, push, and wait for verification' },
+        {
+            name: 'submit',
+            description: 'Commit tracked solution files, push, and wait for verification',
+        },
         { name: 'task', description: 'View current task instructions' },
         { name: 'setup', description: 'Bootstrap a local project manifest from the API' },
         { name: 'ping', description: 'Verify API, auth, GitHub linkage, and repo state' },
@@ -10566,9 +10562,22 @@ function isLegacyInvocation(args) {
     if (args.length === 0)
         return false;
     const knownCommands = new Set([
-        'login', 'logout', 'whoami', 'test', 'submit',
-        'task', 'setup', 'ping', 'update-buildpack',
-        'help', 'legacy', '--help', '-h', '--version', '-v', 'version',
+        'login',
+        'logout',
+        'whoami',
+        'test',
+        'submit',
+        'task',
+        'setup',
+        'ping',
+        'update-buildpack',
+        'help',
+        'legacy',
+        '--help',
+        '-h',
+        '--version',
+        '-v',
+        'version',
     ]);
     return !knownCommands.has(args[0]) && args.length >= 3;
 }
@@ -10827,9 +10836,7 @@ function createPollProgress(totalSeconds, plain) {
         },
         finish: (success) => {
             bar.update(totalTicks, {
-                status: success
-                    ? picocolors_1.default.green('passed ✓')
-                    : picocolors_1.default.red('failed ✗'),
+                status: success ? picocolors_1.default.green('passed ✓') : picocolors_1.default.red('failed ✗'),
             });
             bar.stop();
         },
@@ -10902,9 +10909,7 @@ function printTable(rows, plain) {
         const pad = ' '.repeat(labelWidth - row.label.length);
         const label = plain ? row.label : picocolors_1.default.dim(row.label);
         const value = plain ? row.value : picocolors_1.default.white(row.value);
-        const hint = row.hint
-            ? '  ' + (plain ? row.hint : picocolors_1.default.dim(row.hint))
-            : '';
+        const hint = row.hint ? '  ' + (plain ? row.hint : picocolors_1.default.dim(row.hint)) : '';
         console.log(`  ${label}${pad}${value}${hint}`);
     }
 }

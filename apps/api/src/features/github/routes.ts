@@ -114,20 +114,21 @@ export function registerGitHubRoutes(
     '/dev/approve',
     { schema: { tags: ['auth'], summary: 'Approve device login (dev mode)' } },
     async (request, reply) => {
-    const query = request.query as { user_code?: string };
-    if (!query.user_code) {
-      reply.code(400).type('text/html').send('<h1>Missing user_code</h1>');
-      return;
+      const query = request.query as { user_code?: string };
+      if (!query.user_code) {
+        reply.code(400).type('text/html').send('<h1>Missing user_code</h1>');
+        return;
+      }
+      const approved = await store.authorizeDeviceCode(requestBaseUrl(request), query.user_code);
+      if (!approved) {
+        reply.code(404).type('text/html').send('<h1>Unknown user code</h1>');
+        return;
+      }
+      reply
+        .type('text/html')
+        .send('<h1>Nibras device approved</h1><p>You can return to the CLI.</p>');
     }
-    const approved = await store.authorizeDeviceCode(requestBaseUrl(request), query.user_code);
-    if (!approved) {
-      reply.code(404).type('text/html').send('<h1>Unknown user code</h1>');
-      return;
-    }
-    reply
-      .type('text/html')
-      .send('<h1>Nibras device approved</h1><p>You can return to the CLI.</p>');
-  });
+  );
 
   app.post(
     '/v1/device/poll',
@@ -194,150 +195,152 @@ export function registerGitHubRoutes(
     '/v1/github/oauth/start',
     { schema: { tags: ['github'], summary: 'Begin GitHub OAuth web login' } },
     async (request, reply) => {
-    if (!githubConfig) {
-      reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));
-      return;
+      if (!githubConfig) {
+        reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));
+        return;
+      }
+      const query = request.query as { return_to?: string };
+      const fallbackReturnTo = `${githubConfig.webBaseUrl || requestBaseUrl(request)}/auth/complete`;
+      const returnTo = resolveSafeReturnTo(
+        query.return_to,
+        fallbackReturnTo,
+        requestBaseUrl(request),
+        githubConfig.webBaseUrl
+      );
+      const statePayload = createSignedState(
+        githubConfig.clientSecret,
+        { returnTo },
+        { ttlSeconds: 600 }
+      );
+      reply.redirect(buildGitHubOAuthUrl(githubConfig, statePayload));
     }
-    const query = request.query as { return_to?: string };
-    const fallbackReturnTo = `${githubConfig.webBaseUrl || requestBaseUrl(request)}/auth/complete`;
-    const returnTo = resolveSafeReturnTo(
-      query.return_to,
-      fallbackReturnTo,
-      requestBaseUrl(request),
-      githubConfig.webBaseUrl
-    );
-    const statePayload = createSignedState(
-      githubConfig.clientSecret,
-      { returnTo },
-      { ttlSeconds: 600 }
-    );
-    reply.redirect(buildGitHubOAuthUrl(githubConfig, statePayload));
-  });
+  );
 
   app.get(
     '/v1/github/oauth/callback',
     { schema: { tags: ['github'], summary: 'Handle GitHub OAuth callback' } },
     async (request, reply) => {
-    if (!githubConfig || !(store instanceof PrismaStore)) {
-      reply
-        .code(503)
-        .send(Errors.unavailable('GitHub OAuth requires DATABASE_URL and GitHub App configuration.'));
-      return;
+      if (!githubConfig || !(store instanceof PrismaStore)) {
+        reply
+          .code(503)
+          .send(
+            Errors.unavailable('GitHub OAuth requires DATABASE_URL and GitHub App configuration.')
+          );
+        return;
+      }
+      const query = request.query as { code?: string; state?: string };
+      if (!query.code || !query.state) {
+        reply.code(400).send(Errors.validation('code and state are required.'));
+        return;
+      }
+      const state = verifySignedState(githubConfig.clientSecret, query.state);
+      if (!state) {
+        reply.code(400).send(Errors.validation('Invalid OAuth state.'));
+        return;
+      }
+      const tokenResponse = await exchangeGitHubOAuthCode(githubConfig, query.code);
+      const githubUser = await getGitHubUser(githubConfig, tokenResponse.accessToken);
+      const { user } = await store.upsertGitHubUserSession({
+        githubUserId: String(githubUser.id),
+        login: githubUser.login,
+        email: githubUser.email,
+        accessToken: tokenResponse.accessToken,
+        refreshToken: tokenResponse.refreshToken,
+        accessTokenExpiresIn: tokenResponse.expiresIn,
+        refreshTokenExpiresIn: tokenResponse.refreshTokenExpiresIn,
+      });
+      const webSession = await store.createWebSession(requestBaseUrl(request), user.id);
+      const redirectUrl = resolveSafeReturnTo(
+        state.returnTo,
+        `${githubConfig.webBaseUrl || requestBaseUrl(request)}/auth/complete`,
+        requestBaseUrl(request),
+        githubConfig.webBaseUrl
+      );
+      void reply.header(
+        'Set-Cookie',
+        createWebSessionCookie(request, webSession.sessionToken, {
+          maxAgeSeconds: 30 * 24 * 60 * 60,
+        })
+      );
+      reply.redirect(redirectUrl);
     }
-    const query = request.query as { code?: string; state?: string };
-    if (!query.code || !query.state) {
-      reply.code(400).send(Errors.validation('code and state are required.'));
-      return;
-    }
-    const state = verifySignedState(githubConfig.clientSecret, query.state);
-    if (!state) {
-      reply.code(400).send(Errors.validation('Invalid OAuth state.'));
-      return;
-    }
-    const tokenResponse = await exchangeGitHubOAuthCode(githubConfig, query.code);
-    const githubUser = await getGitHubUser(githubConfig, tokenResponse.accessToken);
-    const { user } = await store.upsertGitHubUserSession({
-      githubUserId: String(githubUser.id),
-      login: githubUser.login,
-      email: githubUser.email,
-      accessToken: tokenResponse.accessToken,
-      refreshToken: tokenResponse.refreshToken,
-      accessTokenExpiresIn: tokenResponse.expiresIn,
-      refreshTokenExpiresIn: tokenResponse.refreshTokenExpiresIn,
-    });
-    const webSession = await store.createWebSession(requestBaseUrl(request), user.id);
-    const redirectUrl = resolveSafeReturnTo(
-      state.returnTo,
-      `${githubConfig.webBaseUrl || requestBaseUrl(request)}/auth/complete`,
-      requestBaseUrl(request),
-      githubConfig.webBaseUrl
-    );
-    void reply.header(
-      'Set-Cookie',
-      createWebSessionCookie(request, webSession.sessionToken, {
-        maxAgeSeconds: 30 * 24 * 60 * 60,
-      })
-    );
-    reply.redirect(redirectUrl);
-  });
+  );
 
   app.get(
     '/v1/github/install-url',
     { schema: { tags: ['github'], summary: 'Get GitHub App installation URL' } },
     async (request, reply) => {
-    const auth = await requireUser(request, reply, store);
-    if (!auth) return;
-    if (!githubConfig) {
-      reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));
-      return;
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      if (!githubConfig) {
+        reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));
+        return;
+      }
+      const signedState =
+        store instanceof PrismaStore
+          ? createSignedState(
+              githubConfig.clientSecret,
+              {
+                userId: auth.user.id,
+                returnTo: `${githubConfig.webBaseUrl || requestBaseUrl(request)}/dashboard`,
+              },
+              { ttlSeconds: 1800 }
+            )
+          : '';
+      return GitHubInstallUrlResponseSchema.parse({
+        installUrl: buildGitHubInstallUrl(githubConfig, signedState),
+      });
     }
-    const signedState =
-      store instanceof PrismaStore
-        ? createSignedState(
-            githubConfig.clientSecret,
-            {
-              userId: auth.user.id,
-              returnTo: `${githubConfig.webBaseUrl || requestBaseUrl(request)}/dashboard`,
-            },
-            { ttlSeconds: 1800 }
-          )
-        : '';
-    return GitHubInstallUrlResponseSchema.parse({
-      installUrl: buildGitHubInstallUrl(githubConfig, signedState),
-    });
-  });
+  );
 
   app.post(
     '/v1/github/setup/complete',
     { schema: { tags: ['github'], summary: 'Link GitHub App installation to account' } },
     async (request, reply) => {
-    const auth = await requireUser(request, reply, store);
-    if (!auth) return;
-    if (!githubConfig || !(store instanceof PrismaStore)) {
-      reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));
-      return;
-    }
-    const payload = GitHubInstallationCompleteRequestSchema.parse(request.body);
-    let redirectTo = `${githubConfig.webBaseUrl || requestBaseUrl(request)}/dashboard`;
-    if (payload.state) {
-      const state = verifySignedState(githubConfig.clientSecret, payload.state);
-      if (!state) {
-        reply.code(400).send(Errors.validation('Invalid installation state.'));
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      if (!githubConfig || !(store instanceof PrismaStore)) {
+        reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));
         return;
       }
-      if (state.userId && state.userId !== auth.user.id) {
-        reply
-          .code(403)
-          .send(Errors.forbidden());
+      const payload = GitHubInstallationCompleteRequestSchema.parse(request.body);
+      let redirectTo = `${githubConfig.webBaseUrl || requestBaseUrl(request)}/dashboard`;
+      if (payload.state) {
+        const state = verifySignedState(githubConfig.clientSecret, payload.state);
+        if (!state) {
+          reply.code(400).send(Errors.validation('Invalid installation state.'));
+          return;
+        }
+        if (state.userId && state.userId !== auth.user.id) {
+          reply.code(403).send(Errors.forbidden());
+          return;
+        }
+        redirectTo = resolveSafeReturnTo(
+          state.returnTo,
+          redirectTo,
+          requestBaseUrl(request),
+          githubConfig.webBaseUrl
+        );
+      }
+      const account = await store.getGithubAccountForUser(auth.user.id);
+      if (!account?.userAccessToken) {
+        reply.code(400).send(Errors.validation('GitHub user token is missing for this account.'));
         return;
       }
-      redirectTo = resolveSafeReturnTo(
-        state.returnTo,
+      const installations = await getGitHubUserInstallations(githubConfig, account.userAccessToken);
+      const matched = installations.find((entry) => String(entry.id) === payload.installationId);
+      if (!matched) {
+        reply.code(403).send(Errors.forbidden());
+        return;
+      }
+      const user = await store.linkGitHubInstallation(auth.user.id, payload.installationId);
+      return GitHubInstallationCompleteResponseSchema.parse({
+        githubAppInstalled: user.githubAppInstalled,
+        installationId: payload.installationId,
         redirectTo,
-        requestBaseUrl(request),
-        githubConfig.webBaseUrl
-      );
+      });
     }
-    const account = await store.getGithubAccountForUser(auth.user.id);
-    if (!account?.userAccessToken) {
-      reply.code(400).send(Errors.validation('GitHub user token is missing for this account.'));
-      return;
-    }
-    const installations = await getGitHubUserInstallations(githubConfig, account.userAccessToken);
-    const matched = installations.find((entry) => String(entry.id) === payload.installationId);
-    if (!matched) {
-      reply
-        .code(403)
-        .send(Errors.forbidden());
-      return;
-    }
-    const user = await store.linkGitHubInstallation(auth.user.id, payload.installationId);
-    return GitHubInstallationCompleteResponseSchema.parse({
-      githubAppInstalled: user.githubAppInstalled,
-      installationId: payload.installationId,
-      redirectTo,
-    });
-  });
+  );
 
   app.post(
     '/v1/github/webhooks',

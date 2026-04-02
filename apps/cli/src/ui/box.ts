@@ -25,12 +25,7 @@ const BORDER_COLORS: Record<BoxKind, string> = {
   warning: 'yellow',
 };
 
-export function printBox(
-  title: string,
-  lines: string[],
-  kind: BoxKind,
-  plain: boolean
-): void {
+export function printBox(title: string, lines: string[], kind: BoxKind, plain: boolean): void {
   if (plain) {
     console.log(`[${kind.toUpperCase()}] ${title}`);
     for (const line of lines) {

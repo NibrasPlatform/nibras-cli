@@ -8,6 +8,14 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .pageHeader h1 {
@@ -106,9 +114,171 @@
   color: var(--text-muted);
 }
 
+/* ── Rich empty state ──────────────────────────────────────────────────────── */
+
+.emptyStateRich {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding: 48px 40px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+}
+
+.emptyStateHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.emptyStateIcon {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.emptyStateHeader h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.emptyStateHeader p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-muted);
+  max-width: 48ch;
+}
+
+.quickSteps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.quickStep {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-strong);
+}
+
+.quickStepNumber {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--primary-strong);
+  letter-spacing: 0.05em;
+}
+
+.quickStepContent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quickStepContent strong {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.quickStepContent p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.quickStepLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-strong);
+  text-decoration: none;
+  margin-top: 4px;
+  transition: color 0.15s;
+}
+
+.quickStepLink:hover {
+  color: var(--primary);
+}
+
+/* ── Course card upgrades ──────────────────────────────────────────────────── */
+
+.courseCardSkeleton {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.courseCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.courseTitle {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.courseBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.courseBadgeActive {
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  color: var(--success);
+}
+
+.courseBadgeArchived {
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  color: var(--text-soft);
+}
+
 .errorText {
   color: var(--error, #e53e3e);
   font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .quickSteps {
+    grid-template-columns: 1fr;
+  }
+  .emptyStateRich {
+    padding: 32px 24px;
+  }
 }
 
 /* ── Forms ─────────────────────────────────────────────────────────────────── */

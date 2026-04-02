@@ -42,9 +42,24 @@ function buildTestApp(storePath) {
   const data = store.read('http://127.0.0.1');
   // Add bearer sessions for both actors
   data.sessions.push(
-    { accessToken: 'student-token', refreshToken: 'student-refresh', userId: 'user_demo', createdAt: new Date().toISOString() },
-    { accessToken: 'instructor-token', refreshToken: 'instructor-refresh', userId: 'user_instructor', createdAt: new Date().toISOString() },
-    { accessToken: 'admin-token', refreshToken: 'admin-refresh', userId: 'user_instructor', createdAt: new Date().toISOString() }
+    {
+      accessToken: 'student-token',
+      refreshToken: 'student-refresh',
+      userId: 'user_demo',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      accessToken: 'instructor-token',
+      refreshToken: 'instructor-refresh',
+      userId: 'user_instructor',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      accessToken: 'admin-token',
+      refreshToken: 'admin-refresh',
+      userId: 'user_instructor',
+      createdAt: new Date().toISOString(),
+    }
   );
   // Make user_instructor an admin for admin-route tests
   const instructor = data.users.find((u) => u.id === 'user_instructor');
@@ -201,7 +216,12 @@ test('GET /v1/admin/users returns 403 for non-admin', async () => {
   // Give student a regular user role
   const store = new FileStore(storePath);
   const data = store.read('http://127.0.0.1');
-  data.sessions.push({ accessToken: 'student-token', refreshToken: 'student-refresh', userId: 'user_demo', createdAt: new Date().toISOString() });
+  data.sessions.push({
+    accessToken: 'student-token',
+    refreshToken: 'student-refresh',
+    userId: 'user_demo',
+    createdAt: new Date().toISOString(),
+  });
   store.write(data);
   const app = buildApp(new FileStore(storePath));
   try {
@@ -264,7 +284,12 @@ test('POST milestone submission is rejected after deadline (422)', async () => {
   if (milestone) {
     milestone.dueAt = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   }
-  data.sessions.push({ accessToken: 'student-token', refreshToken: 'r', userId: 'user_demo', createdAt: new Date().toISOString() });
+  data.sessions.push({
+    accessToken: 'student-token',
+    refreshToken: 'r',
+    userId: 'user_demo',
+    createdAt: new Date().toISOString(),
+  });
   store.write(data);
   const app = buildApp(new FileStore(storePath));
   try {
@@ -301,7 +326,12 @@ test('POST milestone submission is allowed before deadline', async () => {
   if (milestone) {
     milestone.dueAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   }
-  data.sessions.push({ accessToken: 'student-token', refreshToken: 'r', userId: 'user_demo', createdAt: new Date().toISOString() });
+  data.sessions.push({
+    accessToken: 'student-token',
+    refreshToken: 'r',
+    userId: 'user_demo',
+    createdAt: new Date().toISOString(),
+  });
   store.write(data);
   await store.provisionProjectRepo('http://127.0.0.1', 'cs161/exam1', 'user_demo');
   const app = buildApp(new FileStore(storePath));

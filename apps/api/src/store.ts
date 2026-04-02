@@ -305,7 +305,11 @@ export interface AppStore {
     submissionId: string
   ): Promise<VerificationLogRecord[]>;
   listCourseMemberships(apiBaseUrl: string, userId: string): Promise<CourseMembershipRecord[]>;
-  listTrackingCourses(apiBaseUrl: string, userId: string, opts?: PaginationOpts): Promise<CourseRecord[]>;
+  listTrackingCourses(
+    apiBaseUrl: string,
+    userId: string,
+    opts?: PaginationOpts
+  ): Promise<CourseRecord[]>;
   countTrackingCourses(apiBaseUrl: string, userId: string): Promise<number>;
   createTrackingCourse(
     apiBaseUrl: string,
@@ -338,7 +342,11 @@ export interface AppStore {
     code: string,
     userId: string
   ): Promise<CourseMembershipRecord>;
-  listTrackingProjects(apiBaseUrl: string, courseId: string, opts?: PaginationOpts): Promise<ProjectRecord[]>;
+  listTrackingProjects(
+    apiBaseUrl: string,
+    courseId: string,
+    opts?: PaginationOpts
+  ): Promise<ProjectRecord[]>;
   countTrackingProjects(apiBaseUrl: string, courseId: string): Promise<number>;
   getTrackingProjectById(apiBaseUrl: string, projectId: string): Promise<ProjectRecord | null>;
   createTrackingProject(
@@ -450,7 +458,10 @@ export interface AppStore {
     }
   ): Promise<ReviewRecord>;
   getTrackingReview(apiBaseUrl: string, submissionId: string): Promise<ReviewRecord | null>;
-  getSubmissionStudentEmail(apiBaseUrl: string, submissionId: string): Promise<{ email: string; username: string } | null>;
+  getSubmissionStudentEmail(
+    apiBaseUrl: string,
+    submissionId: string
+  ): Promise<{ email: string; username: string } | null>;
   listTrackingReviewQueue(
     apiBaseUrl: string,
     filters?: { courseId?: string; projectId?: string; status?: SubmissionWorkflowStatus },
@@ -490,7 +501,11 @@ export interface AppStore {
     rawPayload?: Record<string, unknown>;
   }): Promise<void>;
   listUsers(apiBaseUrl: string): Promise<UserRecord[]>;
-  setUserSystemRole(apiBaseUrl: string, userId: string, role: SystemRole): Promise<UserRecord | null>;
+  setUserSystemRole(
+    apiBaseUrl: string,
+    userId: string,
+    role: SystemRole
+  ): Promise<UserRecord | null>;
   deleteUserAccount(apiBaseUrl: string, userId: string): Promise<void>;
   listUserSubmissions(
     apiBaseUrl: string,
@@ -501,15 +516,17 @@ export interface AppStore {
   exportCourseGrades(
     apiBaseUrl: string,
     courseId: string
-  ): Promise<Array<{
-    githubLogin: string;
-    username: string;
-    milestoneTitle: string;
-    projectKey: string;
-    status: string;
-    submittedAt: string | null;
-    commitSha: string;
-  }>>;
+  ): Promise<
+    Array<{
+      githubLogin: string;
+      username: string;
+      milestoneTitle: string;
+      projectKey: string;
+      status: string;
+      submittedAt: string | null;
+      commitSha: string;
+    }>
+  >;
   close?(): Promise<void>;
 }
 
@@ -903,7 +920,11 @@ export class FileStore implements AppStore {
     return data.users;
   }
 
-  async setUserSystemRole(apiBaseUrl: string, userId: string, role: SystemRole): Promise<UserRecord | null> {
+  async setUserSystemRole(
+    apiBaseUrl: string,
+    userId: string,
+    role: SystemRole
+  ): Promise<UserRecord | null> {
     const data = this.read(apiBaseUrl);
     const user = data.users.find((u) => u.id === userId);
     if (!user) return null;
@@ -949,15 +970,17 @@ export class FileStore implements AppStore {
   async exportCourseGrades(
     _apiBaseUrl: string,
     _courseId: string
-  ): Promise<Array<{
-    githubLogin: string;
-    username: string;
-    milestoneTitle: string;
-    projectKey: string;
-    status: string;
-    submittedAt: string | null;
-    commitSha: string;
-  }>> {
+  ): Promise<
+    Array<{
+      githubLogin: string;
+      username: string;
+      milestoneTitle: string;
+      projectKey: string;
+      status: string;
+      submittedAt: string | null;
+      commitSha: string;
+    }>
+  > {
     return [];
   }
 
@@ -1703,7 +1726,10 @@ export class FileStore implements AppStore {
     return opts?.limit !== undefined ? results.slice(offset, offset + opts.limit) : results;
   }
 
-  async countTrackingMilestoneSubmissions(apiBaseUrl: string, milestoneId: string): Promise<number> {
+  async countTrackingMilestoneSubmissions(
+    apiBaseUrl: string,
+    milestoneId: string
+  ): Promise<number> {
     const data = this.read(apiBaseUrl);
     return data.submissions.filter((entry) => entry.milestoneId === milestoneId).length;
   }
@@ -1882,7 +1908,10 @@ export class FileStore implements AppStore {
     );
   }
 
-  async getSubmissionStudentEmail(apiBaseUrl: string, submissionId: string): Promise<{ email: string; username: string } | null> {
+  async getSubmissionStudentEmail(
+    apiBaseUrl: string,
+    submissionId: string
+  ): Promise<{ email: string; username: string } | null> {
     const data = this.read(apiBaseUrl);
     const submission = data.submissions.find((entry) => entry.id === submissionId);
     if (!submission) return null;

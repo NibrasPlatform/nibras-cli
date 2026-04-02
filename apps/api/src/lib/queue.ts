@@ -36,7 +36,9 @@ function getQueue(): Queue | null {
     });
     _queue.on('error', (err) => {
       // Log but don't crash — worker will pick up via DB polling as fallback
-      console.error(JSON.stringify({ level: 'error', msg: 'BullMQ queue error', error: err.message }));
+      console.error(
+        JSON.stringify({ level: 'error', msg: 'BullMQ queue error', error: err.message })
+      );
     });
   }
   return _queue;

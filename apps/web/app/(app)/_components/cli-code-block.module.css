@@ -1,0 +1,85 @@
+.wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #0d1117;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.lang {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.5);
+}
+
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(148, 163, 184, 0.7);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.copyBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.pre {
+  margin: 0;
+  padding: 20px 20px;
+  overflow-x: auto;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: #e2e8f0;
+}
+
+.line {
+  display: block;
+  min-height: 1.7em;
+}
+
+/* Token colours */
+.cmd {
+  color: #93c5fd; /* blue-300 */
+  font-weight: 600;
+}
+
+.flag {
+  color: #6ee7b7; /* emerald-300 */
+}
+
+.value {
+  color: #fde68a; /* amber-200 */
+}
+
+.comment {
+  color: rgba(148, 163, 184, 0.5);
+  font-style: italic;
+}
+
+.plain {
+  color: #e2e8f0;
+}

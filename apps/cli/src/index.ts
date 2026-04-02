@@ -39,7 +39,10 @@ function printHelp(plain: boolean): void {
       { name: 'logout', description: 'Clear the local CLI session' },
       { name: 'whoami', description: 'Show the signed-in user and linked GitHub account' },
       { name: 'test', description: 'Run project-local public tests' },
-      { name: 'submit', description: 'Commit tracked solution files, push, and wait for verification' },
+      {
+        name: 'submit',
+        description: 'Commit tracked solution files, push, and wait for verification',
+      },
       { name: 'task', description: 'View current task instructions' },
       { name: 'setup', description: 'Bootstrap a local project manifest from the API' },
       { name: 'ping', description: 'Verify API, auth, GitHub linkage, and repo state' },
@@ -68,9 +71,22 @@ function printHelp(plain: boolean): void {
 function isLegacyInvocation(args: string[]): boolean {
   if (args.length === 0) return false;
   const knownCommands = new Set([
-    'login', 'logout', 'whoami', 'test', 'submit',
-    'task', 'setup', 'ping', 'update-buildpack',
-    'help', 'legacy', '--help', '-h', '--version', '-v', 'version',
+    'login',
+    'logout',
+    'whoami',
+    'test',
+    'submit',
+    'task',
+    'setup',
+    'ping',
+    'update-buildpack',
+    'help',
+    'legacy',
+    '--help',
+    '-h',
+    '--version',
+    '-v',
+    'version',
   ]);
   return !knownCommands.has(args[0]) && args.length >= 3;
 }

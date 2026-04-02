@@ -1,8 +1,5 @@
 import { spawn } from 'node:child_process';
-import {
-  DevicePollResponseSchema,
-  DeviceStartResponseSchema,
-} from '@nibras/contracts';
+import { DevicePollResponseSchema, DeviceStartResponseSchema } from '@nibras/contracts';
 import { apiRequest, readCliConfig, writeCliConfig } from '@nibras/core';
 import { createSpinner } from '../ui/spinner';
 import { printBox } from '../ui/box';
