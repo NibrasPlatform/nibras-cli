@@ -57,27 +57,27 @@ curl https://nibras.yourschool.edu/readyz    # {"ok":true}
 
 ## 4. Environment Variables (`.env.prod`)
 
-| Variable | Required | Description |
-|---|---|---|
-| `DATABASE_URL` | ✅ | PostgreSQL connection string |
-| `NIBRAS_ENCRYPTION_KEY` | ✅ | 32-byte hex key for token encryption. Generate: `openssl rand -hex 32` |
-| `GITHUB_APP_ID` | ✅ | GitHub App numeric ID |
-| `GITHUB_APP_CLIENT_ID` | ✅ | GitHub App OAuth client ID |
-| `GITHUB_APP_CLIENT_SECRET` | ✅ | GitHub App OAuth client secret |
-| `GITHUB_APP_PRIVATE_KEY` | ✅ | PEM key (newlines as `\n`) |
-| `GITHUB_WEBHOOK_SECRET` | ✅ | Random secret configured in GitHub App |
-| `GITHUB_TEMPLATE_OWNER` | ✅ | Org/user owning starter repos |
-| `GITHUB_TEMPLATE_REPO` | optional | Default template repo name |
-| `NIBRAS_API_BASE_URL` | ✅ | Public API URL e.g. `https://nibras.yourschool.edu` |
-| `NIBRAS_WEB_BASE_URL` | ✅ | Public web URL (same as above typically) |
-| `RESEND_API_KEY` | optional | Resend.com key for email notifications |
-| `NIBRAS_EMAIL_FROM` | optional | From address e.g. `Nibras <noreply@yourschool.edu>` |
-| `SENTRY_DSN` | optional | Sentry project DSN for error monitoring |
-| `NIBRAS_METRICS_TOKEN` | optional | Bearer token to protect `/metrics` |
-| `NIBRAS_AI_API_KEY` | optional | OpenAI-compatible key for AI grading |
-| `NIBRAS_AI_MODEL` | optional | Model name (default: `gpt-4o-mini`) |
-| `RATE_LIMIT_MAX` | optional | Requests per minute per user (default: 100) |
-| `BODY_LIMIT_BYTES` | optional | Max request body size (default: 524288 = 512 KB) |
+| Variable                   | Required | Description                                                            |
+| -------------------------- | -------- | ---------------------------------------------------------------------- |
+| `DATABASE_URL`             | ✅       | PostgreSQL connection string                                           |
+| `NIBRAS_ENCRYPTION_KEY`    | ✅       | 32-byte hex key for token encryption. Generate: `openssl rand -hex 32` |
+| `GITHUB_APP_ID`            | ✅       | GitHub App numeric ID                                                  |
+| `GITHUB_APP_CLIENT_ID`     | ✅       | GitHub App OAuth client ID                                             |
+| `GITHUB_APP_CLIENT_SECRET` | ✅       | GitHub App OAuth client secret                                         |
+| `GITHUB_APP_PRIVATE_KEY`   | ✅       | PEM key (newlines as `\n`)                                             |
+| `GITHUB_WEBHOOK_SECRET`    | ✅       | Random secret configured in GitHub App                                 |
+| `GITHUB_TEMPLATE_OWNER`    | ✅       | Org/user owning starter repos                                          |
+| `GITHUB_TEMPLATE_REPO`     | optional | Default template repo name                                             |
+| `NIBRAS_API_BASE_URL`      | ✅       | Public API URL e.g. `https://nibras.yourschool.edu`                    |
+| `NIBRAS_WEB_BASE_URL`      | ✅       | Public web URL (same as above typically)                               |
+| `RESEND_API_KEY`           | optional | Resend.com key for email notifications                                 |
+| `NIBRAS_EMAIL_FROM`        | optional | From address e.g. `Nibras <noreply@yourschool.edu>`                    |
+| `SENTRY_DSN`               | optional | Sentry project DSN for error monitoring                                |
+| `NIBRAS_METRICS_TOKEN`     | optional | Bearer token to protect `/metrics`                                     |
+| `NIBRAS_AI_API_KEY`        | optional | OpenAI-compatible key for AI grading                                   |
+| `NIBRAS_AI_MODEL`          | optional | Model name (default: `gpt-4o-mini`)                                    |
+| `RATE_LIMIT_MAX`           | optional | Requests per minute per user (default: 100)                            |
+| `BODY_LIMIT_BYTES`         | optional | Max request body size (default: 524288 = 512 KB)                       |
 
 ---
 
@@ -120,10 +120,10 @@ gunzip -c backups/nibras-db-20260401T020000Z.sql.gz \
 
 ### Health Endpoints
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /healthz` | Liveness — always returns `{"ok":true}` |
-| `GET /readyz` | Readiness — checks DB connectivity |
+| Endpoint       | Purpose                                                         |
+| -------------- | --------------------------------------------------------------- |
+| `GET /healthz` | Liveness — always returns `{"ok":true}`                         |
+| `GET /readyz`  | Readiness — checks DB connectivity                              |
 | `GET /metrics` | Prometheus-format metrics (protected by `NIBRAS_METRICS_TOKEN`) |
 
 ### Prometheus Scrape Config
@@ -143,6 +143,7 @@ scrape_configs:
 Import `grafana/nibras-dashboard.json` into your Grafana instance. Set the Prometheus datasource to the one scraping `/metrics`.
 
 Key panels:
+
 - Request rate by method/status
 - Total 2xx / 4xx+5xx / 429 counters
 - Verification queue depth (gauge)
@@ -181,6 +182,7 @@ Prisma migrations run automatically on API startup (`prisma migrate deploy`).
 ## 10. Graceful Shutdown
 
 Both the API and worker handle `SIGTERM` / `SIGINT`:
+
 - In-flight requests complete before the process exits.
 - Docker Compose sends `SIGTERM` by default on `docker compose stop` or `docker compose down`.
 
@@ -195,10 +197,10 @@ All services log JSON to stdout. Use your preferred log shipper:
 ```yaml
 # docker-compose.prod.yml snippet — add to any service
 logging:
-  driver: "json-file"
+  driver: 'json-file'
   options:
-    max-size: "50m"
-    max-file: "5"
+    max-size: '50m'
+    max-file: '5'
 ```
 
 Or forward to Loki:
@@ -207,8 +209,8 @@ Or forward to Loki:
 logging:
   driver: loki
   options:
-    loki-url: "http://loki:3100/loki/api/v1/push"
-    loki-external-labels: "service={{.Name}}"
+    loki-url: 'http://loki:3100/loki/api/v1/push'
+    loki-external-labels: 'service={{.Name}}'
 ```
 
 ---

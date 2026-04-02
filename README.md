@@ -200,11 +200,11 @@ When `RESEND_API_KEY` is set, the system sends transactional emails via [Resend]
 
 Emails sent automatically:
 
-| Trigger | Recipient |
-|---|---|
-| Submission verified (passed / failed / needs review) | Student |
-| Submission flagged for human review | All course instructors and TAs |
-| Instructor submits a review | Student |
+| Trigger                                              | Recipient                      |
+| ---------------------------------------------------- | ------------------------------ |
+| Submission verified (passed / failed / needs review) | Student                        |
+| Submission flagged for human review                  | All course instructors and TAs |
+| Instructor submits a review                          | Student                        |
 
 Relevant env vars:
 
@@ -219,11 +219,11 @@ After every submission is verified, the worker posts a GitHub commit status to
 the student's repo. Students see a ✅, ❌, or 🔄 badge directly on their commit
 and can click through to their Nibras submission page.
 
-| Nibras status | GitHub badge | Label |
-|---|---|---|
-| `passed` | ✅ green | All tests passed |
-| `failed` | ❌ red | Tests failed |
-| `needs_review` | 🔄 pending | Tests passed — awaiting instructor review |
+| Nibras status  | GitHub badge | Label                                     |
+| -------------- | ------------ | ----------------------------------------- |
+| `passed`       | ✅ green     | All tests passed                          |
+| `failed`       | ❌ red       | Tests failed                              |
+| `needs_review` | 🔄 pending   | Tests passed — awaiting instructor review |
 
 Requires the GitHub App to have **Commit statuses: Read and write** permission
 (see GitHub App Checklist) and the student to have completed the app installation

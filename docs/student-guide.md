@@ -67,6 +67,7 @@ nibras submit
 ```
 
 The CLI will:
+
 1. Stage only the **allowed files** (configured in `.nibras/project.json`).
 2. Commit and push to your remote branch.
 3. Poll the API for verification results.
@@ -121,13 +122,13 @@ This anonymises your profile, revokes all sessions, and removes your course memb
 
 ## 11. Common Errors
 
-| Error | Cause | Fix |
-|---|---|---|
-| `AUTH_REQUIRED` | No token or cookie | Run `nibras login` |
-| `INVALID_SESSION` | Token expired or revoked | Run `nibras login` |
-| `NOT_FOUND` | Wrong project key or ID | Check `nibras task` for the correct key |
-| `VALIDATION_ERROR` (deadline) | Past the due date | Contact your instructor |
-| `RATE_LIMITED` | Too many requests | Wait the indicated number of seconds |
+| Error                         | Cause                    | Fix                                     |
+| ----------------------------- | ------------------------ | --------------------------------------- |
+| `AUTH_REQUIRED`               | No token or cookie       | Run `nibras login`                      |
+| `INVALID_SESSION`             | Token expired or revoked | Run `nibras login`                      |
+| `NOT_FOUND`                   | Wrong project key or ID  | Check `nibras task` for the correct key |
+| `VALIDATION_ERROR` (deadline) | Past the due date        | Contact your instructor                 |
+| `RATE_LIMITED`                | Too many requests        | Wait the indicated number of seconds    |
 
 ---
 

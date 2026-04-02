@@ -277,9 +277,11 @@ export function registerHostedCliRoutes(
           requestBaseUrl(request),
           params.submissionId
         );
-        existing
-          ? reply.code(403).send(Errors.forbidden())
-          : reply.code(404).send(Errors.notFound('Submission'));
+        if (existing) {
+          reply.code(403).send(Errors.forbidden());
+        } else {
+          reply.code(404).send(Errors.notFound('Submission'));
+        }
         return;
       }
       return { ok: true };
@@ -403,9 +405,11 @@ export function registerHostedCliRoutes(
           requestBaseUrl(request),
           params.submissionId
         );
-        existing
-          ? reply.code(403).send(Errors.forbidden())
-          : reply.code(404).send(Errors.notFound('Submission'));
+        if (existing) {
+          reply.code(403).send(Errors.forbidden());
+        } else {
+          reply.code(404).send(Errors.notFound('Submission'));
+        }
         return;
       }
       return SubmissionStatusResponseSchema.parse({

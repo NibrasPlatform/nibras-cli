@@ -43,14 +43,14 @@ Open the web dashboard at the URL your admin provides (e.g. `https://nibras.your
 
 Inside a course, click **Projects → New Project**.
 
-| Field | Notes |
-|---|---|
-| Title | Shown to students on their dashboard |
-| Slug | Used in repo names (e.g. `cs161-lab1`) |
-| Delivery mode | `individual` (default) or `team` |
-| Description | Markdown — supports code blocks |
-| Rubric | Add rubric items for AI/instructor grading |
-| Resources | Links to starter code, reference docs, etc. |
+| Field         | Notes                                       |
+| ------------- | ------------------------------------------- |
+| Title         | Shown to students on their dashboard        |
+| Slug          | Used in repo names (e.g. `cs161-lab1`)      |
+| Delivery mode | `individual` (default) or `team`            |
+| Description   | Markdown — supports code blocks             |
+| Rubric        | Add rubric items for AI/instructor grading  |
+| Resources     | Links to starter code, reference docs, etc. |
 
 Projects start in **draft** status. Students cannot see or submit to draft projects. Click **Publish** when ready.
 
@@ -76,6 +76,7 @@ Each project can have multiple milestones (e.g. "Design Review", "Final Submissi
 **Review Queue** in the sidebar shows all submissions that need attention — either `needs_review` (AI flagged for human review) or `passed` submissions that you want to override.
 
 Filters available:
+
 - By course
 - By project
 - By status (`queued`, `running`, `passed`, `failed`, `needs_review`)
@@ -83,6 +84,7 @@ Filters available:
 ### Creating a Review
 
 Open a submission → **Add Review**:
+
 - **Status**: `approved`, `changes_requested`, or `graded`
 - **Score**: 0–100
 - **Feedback**: Markdown — visible to the student
@@ -93,6 +95,7 @@ Open a submission → **Add Review**:
 ## 6. Course-Level Dashboard
 
 **Dashboard → Course** shows an overview for your course:
+
 - Total students, submissions, and pass rate
 - Per-project progress bars
 - At-risk students (submitted but not yet passed)

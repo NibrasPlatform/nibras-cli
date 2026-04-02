@@ -7,43 +7,47 @@ This guide covers deploying Nibras on Railway or Fly.io. The stack consists of f
 ## Required Environment Variables
 
 ### All services
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
+
+| Variable                | Description                                            |
+| ----------------------- | ------------------------------------------------------ |
+| `DATABASE_URL`          | PostgreSQL connection string                           |
 | `NIBRAS_ENCRYPTION_KEY` | 32-byte hex key — generate with `openssl rand -hex 32` |
 
 ### API service
-| Variable | Description |
-|---|---|
-| `PORT` | Port to listen on (Railway sets this automatically) |
-| `NIBRAS_API_BASE_URL` | Public URL of the API (e.g. `https://api.nibras.app`) |
-| `NIBRAS_WEB_BASE_URL` | Public URL of the web dashboard |
-| `GITHUB_APP_ID` | GitHub App numeric ID |
-| `GITHUB_APP_CLIENT_ID` | GitHub App OAuth client ID |
-| `GITHUB_APP_CLIENT_SECRET` | GitHub App OAuth client secret |
-| `GITHUB_APP_PRIVATE_KEY` | PEM private key for JWT signing (newlines as `\n`) |
-| `GITHUB_APP_NAME` | Slug of your GitHub App |
-| `GITHUB_WEBHOOK_SECRET` | Secret configured in GitHub App webhook settings |
-| `GITHUB_TEMPLATE_OWNER` | GitHub org/user that owns template repos |
-| `GITHUB_TEMPLATE_REPO` | Template repository name |
-| `RESEND_API_KEY` | (Optional) Resend API key for email notifications |
-| `NIBRAS_EMAIL_FROM` | (Optional) Verified sender address, e.g. `Nibras <noreply@yourdomain.com>` |
-| `SENTRY_DSN` | (Optional) Sentry DSN for error tracking |
-| `RATE_LIMIT_MAX` | (Optional) Global rate limit per minute, default `100` |
+
+| Variable                   | Description                                                                |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `PORT`                     | Port to listen on (Railway sets this automatically)                        |
+| `NIBRAS_API_BASE_URL`      | Public URL of the API (e.g. `https://api.nibras.app`)                      |
+| `NIBRAS_WEB_BASE_URL`      | Public URL of the web dashboard                                            |
+| `GITHUB_APP_ID`            | GitHub App numeric ID                                                      |
+| `GITHUB_APP_CLIENT_ID`     | GitHub App OAuth client ID                                                 |
+| `GITHUB_APP_CLIENT_SECRET` | GitHub App OAuth client secret                                             |
+| `GITHUB_APP_PRIVATE_KEY`   | PEM private key for JWT signing (newlines as `\n`)                         |
+| `GITHUB_APP_NAME`          | Slug of your GitHub App                                                    |
+| `GITHUB_WEBHOOK_SECRET`    | Secret configured in GitHub App webhook settings                           |
+| `GITHUB_TEMPLATE_OWNER`    | GitHub org/user that owns template repos                                   |
+| `GITHUB_TEMPLATE_REPO`     | Template repository name                                                   |
+| `RESEND_API_KEY`           | (Optional) Resend API key for email notifications                          |
+| `NIBRAS_EMAIL_FROM`        | (Optional) Verified sender address, e.g. `Nibras <noreply@yourdomain.com>` |
+| `SENTRY_DSN`               | (Optional) Sentry DSN for error tracking                                   |
+| `RATE_LIMIT_MAX`           | (Optional) Global rate limit per minute, default `100`                     |
 
 ### Web service (Next.js)
-| Variable | Description |
-|---|---|
+
+| Variable                          | Description                         |
+| --------------------------------- | ----------------------------------- |
 | `NEXT_PUBLIC_NIBRAS_API_BASE_URL` | Public API URL (exposed to browser) |
 | `NEXT_PUBLIC_NIBRAS_WEB_BASE_URL` | Public web URL (exposed to browser) |
 
 ### Worker service
+
 Same as API — needs `DATABASE_URL`, `NIBRAS_ENCRYPTION_KEY`, and AI variables if grading is enabled.
 
-| Variable | Description |
-|---|---|
-| `NIBRAS_AI_API_KEY` | (Optional) OpenAI-compatible API key |
-| `NIBRAS_AI_MODEL` | (Optional) Model name, e.g. `gpt-4o-mini` |
+| Variable             | Description                                 |
+| -------------------- | ------------------------------------------- |
+| `NIBRAS_AI_API_KEY`  | (Optional) OpenAI-compatible API key        |
+| `NIBRAS_AI_MODEL`    | (Optional) Model name, e.g. `gpt-4o-mini`   |
 | `NIBRAS_AI_BASE_URL` | (Optional) API base URL, defaults to OpenAI |
 
 ---
@@ -65,11 +69,11 @@ In the Railway dashboard: **New Service → Database → PostgreSQL**. Railway s
 
 Railway detects Dockerfiles automatically. Set the **Root Directory** per service in Railway settings:
 
-| Service | Root Directory | Dockerfile |
-|---|---|---|
-| api | `apps/api` | `apps/api/Dockerfile` |
-| web | `apps/web` | `apps/web/Dockerfile` |
-| worker | `apps/worker` | `apps/worker/Dockerfile` |
+| Service | Root Directory | Dockerfile               |
+| ------- | -------------- | ------------------------ |
+| api     | `apps/api`     | `apps/api/Dockerfile`    |
+| web     | `apps/web`     | `apps/web/Dockerfile`    |
+| worker  | `apps/worker`  | `apps/worker/Dockerfile` |
 
 ### 4. Run database migrations (first deploy)
 

@@ -19,16 +19,19 @@ End-to-end test scenarios covering the full Nibras platform from student and ins
 ## Scenario 1 — Instructor: Set up a course and project
 
 ### 1.1 Sign in as instructor
+
 1. Go to `http://localhost:3000` → click **Sign in with GitHub**
 2. Authorize the GitHub OAuth app
 3. You should land on `/instructor`
 
 ### 1.2 Create a course
+
 1. Click **New Course**
 2. Fill in: Slug `cs101-s26`, Title `CS 101`, Term `Spring 2026`, Course Code `CS101`
 3. Submit → course card appears in the list
 
 ### 1.3 Create a project
+
 1. Open the course → **New Project**
 2. Fill Title `Lab 1 – Hello World`, Status `Published`
 3. Add a rubric criterion: `Code quality`, Max Score `10`
@@ -36,11 +39,13 @@ End-to-end test scenarios covering the full Nibras platform from student and ins
 5. Save → project appears under the course
 
 ### 1.4 Add a milestone
+
 1. Open the project → **New Milestone**
 2. Title `Initial Submission`, Order `1`, Due Date (any future date), Final `true`
 3. Save
 
 ### 1.5 Generate invite link
+
 1. Course page → **Members** tab → **Invite Student**
 2. Copy the invite URL (format: `http://localhost:3000/join/<code>`)
 
@@ -49,31 +54,39 @@ End-to-end test scenarios covering the full Nibras platform from student and ins
 ## Scenario 2 — Student: Join and submit
 
 ### 2.1 Join via invite
+
 1. Open the invite URL in a new browser/incognito as Student A
 2. Sign in with GitHub (Student A's account)
 3. **Expected**: Preview page shows course name and role = `student`; click Accept → redirected to `/projects`
 
 ### 2.2 View project dashboard
+
 1. `/projects` → select the course → the project card should appear
 2. Click the project → milestone `Initial Submission` visible with status `Open`
 
 ### 2.3 Submit via CLI
+
 ```bash
 # in Student A's repo directory (must have Nibras GitHub App installed)
 npx nibras submit --milestone "Initial Submission"
 ```
+
 Or via web modal:
+
 1. Click **Submit** next to the milestone
 2. Enter repo URL, branch, commit SHA
 3. Click **Submit**
 
 **Expected**:
+
 - Toast/confirmation shown
 - Milestone status changes to `Submitted` or `Queued`
 - GitHub commit status badge on that SHA shows `pending` (yellow dot)
 
 ### 2.4 Watch worker process the job
+
 Check worker logs — you should see:
+
 ```
 [traceId] claimed job …
 [traceId] running tests …
@@ -88,6 +101,7 @@ Check worker logs — you should see:
 | Needs AI review | `needs_review` | 🟡 pending `Nibras / pending review` |
 
 ### 2.5 Email notification (if RESEND_API_KEY set)
+
 Student A's email should receive a notification with the submission result.
 
 ---
@@ -95,20 +109,24 @@ Student A's email should receive a notification with the submission result.
 ## Scenario 3 — Instructor: Review a submission
 
 ### 3.1 Review queue
+
 1. Sign in as Instructor → `/instructor/courses/<courseId>/submissions`
 2. Submission from Student A should appear
 
 ### 3.2 Open review
+
 1. Click the submission → review form opens
 2. Fill: Status `approved`, Score `9`, Feedback `Great work!`
 3. Optionally fill rubric criterion scores
 4. Click **Submit Review**
 
 **Expected**:
+
 - Submission moves out of review queue
 - Student receives email: "Your submission has been reviewed"
 
 ### 3.3 View AI grading (if AI ran)
+
 - On the review page, AI-generated criterion scores and reasoning should be pre-populated
 - Instructor can override any score before submitting
 
@@ -134,6 +152,7 @@ curl -H "Authorization: Bearer <instructor_jwt>" \
 ```
 
 **Expected CSV format**:
+
 ```
 Student,GitHub Login,Milestone: Initial Submission
 Alice,alice123,passed
