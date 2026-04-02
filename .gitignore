@@ -6,13 +6,14 @@ dist/
 apps/*/dist/
 packages/*/dist/
 apps/web/.next/
+apps/cli/bundle/
 .env
 .DS_Store
 *.log
 tmp/
 .idea/
-xx/.git/
-xx/.idea/
+xx/
+Frontend-examples/
 exam1.zip
 /exam1/
 !/test/fixtures/answers/exam1/
