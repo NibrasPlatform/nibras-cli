@@ -22,7 +22,12 @@ export function getStoredApiBaseUrl(): string | null {
 }
 
 export function getConfiguredApiBaseUrl(): string | null {
-  return normalizeApiBaseUrl(process.env.NEXT_PUBLIC_NIBRAS_API_BASE_URL);
+  const raw = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_NIBRAS_API_BASE_URL);
+  if (!raw) return null;
+  // Ignore loopback configured URL when accessed from a production HTTPS origin —
+  // same protection already applied to stored URLs.
+  if (shouldIgnoreStoredApiBaseUrl(raw)) return null;
+  return raw;
 }
 
 export function getCurrentOriginCandidate(): string | null {

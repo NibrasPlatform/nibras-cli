@@ -9,6 +9,7 @@
 **/apps/web/.next
 **/apps/cli/bundle
 **/.env
+**/.env.local
 **/.DS_Store
 **/*.log
 **/tmp

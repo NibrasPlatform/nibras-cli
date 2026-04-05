@@ -1,10 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { discoverApiBaseUrl } from './lib/session';
 import NibrasLogo from './_components/nibras-logo';
 import styles from './signin.module.css';
+
+function AuthBanner() {
+  const searchParams = useSearchParams();
+  if (searchParams.get('auth') !== 'required') return null;
+  return (
+    <div className={styles.authBanner} role="alert">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
+      Authentication required. Please sign in to access the dashboard.
+    </div>
+  );
+}
 
 export default function HomePage() {
   const [error, setError] = useState('');
@@ -36,6 +61,11 @@ export default function HomePage() {
 
   return (
     <main className={styles.page}>
+      {/* Auth required banner */}
+      <Suspense>
+        <AuthBanner />
+      </Suspense>
+
       {/* Animated orbs */}
       <div className={`${styles.orb} ${styles.orb1}`} />
       <div className={`${styles.orb} ${styles.orb2}`} />
@@ -418,27 +448,33 @@ export default function HomePage() {
                 'Nibras cut my grading time in half. The CLI is a joy to use and students actually submit more often because the feedback loop is instant.',
               name: 'Sarah Chen',
               role: 'CS Instructor, State University',
-              initials: 'SC',
+              avatar: '/testimonials/sarah-chen.svg',
             },
             {
               quote:
                 'Finally a platform that treats students like real developers. GitHub-backed submissions, real commits, automated tests — exactly what I wanted.',
               name: 'Marcus Wright',
               role: 'Bootcamp Lead, TechPath',
-              initials: 'MW',
+              avatar: '/testimonials/marcus-wright.svg',
             },
             {
               quote:
                 "The instructor dashboard is gorgeous. I can see every student's progress at a glance without digging through spreadsheets.",
               name: 'Priya Nair',
               role: 'Data Science Professor',
-              initials: 'PN',
+              avatar: '/testimonials/priya-nair.svg',
             },
           ].map((t) => (
             <div key={t.name} className={styles.testimonialCard}>
               <p className={styles.testimonialQuote}>&ldquo;{t.quote}&rdquo;</p>
               <div className={styles.testimonialAuthor}>
-                <span className={styles.testimonialAvatar}>{t.initials}</span>
+                <img
+                  src={t.avatar}
+                  alt={t.name}
+                  className={styles.testimonialAvatar}
+                  width={38}
+                  height={38}
+                />
                 <div>
                   <strong>{t.name}</strong>
                   <span>{t.role}</span>

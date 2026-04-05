@@ -30,7 +30,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       try {
         const response = await apiFetch('/v1/web/session', { auth: true });
         if (!response.ok) {
-          throw new Error('Session unavailable.');
+          if (alive) {
+            window.location.href = '/?auth=required';
+          }
+          return;
         }
         const payload = (await response.json()) as ShellSessionPayload;
         if (alive) {
@@ -38,8 +41,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         }
       } catch {
         if (alive) {
-          setSession(null);
+          window.location.href = '/?auth=required';
         }
+        return;
       } finally {
         if (alive) {
           setLoading(false);
