@@ -42,6 +42,7 @@ COPY --from=build /app/apps/api/package.json ./apps/api/
 COPY --from=build /app/prisma ./prisma
 COPY package.json ./
 
+ENV HOST=0.0.0.0
 EXPOSE 4848
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s \
   CMD wget -qO- http://127.0.0.1:4848/healthz || exit 1

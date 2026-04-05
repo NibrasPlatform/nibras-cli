@@ -18,16 +18,32 @@ ARG NEXT_PUBLIC_NIBRAS_API_BASE_URL
 ARG NEXT_PUBLIC_NIBRAS_WEB_BASE_URL
 ENV NEXT_PUBLIC_NIBRAS_API_BASE_URL=$NEXT_PUBLIC_NIBRAS_API_BASE_URL
 ENV NEXT_PUBLIC_NIBRAS_WEB_BASE_URL=$NEXT_PUBLIC_NIBRAS_WEB_BASE_URL
+# Next.js requires .env.local to exist (even if empty) during build
+RUN touch apps/web/.env.local
+# Build contracts first so its type declarations are available to the web build
+RUN npm run build -w @nibras/contracts
 RUN npm run build -w @nibras/web
 
 # ── Runtime ────────────────────────────────────────────────────────────────────
+# next.config.ts sets output: 'standalone' + outputFileTracingRoot pointing to
+# the repo root. Next.js therefore emits the standalone server at:
+#   apps/web/.next/standalone/apps/web/server.js  (relative to repo root)
+# After COPY --from=build /app/apps/web/.next/standalone ./ that becomes:
+#   /app/apps/web/server.js
+#
+# Static assets and the public dir are NOT included in standalone output and
+# must be copied manually (this is a Next.js requirement).
 FROM base AS runner
 ENV NODE_ENV=production
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/apps/web/.next ./apps/web/.next
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+# Copy the self-contained standalone server (includes traced node_modules)
+COPY --from=build /app/apps/web/.next/standalone ./
+# Static assets ─ served by Next.js from .next/static relative to the app dir
+COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
+# Public dir ─ served from /public relative to the app dir
 COPY --from=build /app/apps/web/public ./apps/web/public
-COPY --from=build /app/apps/web/package.json ./apps/web/
-COPY package.json ./
 
 EXPOSE 3000
-CMD ["node", "apps/web/node_modules/.bin/next", "start", "--port", "3000", "-H", "0.0.0.0"]
+CMD ["node", "apps/web/server.js"]
