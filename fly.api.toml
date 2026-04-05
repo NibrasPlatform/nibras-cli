@@ -5,7 +5,7 @@ primary_region = 'iad'
   dockerfile = 'Dockerfile.api'
 
 [http_service]
-  internal_port = 4848
+  internal_port = 8080
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
@@ -18,7 +18,7 @@ primary_region = 'iad'
     interval = "15s"
     method = "GET"
     path = "/healthz"
-    port = 4848
+    port = 8080
     timeout = "5s"
     type = "http"
 
