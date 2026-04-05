@@ -17,12 +17,7 @@ function validateEnv(): void {
   if (process.env.NODE_ENV !== 'production') {
     return;
   }
-  const required = [
-    'DATABASE_URL',
-    'NIBRAS_ENCRYPTION_KEY',
-    'GITHUB_APP_ID',
-    'GITHUB_WEBHOOK_SECRET',
-  ];
+  const required = ['DATABASE_URL', 'NIBRAS_ENCRYPTION_KEY'];
   const missing = required.filter((key) => !process.env[key]);
   if (missing.length > 0) {
     console.error(

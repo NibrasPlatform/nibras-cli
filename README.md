@@ -31,11 +31,11 @@ Nibras is a course-operations platform: a CLI that students use to set up projec
 
 ## Overview
 
-| Persona    | What they do                                                                 |
-| ---------- | ---------------------------------------------------------------------------- |
-| Student    | `nibras login` → `nibras setup` → `nibras test` → `nibras submit`           |
-| Instructor | Manages courses, projects, milestones, reviews submissions, exports grades   |
-| Operator   | Deploys API + worker + web via Docker Compose; monitors via Prometheus       |
+| Persona    | What they do                                                               |
+| ---------- | -------------------------------------------------------------------------- |
+| Student    | `nibras login` → `nibras setup` → `nibras test` → `nibras submit`          |
+| Instructor | Manages courses, projects, milestones, reviews submissions, exports grades |
+| Operator   | Deploys API + worker + web via Docker Compose; monitors via Prometheus     |
 
 **Key capabilities:**
 
@@ -146,16 +146,16 @@ nibras-cli/
 
 ## Prerequisites
 
-| Tool      | Required | Notes                                    |
-| --------- | -------- | ---------------------------------------- |
-| Node.js   | ≥ 18     |                                          |
-| npm       | ≥ 9      |                                          |
-| git       | any      |                                          |
-| Docker    | yes      | Runs local Postgres via Docker Compose   |
-| unzip     | yes      | Used by `nibras setup`                   |
+| Tool      | Required | Notes                                        |
+| --------- | -------- | -------------------------------------------- |
+| Node.js   | ≥ 18     |                                              |
+| npm       | ≥ 9      |                                              |
+| git       | any      |                                              |
+| Docker    | yes      | Runs local Postgres via Docker Compose       |
+| unzip     | yes      | Used by `nibras setup`                       |
 | wget/curl | yes      | Used by `nibras setup` for HTTP(S) downloads |
-| ngrok     | optional | Required for live GitHub webhook testing |
-| check50   | optional | Required only for check50-type projects  |
+| ngrok     | optional | Required for live GitHub webhook testing     |
+| check50   | optional | Required only for check50-type projects      |
 
 ---
 
@@ -176,6 +176,7 @@ npm run dev
 ```
 
 `npm run dev` will:
+
 1. Start the Postgres container via Docker Compose
 2. Wait for Postgres readiness
 3. Apply Prisma migrations (`prisma migrate deploy`)
@@ -184,11 +185,11 @@ npm run dev
 
 **Local endpoints:**
 
-| Service | URL |
-| ------- | --- |
-| API health | `http://127.0.0.1:4848/v1/health` |
-| Web dashboard | `http://127.0.0.1:3000` |
-| Worker health | `http://127.0.0.1:9090/healthz` |
+| Service       | URL                               |
+| ------------- | --------------------------------- |
+| API health    | `http://127.0.0.1:4848/v1/health` |
+| Web dashboard | `http://127.0.0.1:3000`           |
+| Worker health | `http://127.0.0.1:9090/healthz`   |
 
 ---
 
@@ -251,12 +252,12 @@ contracts → core → github
                  → grading
 ```
 
-| Package | Description |
-| ------- | ----------- |
-| `@nibras/contracts` | Zod schemas and TypeScript types shared by all layers |
-| `@nibras/core` | API client (with token refresh), config, manifest, git helpers |
-| `@nibras/github` | GitHub App JWT signing and webhook HMAC validation |
-| `@nibras/grading` | AI semantic grading runner (OpenAI-compatible) |
+| Package             | Description                                                    |
+| ------------------- | -------------------------------------------------------------- |
+| `@nibras/contracts` | Zod schemas and TypeScript types shared by all layers          |
+| `@nibras/core`      | API client (with token refresh), config, manifest, git helpers |
+| `@nibras/github`    | GitHub App JWT signing and webhook HMAC validation             |
+| `@nibras/grading`   | AI semantic grading runner (OpenAI-compatible)                 |
 
 ### Legacy CLI (`src/`)
 
@@ -268,15 +269,15 @@ contracts → core → github
 
 Copy `.env.example` to `.env`. Groups:
 
-| Group | Required | Key vars |
-| ----- | -------- | -------- |
-| Database | yes | `DATABASE_URL` |
+| Group      | Required                 | Key vars                                                                                                       |
+| ---------- | ------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Database   | yes                      | `DATABASE_URL`                                                                                                 |
 | GitHub App | yes (for OAuth/webhooks) | `GITHUB_APP_ID`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` |
-| Session | yes | `SESSION_SECRET` |
-| App URLs | yes | `NIBRAS_API_BASE_URL`, `NIBRAS_WEB_BASE_URL` |
-| AI Grading | optional | `NIBRAS_AI_API_KEY`, `NIBRAS_AI_MODEL`, `NIBRAS_AI_BASE_URL`, `NIBRAS_AI_MIN_CONFIDENCE` |
-| Email | optional | `RESEND_API_KEY`, `NIBRAS_EMAIL_FROM` |
-| Monitoring | optional | `SENTRY_DSN` |
+| Session    | yes                      | `SESSION_SECRET`                                                                                               |
+| App URLs   | yes                      | `NIBRAS_API_BASE_URL`, `NIBRAS_WEB_BASE_URL`                                                                   |
+| AI Grading | optional                 | `NIBRAS_AI_API_KEY`, `NIBRAS_AI_MODEL`, `NIBRAS_AI_BASE_URL`, `NIBRAS_AI_MIN_CONFIDENCE`                       |
+| Email      | optional                 | `RESEND_API_KEY`, `NIBRAS_EMAIL_FROM`                                                                          |
+| Monitoring | optional                 | `SENTRY_DSN`                                                                                                   |
 
 See `.env.example` for all variables with documentation.
 
@@ -338,12 +339,12 @@ When `NIBRAS_AI_API_KEY` is set, the worker runs semantic grading after verifica
 - Reasoning summaries and evidence quotes
 - Auto-flagging of low-confidence submissions for human review
 
-| Env var | Default | Description |
-| ------- | ------- | ----------- |
-| `NIBRAS_AI_API_KEY` | — | Enables AI grading |
-| `NIBRAS_AI_MODEL` | `gpt-4o-mini` | Model name |
-| `NIBRAS_AI_BASE_URL` | OpenAI | Override for Azure, Ollama, or other OpenAI-compatible providers |
-| `NIBRAS_AI_MIN_CONFIDENCE` | `0.8` | Submissions below this threshold are flagged for review |
+| Env var                    | Default       | Description                                                      |
+| -------------------------- | ------------- | ---------------------------------------------------------------- |
+| `NIBRAS_AI_API_KEY`        | —             | Enables AI grading                                               |
+| `NIBRAS_AI_MODEL`          | `gpt-4o-mini` | Model name                                                       |
+| `NIBRAS_AI_BASE_URL`       | OpenAI        | Override for Azure, Ollama, or other OpenAI-compatible providers |
+| `NIBRAS_AI_MIN_CONFIDENCE` | `0.8`         | Submissions below this threshold are flagged for review          |
 
 Omit `NIBRAS_AI_API_KEY` to disable entirely — no other changes required.
 
@@ -351,11 +352,11 @@ Omit `NIBRAS_AI_API_KEY` to disable entirely — no other changes required.
 
 When `RESEND_API_KEY` is set, transactional emails are sent automatically:
 
-| Trigger | Recipient |
-| ------- | --------- |
-| Submission verified (passed / failed / needs review) | Student |
-| Submission flagged for human review | All course instructors and TAs |
-| Instructor submits a review | Student |
+| Trigger                                              | Recipient                      |
+| ---------------------------------------------------- | ------------------------------ |
+| Submission verified (passed / failed / needs review) | Student                        |
+| Submission flagged for human review                  | All course instructors and TAs |
+| Instructor submits a review                          | Student                        |
 
 ```env
 RESEND_API_KEY=re_...
@@ -368,11 +369,11 @@ The sender address must be a verified domain in your Resend account. Omit `RESEN
 
 After every verified submission, the worker posts a GitHub commit status to the student's repo:
 
-| Nibras status | GitHub badge | Label |
-| ------------- | ------------ | ----- |
-| `passed` | ✅ green | All tests passed |
-| `failed` | ❌ red | Tests failed |
-| `needs_review` | 🔄 pending | Tests passed — awaiting instructor review |
+| Nibras status  | GitHub badge | Label                                     |
+| -------------- | ------------ | ----------------------------------------- |
+| `passed`       | ✅ green     | All tests passed                          |
+| `failed`       | ❌ red       | Tests failed                              |
+| `needs_review` | 🔄 pending   | Tests passed — awaiting instructor review |
 
 Requires the GitHub App to have **Commit statuses: Read and write** and the student to have completed the app install flow. Skipped silently if either is missing.
 
@@ -428,6 +429,7 @@ For the full manual validation sequence, see `TEST.md`.
 ## CI/CD
 
 **`.github/workflows/ci.yml`** — runs on every push and PR:
+
 1. Spin up Postgres 16
 2. `npm ci` → `db:generate` → `db:deploy`
 3. Lint (`eslint` + `prettier --check`)
@@ -436,6 +438,7 @@ For the full manual validation sequence, see `TEST.md`.
 6. Build web app (`next build`)
 
 **`.github/workflows/release.yml`** — triggers on `v*` tags:
+
 1. Build all packages
 2. Publish `@nibras/cli` to npm (public)
 3. Create a GitHub Release with auto-generated notes

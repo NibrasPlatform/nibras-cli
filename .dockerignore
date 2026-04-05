@@ -1,0 +1,36 @@
+# flyctl launch added from .gitignore
+**/node_modules
+**/**/node_modules
+**/dist
+**/.next
+**/**/.next
+**/apps/*/dist
+**/packages/*/dist
+**/apps/web/.next
+**/apps/cli/bundle
+**/.env
+**/.DS_Store
+**/*.log
+**/tmp
+**/.idea
+**/xx
+**/Frontend-examples
+**/exam1.zip
+exam1
+!test/fixtures/answers/exam1
+!test/fixtures/answers/exam1/**
+!test/fixtures/private-grading/cs161/exam1
+!test/fixtures/private-grading/cs161/exam1/**
+
+# flyctl launch added from .idea/.gitignore
+# Default ignored files
+.idea/shelf
+.idea/workspace.xml
+# Ignored default folder with query files
+.idea/queries
+# Datasource local storage ignored files
+.idea/dataSources
+.idea/dataSources.local.xml
+# Editor-based HTTP Client requests
+.idea/httpRequests
+fly.toml

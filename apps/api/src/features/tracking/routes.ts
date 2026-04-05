@@ -551,6 +551,18 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
           return;
         }
       }
+      // Team delivery mode is not implemented in v1.
+      // Guard here to prevent silent misbehaviour (submissions would be treated as individual).
+      if (project.deliveryMode === 'team') {
+        reply
+          .code(501)
+          .send(
+            Errors.unavailable(
+              'Team delivery mode is not yet supported. Change the project to individual mode to accept submissions.'
+            )
+          );
+        return;
+      }
       const payload = CreateTrackingSubmissionRequestSchema.parse(request.body);
       const created = await store.createTrackingSubmission(
         requestBaseUrl(request),

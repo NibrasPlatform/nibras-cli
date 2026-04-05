@@ -1,0 +1,12 @@
+# Nibras uses three separate Fly.io apps, each with their own config:
+#
+#   fly.api.toml    → nibras-api    (API server, port 4848)
+#   fly.worker.toml → nibras-worker (background worker, port 9090)
+#   fly.web.toml    → nibras-web    (Next.js frontend, port 3000)
+#
+# Deploy each with:
+#   fly deploy --config fly.api.toml    --app nibras-api
+#   fly deploy --config fly.worker.toml --app nibras-worker
+#   fly deploy --config fly.web.toml    --app nibras-web \
+#     --build-arg NEXT_PUBLIC_NIBRAS_API_BASE_URL=https://nibras-api.fly.dev \
+#     --build-arg NEXT_PUBLIC_NIBRAS_WEB_BASE_URL=https://nibras-web.fly.dev

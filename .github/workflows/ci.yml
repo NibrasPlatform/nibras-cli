@@ -27,6 +27,14 @@ jobs:
     env:
       DATABASE_URL: postgresql://nibras:nibras@localhost:5432/nibras_test
       NODE_ENV: test
+      # Stub values so validate:env passes in CI — real secrets come from repo secrets in prod
+      NIBRAS_ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000000'
+      GITHUB_APP_ID: '12345'
+      GITHUB_APP_CLIENT_ID: 'Iv1.stub'
+      GITHUB_APP_CLIENT_SECRET: 'stub-client-secret'
+      GITHUB_APP_PRIVATE_KEY: 'stub-private-key'
+      GITHUB_APP_NAME: 'nibras-ci'
+      GITHUB_WEBHOOK_SECRET: 'stub-webhook-secret'
 
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +46,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Validate environment variables
+        run: npm run validate:env
 
       - name: Generate Prisma client
         run: npm run db:generate

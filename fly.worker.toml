@@ -1,0 +1,21 @@
+app = 'nibras-worker'
+primary_region = 'iad'
+
+[build]
+  dockerfile = 'Dockerfile.worker'
+
+# The worker is not publicly routed — it pulls jobs from the queue and
+# exposes only an internal /healthz endpoint for health checks.
+[[services]]
+  internal_port = 9090
+  protocol = 'tcp'
+  [[services.tcp_checks]]
+    grace_period = "10s"
+    interval = "15s"
+    restart_limit = 0
+    timeout = "5s"
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
