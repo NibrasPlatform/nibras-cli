@@ -97,21 +97,23 @@ function MilestoneCard({
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
         >
-          <div className={styles.milestoneTitleRow}>
-            <strong className={styles.milestoneTitle}>{milestone.title}</strong>
-            {milestone.isFinal && <span className={styles.finalBadge}>Final</span>}
-            <span className={`${styles.statusPill} ${statusColor(milestone.status)}`}>
-              {milestone.statusLabel}
-            </span>
+          <div className={styles.milestoneHeaderLeft}>
+            <div className={styles.milestoneTitleRow}>
+              <strong className={styles.milestoneTitle}>{milestone.title}</strong>
+              {milestone.isFinal && <span className={styles.finalBadge}>Final</span>}
+              <span className={`${styles.statusPill} ${statusColor(milestone.status)}`}>
+                {milestone.statusLabel}
+              </span>
+            </div>
+            {milestone.dueAt && (
+              <span
+                className={`${styles.dueDate} ${dueDateColor(milestone.dueAt, milestone.status)}`}
+              >
+                {dueDateText(milestone.dueAt, milestone.dueDateLabel)}
+                {days !== null && days < 0 && !isApproved ? ' ⚠' : ''}
+              </span>
+            )}
           </div>
-          {milestone.dueAt && (
-            <span
-              className={`${styles.dueDate} ${dueDateColor(milestone.dueAt, milestone.status)}`}
-            >
-              {dueDateText(milestone.dueAt, milestone.dueDateLabel)}
-              {days !== null && days < 0 && !isApproved ? ' ⚠' : ''}
-            </span>
-          )}
           <span className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`}>▾</span>
         </button>
 
