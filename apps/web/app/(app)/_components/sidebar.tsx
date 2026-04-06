@@ -209,8 +209,8 @@ export default function Sidebar({
       {/* Bottom links */}
       <nav className="sidebarNav" aria-label="Secondary">
         <Link
-          href="/dashboard"
-          className="navLink"
+          href="/settings"
+          className={`navLink ${pathname === '/settings' ? 'navLinkActive navLinkAccentBorder' : ''}`}
           title={collapsed ? 'Settings' : undefined}
           style={collapsed ? { justifyContent: 'center', padding: '9px 0' } : undefined}
         >

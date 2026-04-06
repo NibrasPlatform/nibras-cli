@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/session';
 import Sidebar from './sidebar';
 import TopHeader from './top-header';
@@ -22,6 +22,24 @@ export type ShellUser = ShellSessionPayload['user'];
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<ShellUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const shellRef = useRef<HTMLDivElement>(null);
+
+  // Apply compact mode from localStorage and listen for changes
+  useEffect(() => {
+    function applyCompact() {
+      const compact = localStorage.getItem('nibras.compact') === 'true';
+      shellRef.current?.setAttribute('data-compact', String(compact));
+    }
+
+    applyCompact();
+
+    function onCompactChanged() {
+      applyCompact();
+    }
+
+    window.addEventListener('nibras:compact-changed', onCompactChanged);
+    return () => window.removeEventListener('nibras:compact-changed', onCompactChanged);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -57,7 +75,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className={styles.appShell}>
+    <div ref={shellRef} className={styles.appShell}>
       <Sidebar user={session} loading={loading} />
       <div className={styles.mainArea}>
         <TopHeader user={session} loading={loading} />

@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import ThemeToggle from './theme-toggle';
+import NotificationsPanel from './notifications-panel';
 
 type ShellSessionUser = {
   username: string;
@@ -29,26 +29,8 @@ const BREADCRUMBS: Record<string, string> = {
   '/instructor': 'Instructor',
   '/instructor/onboarding': 'CLI Setup Guide',
   '/admin': 'Admin',
+  '/settings': 'Settings',
 };
-
-function BellIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path
-        d="M9 1.5a5.5 5.5 0 00-5.5 5.5v3L2 12h14l-1.5-2V7A5.5 5.5 0 009 1.5z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M7 12v.5a2 2 0 004 0V12"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 function SearchIcon() {
   return (
@@ -99,17 +81,8 @@ export default function TopHeader({
 
       {/* Right: actions */}
       <div className="headerActions">
-        <ThemeToggle />
-
-        {/* Notification bell */}
-        <button
-          className="iconButton notifBadge"
-          aria-label="Notifications"
-          title="Notifications"
-          style={{ position: 'relative' }}
-        >
-          <BellIcon />
-        </button>
+        {/* Notification bell with panel */}
+        <NotificationsPanel user={user} />
 
         {/* Profile chip */}
         <div className="profileChip" aria-live="polite">

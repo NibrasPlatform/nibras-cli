@@ -115,8 +115,8 @@ export default function HomePage() {
         </h1>
 
         <p className={styles.sub}>
-          GitHub-native submissions, automated grading, and live student progress — one workflow,
-          less admin, more teaching.
+          Nibras brings GitHub-native submissions, automated grading, and live student progress into
+          one smooth workflow — so you spend less time managing and more time teaching.
         </p>
 
         <div className={styles.heroCtas}>
@@ -445,23 +445,20 @@ export default function HomePage() {
         <div className={styles.testimonials}>
           {[
             {
-              quote:
-                'Nibras cut my grading time in half. The CLI is a joy to use and students actually submit more often because the feedback loop is instant.',
-              name: 'Sarah Chen',
+              quote: 'blah',
+              name: 'Mahmoud AboZied',
               role: 'CS Instructor, State University',
               avatar: '/testimonials/sarah-chen.svg',
             },
             {
-              quote:
-                'Finally a platform that treats students like real developers. GitHub-backed submissions, real commits, automated tests — exactly what I wanted.',
-              name: 'Marcus Wright',
+              quote: 'blah',
+              name: 'Mahmoud AboZied',
               role: 'Bootcamp Lead, TechPath',
               avatar: '/testimonials/marcus-wright.svg',
             },
             {
-              quote:
-                "The instructor dashboard is gorgeous. I can see every student's progress at a glance without digging through spreadsheets.",
-              name: 'Priya Nair',
+              quote: 'blah',
+              name: 'Mahmoud AboZied',
               role: 'Data Science Professor',
               avatar: '/testimonials/priya-nair.svg',
             },

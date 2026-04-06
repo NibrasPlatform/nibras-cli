@@ -1,0 +1,201 @@
+.page {
+  padding: 28px 32px;
+  max-width: 680px;
+}
+
+.pageHeader {
+  margin-bottom: 28px;
+}
+
+.pageTitle {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.pageSubtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+/* Profile */
+.profileRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatarFallback {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.profileName {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.profileEmail {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.profileGitHub {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+/* Preferences */
+.prefRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.prefInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.prefLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: default;
+}
+
+.prefDesc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+
+/* Toggle */
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-muted);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.toggleOn {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.18s ease;
+  display: block;
+}
+
+.toggleOn .toggleThumb {
+  transform: translateX(18px);
+}
+
+/* Account */
+.accountRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.signOutRow {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.signOutBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: var(--radius-xs);
+  background: rgba(248, 113, 113, 0.1);
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  transition: background 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.signOutBtn:hover {
+  background: rgba(248, 113, 113, 0.18);
+  border-color: rgba(248, 113, 113, 0.35);
+}

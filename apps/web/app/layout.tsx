@@ -25,16 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var saved = localStorage.getItem('nibras.theme');
-                  document.documentElement.setAttribute("data-theme", saved || "dark");
-                } catch (error) {
-                  document.documentElement.setAttribute("data-theme", "dark");
-                }
-              })();
-            `,
+            __html: `document.documentElement.setAttribute("data-theme","dark");`,
           }}
         />
         {children}

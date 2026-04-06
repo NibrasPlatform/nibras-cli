@@ -717,3 +717,67 @@ main {
   background: var(--danger);
   border: 2px solid var(--sidebar-bg);
 }
+
+/* ── Compact mode ────────────────────────────────────────────────────────── */
+
+[data-compact='true'] .topHeader {
+  padding: 8px 20px;
+}
+
+[data-compact='true'] .sidebar {
+  padding: 10px 8px;
+  gap: 4px;
+}
+
+[data-compact='true'] .brandBlock {
+  padding: 8px 4px;
+  margin-bottom: 4px;
+}
+
+[data-compact='true'] .navLink {
+  padding: 6px 10px;
+  gap: 8px;
+}
+
+[data-compact='true'] .sidebarFooter {
+  padding: 8px 4px;
+  gap: 6px;
+}
+
+[data-compact='true'] .pageBody {
+  padding: 16px 20px;
+}
+
+[data-compact='true'] .pageSection {
+  gap: 14px;
+}
+
+[data-compact='true'] .surfaceCard {
+  padding: 14px 16px;
+}
+
+[data-compact='true'] .pageHero {
+  padding: 18px 22px;
+}
+
+[data-compact='true'] .buttonPrimary,
+[data-compact='true'] .buttonSecondary {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+[data-compact='true'] .iconButton {
+  width: 36px;
+  height: 36px;
+}
+
+[data-compact='true'] .profileChip {
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+[data-compact='true'] .sectionEyebrow {
+  font-size: 10px;
+  margin-bottom: 6px;
+}
