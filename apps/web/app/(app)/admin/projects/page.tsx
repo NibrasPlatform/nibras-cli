@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '../../../lib/session';
+import { useFetch } from '../../../lib/use-fetch';
 import styles from '../../instructor/instructor.module.css';
 
 type Project = {
@@ -19,25 +20,12 @@ type CourseGroup = {
 };
 
 export default function AdminProjectsPage() {
-  const [groups, setGroups] = useState<CourseGroup[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, loading, error } = useFetch<{ courses: CourseGroup[] }>('/v1/admin/projects');
+  const [groups, setGroups] = useState<CourseGroup[] | null>(null);
   const [archiving, setArchiving] = useState<string | null>(null);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await apiFetch('/v1/admin/projects', { auth: true });
-        if (!res.ok) throw new Error('Failed to load projects.');
-        const data = (await res.json()) as { courses: CourseGroup[] };
-        setGroups(data.courses || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  // Sync fetched data into local state so we can do optimistic updates on archive
+  const displayGroups = groups ?? data?.courses ?? [];
 
   async function handleArchive(projectId: string) {
     if (!confirm('Archive this project? Students will no longer be able to submit.')) return;
@@ -48,8 +36,8 @@ export default function AdminProjectsPage() {
         auth: true,
       });
       if (!res.ok) throw new Error('Archive failed.');
-      setGroups((prev) =>
-        prev.map((group) => ({
+      setGroups(
+        displayGroups.map((group) => ({
           ...group,
           projects: group.projects.map((p) =>
             p.id === projectId ? { ...p, status: 'archived' } : p
@@ -83,11 +71,11 @@ export default function AdminProjectsPage() {
       {loading && <p className={styles.muted}>Loading…</p>}
       {error && <p className={styles.errorText}>{error}</p>}
 
-      {!loading && !error && groups.length === 0 && (
+      {!loading && !error && displayGroups.length === 0 && (
         <p className={styles.muted}>No courses or projects found.</p>
       )}
 
-      {groups.map(({ course, projects }) => (
+      {displayGroups.map(({ course, projects }) => (
         <div key={course.id} className={styles.panel}>
           <div className={styles.panelHeader}>
             <h2>

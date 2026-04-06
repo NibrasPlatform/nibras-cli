@@ -1,36 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiFetch } from '../../lib/session';
+import { useFetch } from '../../lib/use-fetch';
 import styles from '../instructor/instructor.module.css';
 
 type Submission = { id: string; status: string };
 type StatusCount = Record<string, number>;
 
 export default function AdminPage() {
-  const [counts, setCounts] = useState<StatusCount>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await apiFetch('/v1/admin/submissions', { auth: true });
-        if (!res.ok) throw new Error('Failed to load submissions.');
-        const data = (await res.json()) as { submissions: Submission[] };
-        const tally: StatusCount = {};
-        for (const sub of data.submissions) {
-          tally[sub.status] = (tally[sub.status] || 0) + 1;
-        }
-        setCounts(tally);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const { data, loading, error } = useFetch<{ submissions: Submission[] }>('/v1/admin/submissions');
+  const counts: StatusCount = {};
+  for (const sub of data?.submissions ?? []) {
+    counts[sub.status] = (counts[sub.status] || 0) + 1;
+  }
 
   const statuses = ['queued', 'running', 'passed', 'failed', 'needs_review'];
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);

@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
-import { apiFetch } from '../../../../../../lib/session';
+import { useFormSubmit } from '../../../../../../lib/use-form-submit';
 import styles from '../../../../instructor.module.css';
 
 type RubricRow = { criterion: string; maxScore: number };
@@ -13,10 +13,12 @@ type ResourceRow = { label: string; url: string };
 export default function NewProjectPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = use(params);
   const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [rubric, setRubric] = useState<RubricRow[]>([{ criterion: '', maxScore: 10 }]);
   const [resources, setResources] = useState<ResourceRow[]>([]);
+  const { submitting, error, submit } = useFormSubmit({
+    url: '/v1/tracking/projects',
+    onSuccess: () => router.push(`/instructor/courses/${courseId}`),
+  });
 
   function addRubricRow() {
     setRubric((prev) => [...prev, { criterion: '', maxScore: 10 }]);
@@ -42,11 +44,8 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
     setResources((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setSubmitting(true);
-
     const form = new FormData(event.currentTarget);
     const slug = (form.get('title') as string)
       .trim()
@@ -54,7 +53,7 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
 
-    const payload = {
+    void submit({
       courseId,
       slug,
       title: (form.get('title') as string).trim(),
@@ -73,24 +72,7 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
           label: row.label.trim(),
           url: row.url.trim(),
         })),
-    };
-
-    try {
-      const res = await apiFetch('/v1/tracking/projects', {
-        method: 'POST',
-        auth: true,
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        throw new Error(body.error || `Request failed (${res.status}).`);
-      }
-      router.push(`/instructor/courses/${courseId}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error.');
-      setSubmitting(false);
-    }
+    });
   }
 
   return (

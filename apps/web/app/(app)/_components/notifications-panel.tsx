@@ -43,7 +43,7 @@ function deriveNotifications(
       type: 'github',
       title: 'GitHub App not installed',
       body: 'Install the GitHub App to enable repo provisioning and submissions.',
-      color: '#f59e0b',
+      color: 'var(--warning)',
     });
   }
 
@@ -56,7 +56,7 @@ function deriveNotifications(
         type: 'review',
         title: 'Needs review',
         body: m.title,
-        color: '#3b82f6',
+        color: 'var(--primary)',
       });
     } else if (m.dueAt) {
       const due = new Date(m.dueAt).getTime();
@@ -66,7 +66,7 @@ function deriveNotifications(
           type: 'overdue',
           title: 'Overdue',
           body: `${m.title} was due ${new Date(m.dueAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
-          color: '#f87171',
+          color: 'var(--danger)',
         });
       } else if (
         due - now <= sevenDays &&
@@ -79,7 +79,7 @@ function deriveNotifications(
           type: 'deadline',
           title: 'Upcoming deadline',
           body: `${m.title} due ${new Date(m.dueAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
-          color: '#fbbf24',
+          color: 'var(--warning)',
         });
       }
     }

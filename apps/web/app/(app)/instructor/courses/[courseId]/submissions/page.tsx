@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { use } from 'react';
-import { apiFetch } from '../../../../../lib/session';
+import { useFetch } from '../../../../../lib/use-fetch';
 import styles from '../../../instructor.module.css';
 
 type Submission = {
@@ -24,27 +24,11 @@ export default function CourseSubmissionsPage({
   params: Promise<{ courseId: string }>;
 }) {
   const { courseId } = use(params);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await apiFetch(`/v1/tracking/review-queue?courseId=${courseId}`, {
-          auth: true,
-        });
-        if (!res.ok) throw new Error('Failed to load submissions.');
-        const data = (await res.json()) as { submissions: Submission[] };
-        setSubmissions(data.submissions || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [courseId]);
+  const { data, loading, error } = useFetch<{ submissions: Submission[] }>(
+    `/v1/tracking/review-queue?courseId=${courseId}`
+  );
+  const submissions = data?.submissions ?? [];
 
   const filtered =
     statusFilter === 'all' ? submissions : submissions.filter((sub) => sub.status === statusFilter);

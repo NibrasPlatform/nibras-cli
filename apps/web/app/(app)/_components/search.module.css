@@ -1,0 +1,172 @@
+/* Search modal & trigger */
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-soft);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  min-width: 160px;
+}
+
+.trigger:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+
+.triggerText {
+  flex: 1;
+  text-align: left;
+}
+
+.kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+}
+
+/* dialog element */
+.dialog {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+}
+
+.dialog::backdrop {
+  display: none; /* handled by the dialog background itself */
+}
+
+.modal {
+  width: 100%;
+  max-width: 560px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-soft);
+}
+
+.input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.input::placeholder {
+  color: var(--text-soft);
+}
+
+.escKey {
+  padding: 2px 7px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+}
+
+.results {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.result:hover,
+.selected {
+  background: var(--surface-strong);
+}
+
+.resultIcon {
+  font-size: 14px;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.resultText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.resultTitle {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resultSub {
+  font-size: 11px;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resultType {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-soft);
+  flex-shrink: 0;
+}
+
+.empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-soft);
+  font-size: 13px;
+}

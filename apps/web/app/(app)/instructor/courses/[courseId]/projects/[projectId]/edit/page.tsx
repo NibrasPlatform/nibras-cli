@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import { apiFetch } from '../../../../../../../lib/session';
+import { useFormSubmit } from '../../../../../../../lib/use-form-submit';
 import styles from '../../../../../instructor.module.css';
 
 type RubricRow = { criterion: string; maxScore: number };
@@ -28,14 +29,18 @@ export default function EditProjectPage({
   const { courseId, projectId } = use(params);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [deliveryMode, setDeliveryMode] = useState('individual');
   const [status, setStatus] = useState('draft');
   const [rubric, setRubric] = useState<RubricRow[]>([]);
   const [resources, setResources] = useState<ResourceRow[]>([]);
+  const { submitting, error, submit } = useFormSubmit({
+    url: `/v1/tracking/projects/${projectId}`,
+    method: 'PATCH',
+    onSuccess: () => router.push(`/instructor/courses/${courseId}/projects/${projectId}`),
+  });
 
   useEffect(() => {
     void (async () => {
@@ -50,7 +55,7 @@ export default function EditProjectPage({
         setRubric(data.rubric.length > 0 ? data.rubric : []);
         setResources(data.resources || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error.');
+        setLoadError(err instanceof Error ? err.message : 'Unknown error.');
       } finally {
         setLoading(false);
       }
@@ -81,12 +86,9 @@ export default function EditProjectPage({
     setResources((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setSubmitting(true);
-
-    const payload = {
+    void submit({
       title: title.trim(),
       description: description.trim(),
       deliveryMode,
@@ -103,30 +105,21 @@ export default function EditProjectPage({
           label: row.label.trim(),
           url: row.url.trim(),
         })),
-    };
-
-    try {
-      const res = await apiFetch(`/v1/tracking/projects/${projectId}`, {
-        method: 'PATCH',
-        auth: true,
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        throw new Error(body.error || `Request failed (${res.status}).`);
-      }
-      router.push(`/instructor/courses/${courseId}/projects/${projectId}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error.');
-      setSubmitting(false);
-    }
+    });
   }
 
   if (loading) {
     return (
       <div className={styles.formPage}>
         <p className={styles.muted}>Loading project…</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className={styles.formPage}>
+        <p className={styles.errorText}>{loadError}</p>
       </div>
     );
   }

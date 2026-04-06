@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import { apiFetch, discoverApiBaseUrl } from '../../lib/session';
+import { useFormSubmit } from '../../lib/use-form-submit';
 import NibrasLogo from '../../_components/nibras-logo';
 
 type InvitePreview = {
@@ -22,10 +23,16 @@ export default function JoinPage({ params }: { params: Promise<{ code: string }>
   const [invite, setInvite] = useState<InvitePreview | null>(null);
   const [loadingInvite, setLoadingInvite] = useState(true);
   const [inviteError, setInviteError] = useState<string | null>(null);
-
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [joining, setJoining] = useState(false);
-  const [joinError, setJoinError] = useState<string | null>(null);
+  const [signInError, setSignInError] = useState<string | null>(null);
+  const {
+    submitting: joining,
+    error: joinError,
+    submit: joinSubmit,
+  } = useFormSubmit({
+    url: `/v1/tracking/invites/${code}/join`,
+    onSuccess: () => router.push('/projects'),
+  });
 
   useEffect(() => {
     void (async () => {
@@ -61,27 +68,12 @@ export default function JoinPage({ params }: { params: Promise<{ code: string }>
       const returnTo = `${window.location.href}`;
       window.location.href = `${apiBaseUrl}/v1/github/oauth/start?return_to=${encodeURIComponent(returnTo)}`;
     } catch {
-      setJoinError('Could not initiate sign-in. Please try again.');
+      setSignInError('Could not initiate sign-in. Please try again.');
     }
   }
 
   async function handleJoin() {
-    setJoinError(null);
-    setJoining(true);
-    try {
-      const res = await apiFetch(`/v1/tracking/invites/${code}/join`, {
-        method: 'POST',
-        auth: true,
-      });
-      if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        throw new Error(body.error || 'Failed to join course.');
-      }
-      router.push('/projects');
-    } catch (err) {
-      setJoinError(err instanceof Error ? err.message : 'Failed to join course.');
-      setJoining(false);
-    }
+    await joinSubmit({});
   }
 
   return (
@@ -175,8 +167,10 @@ export default function JoinPage({ params }: { params: Promise<{ code: string }>
               </div>
             </div>
 
-            {joinError && (
-              <p style={{ color: 'var(--error, #e53e3e)', fontSize: 13, margin: 0 }}>{joinError}</p>
+            {(joinError || signInError) && (
+              <p style={{ color: 'var(--error, #e53e3e)', fontSize: 13, margin: 0 }}>
+                {joinError ?? signInError}
+              </p>
             )}
 
             {isAuthenticated ? (

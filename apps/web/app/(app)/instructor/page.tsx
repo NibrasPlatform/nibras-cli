@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiFetch } from '../../lib/session';
+import { useFetch } from '../../lib/use-fetch';
 import styles from './instructor.module.css';
 
 type Course = {
@@ -42,24 +41,7 @@ function QuickStartStep({
 }
 
 export default function InstructorPage() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await apiFetch('/v1/tracking/courses', { auth: true });
-        if (!res.ok) throw new Error('Failed to load courses.');
-        const data = (await res.json()) as Course[];
-        setCourses(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const { data: courses, loading, error } = useFetch<Course[]>('/v1/tracking/courses');
 
   return (
     <div className={styles.page}>
@@ -115,7 +97,7 @@ export default function InstructorPage() {
       {error && <p className={styles.errorText}>{error}</p>}
 
       {/* Empty state: rich quick-start */}
-      {!loading && !error && courses.length === 0 && (
+      {!loading && !error && (courses ?? []).length === 0 && (
         <div className={styles.emptyStateRich}>
           <div className={styles.emptyStateHeader}>
             <div className={styles.emptyStateIcon}>🎓</div>
@@ -161,9 +143,9 @@ export default function InstructorPage() {
       )}
 
       {/* Course grid */}
-      {courses.length > 0 && (
+      {(courses ?? []).length > 0 && (
         <div className={styles.courseGrid}>
-          {courses.map((course) => (
+          {(courses ?? []).map((course) => (
             <Link
               key={course.id}
               href={`/instructor/courses/${course.id}`}

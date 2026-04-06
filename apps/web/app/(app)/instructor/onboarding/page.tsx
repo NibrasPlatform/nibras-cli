@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import CliCodeBlock from '../../_components/cli-code-block';
 import TerminalMockup, { type TerminalLine } from '../../_components/terminal-mockup';
+import { prefs } from '../../../lib/prefs';
 import styles from './page.module.css';
 
 // ── OS type ──────────────────────────────────────────────────────────────────
@@ -179,22 +180,14 @@ export default function OnboardingPage() {
 
   // Detect OS on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('nibras.onboarding.os') as OS | null;
-      setOs(saved ?? detectOS());
-    } catch {
-      setOs(detectOS());
-    }
+    const saved = prefs.getOnboardingOs() as OS | null;
+    setOs(saved ?? detectOS());
   }, []);
 
   // Persist OS selection
   function handleSetOs(v: OS) {
     setOs(v);
-    try {
-      localStorage.setItem('nibras.onboarding.os', v);
-    } catch {
-      /* ignore */
-    }
+    prefs.setOnboardingOs(v);
   }
 
   // IntersectionObserver — track active section

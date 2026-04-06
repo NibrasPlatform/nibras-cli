@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../lib/session';
+import { prefs } from '../../lib/prefs';
 import styles from './page.module.css';
 
 type SessionUser = {
@@ -44,7 +45,7 @@ export default function SettingsPage() {
   const [installUrlLoading, setInstallUrlLoading] = useState(false);
 
   useEffect(() => {
-    setCompact(localStorage.getItem('nibras.compact') === 'true');
+    setCompact(prefs.getCompact());
 
     void (async () => {
       try {
@@ -79,7 +80,7 @@ export default function SettingsPage() {
 
   function handleCompactChange(val: boolean) {
     setCompact(val);
-    localStorage.setItem('nibras.compact', String(val));
+    prefs.setCompact(val);
     window.dispatchEvent(new Event('nibras:compact-changed'));
   }
 

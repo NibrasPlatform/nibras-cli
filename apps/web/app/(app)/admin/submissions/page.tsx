@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '../../../lib/session';
+import { useFetch } from '../../../lib/use-fetch';
 import styles from '../../instructor/instructor.module.css';
 
 type Submission = {
@@ -20,31 +21,13 @@ type Submission = {
 const OVERRIDE_STATUSES = ['passed', 'failed', 'needs_review'] as const;
 
 export default function AdminSubmissionsPage() {
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, loading, error } = useFetch<{ submissions: Submission[] }>('/v1/admin/submissions');
+  const [localSubmissions, setLocalSubmissions] = useState<Submission[] | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [overriding, setOverriding] = useState<string | null>(null);
   const [overrideValues, setOverrideValues] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    void loadSubmissions();
-  }, []);
-
-  async function loadSubmissions() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await apiFetch('/v1/admin/submissions', { auth: true });
-      if (!res.ok) throw new Error('Failed to load submissions.');
-      const data = (await res.json()) as { submissions: Submission[] };
-      setSubmissions(data.submissions || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error.');
-    } finally {
-      setLoading(false);
-    }
-  }
+  const submissions = localSubmissions ?? data?.submissions ?? [];
 
   async function handleOverride(submissionId: string) {
     const newStatus = overrideValues[submissionId];
@@ -61,8 +44,8 @@ export default function AdminSubmissionsPage() {
         const body = (await res.json()) as { error?: string };
         throw new Error(body.error || 'Override failed.');
       }
-      setSubmissions((prev) =>
-        prev.map((sub) => (sub.id === submissionId ? { ...sub, status: newStatus } : sub))
+      setLocalSubmissions(
+        submissions.map((sub) => (sub.id === submissionId ? { ...sub, status: newStatus } : sub))
       );
       setOverrideValues((prev) => {
         const next = { ...prev };

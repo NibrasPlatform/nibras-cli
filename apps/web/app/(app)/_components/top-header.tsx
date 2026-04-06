@@ -2,7 +2,9 @@
 
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { getInitials } from '../../lib/utils';
 import NotificationsPanel from './notifications-panel';
+import { SearchTrigger } from './search';
 
 type ShellSessionUser = {
   username: string;
@@ -10,18 +12,6 @@ type ShellSessionUser = {
   githubLinked: boolean;
   githubAppInstalled: boolean;
 };
-
-function getInitials(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return 'NB';
-  return (
-    trimmed
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() || '')
-      .join('') || trimmed.slice(0, 2).toUpperCase()
-  );
-}
 
 const BREADCRUMBS: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -31,15 +21,6 @@ const BREADCRUMBS: Record<string, string> = {
   '/admin': 'Admin',
   '/settings': 'Settings',
 };
-
-function SearchIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-      <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M10.5 10.5l3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 export default function TopHeader({
   user,
@@ -75,8 +56,7 @@ export default function TopHeader({
 
       {/* Center: Search */}
       <div className="headerSearch" style={{ flex: '0 1 360px' }}>
-        <SearchIcon />
-        <input type="search" placeholder="Search projects, courses…" aria-label="Search" />
+        <SearchTrigger />
       </div>
 
       {/* Right: actions */}

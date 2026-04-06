@@ -1,46 +1,35 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '../../../../lib/session';
+import { useFormSubmit } from '../../../../lib/use-form-submit';
 import styles from '../../instructor.module.css';
 
 export default function NewCoursePage() {
   const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { submitting, error, submit } = useFormSubmit<{
+    slug: string;
+    title: string;
+    termLabel: string;
+    courseCode: string;
+  }>({
+    url: '/v1/tracking/courses',
+    onSuccess: (data) => {
+      const course = data as { id: string };
+      router.push(`/instructor/courses/${course.id}`);
+    },
+  });
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setSubmitting(true);
-
     const form = new FormData(event.currentTarget);
-    const payload = {
+    void submit({
       slug: (form.get('slug') as string).trim().toLowerCase(),
       title: (form.get('title') as string).trim(),
       termLabel: (form.get('termLabel') as string).trim(),
       courseCode: (form.get('courseCode') as string).trim(),
-    };
-
-    try {
-      const res = await apiFetch('/v1/tracking/courses', {
-        method: 'POST',
-        auth: true,
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        throw new Error(body.error || `Request failed (${res.status}).`);
-      }
-      const course = (await res.json()) as { id: string };
-      router.push(`/instructor/courses/${course.id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error.');
-      setSubmitting(false);
-    }
+    });
   }
 
   return (

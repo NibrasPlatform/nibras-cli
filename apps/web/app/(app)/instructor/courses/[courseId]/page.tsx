@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { use } from 'react';
-import { apiFetch } from '../../../../lib/session';
+import { useFetch } from '../../../../lib/use-fetch';
 import styles from '../../instructor.module.css';
 
 type Project = {
@@ -25,33 +24,20 @@ type Submission = {
 
 export default function CourseDetailPage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = use(params);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: projects,
+    loading: loadingProjects,
+    error: errorProjects,
+  } = useFetch<Project[]>(`/v1/tracking/courses/${courseId}/projects`);
+  const {
+    data: subData,
+    loading: loadingSubs,
+    error: errorSubs,
+  } = useFetch<{ submissions: Submission[] }>(`/v1/tracking/review-queue?courseId=${courseId}`);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [projRes, subRes] = await Promise.all([
-          apiFetch(`/v1/tracking/courses/${courseId}/projects`, { auth: true }),
-          apiFetch(`/v1/tracking/review-queue?courseId=${courseId}`, { auth: true }),
-        ]);
-
-        if (projRes.ok) {
-          setProjects((await projRes.json()) as Project[]);
-        }
-        if (subRes.ok) {
-          const data = (await subRes.json()) as { submissions: Submission[] };
-          setSubmissions(data.submissions || []);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load course data.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [courseId]);
+  const loading = loadingProjects || loadingSubs;
+  const error = errorProjects || errorSubs || null;
+  const submissions = subData?.submissions ?? [];
 
   function statusClass(status: string) {
     if (status === 'published') return styles.statusPublished;
@@ -87,13 +73,13 @@ export default function CourseDetailPage({ params }: { params: Promise<{ courseI
             <div className={styles.panel}>
               <div className={styles.panelHeader}>
                 <h2>Projects</h2>
-                <span className={styles.muted}>{projects.length} total</span>
+                <span className={styles.muted}>{(projects ?? []).length} total</span>
               </div>
-              {projects.length === 0 ? (
+              {(projects ?? []).length === 0 ? (
                 <p className={styles.muted}>No projects yet.</p>
               ) : (
                 <div className={styles.projectList}>
-                  {projects.map((project) => (
+                  {(projects ?? []).map((project) => (
                     <Link
                       key={project.id}
                       href={`/instructor/courses/${courseId}/projects/${project.id}`}

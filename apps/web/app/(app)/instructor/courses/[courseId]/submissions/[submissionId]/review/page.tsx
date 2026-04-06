@@ -53,7 +53,7 @@ const REVIEW_STATUSES = ['approved', 'changes_requested', 'graded'] as const;
 
 function ConfidenceBadge({ value }: { value: number }) {
   const pct = Math.round(value * 100);
-  const color = value >= 0.8 ? '#34d399' : value >= 0.6 ? '#fbbf24' : '#f87171';
+  const color = value >= 0.8 ? 'var(--success)' : value >= 0.6 ? 'var(--warning)' : 'var(--danger)';
   return (
     <span
       style={{
@@ -390,10 +390,10 @@ export default function SubmissionReviewPage({
                               fontWeight: 700,
                               color:
                                 c.earned >= c.points * 0.7
-                                  ? '#34d399'
+                                  ? 'var(--success)'
                                   : c.earned > 0
-                                    ? '#fbbf24'
-                                    : '#f87171',
+                                    ? 'var(--warning)'
+                                    : 'var(--danger)',
                             }}
                           >
                             {c.earned} / {c.points}

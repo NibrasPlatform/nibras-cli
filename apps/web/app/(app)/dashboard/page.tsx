@@ -4,31 +4,10 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import type { TrackingMilestone } from '@nibras/contracts';
 import { apiFetch } from '../../lib/session';
-import { loadDashboardData } from './load-dashboard-data.js';
-import type { LoadDashboardDataResult } from './load-dashboard-data.js';
+import { formatShortDate, daysUntil, getGreeting } from '../../lib/utils';
+import { loadDashboardData } from './load-dashboard-data';
+import type { LoadDashboardDataResult } from './load-dashboard-data';
 import styles from './page.module.css';
-
-/* ── helpers ──────────────────────────────────────────────────────────────── */
-
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
-function formatShortDate(value: string | null | undefined): string {
-  if (!value) return 'No due date';
-  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function daysUntil(dateStr: string): number {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const d = new Date(dateStr);
-  d.setHours(0, 0, 0, 0);
-  return Math.round((d.getTime() - now.getTime()) / 86_400_000);
-}
 
 function sortByDueDate(a: TrackingMilestone, b: TrackingMilestone): number {
   if (!a.dueAt && !b.dueAt) return 0;
@@ -138,8 +117,7 @@ export default function DashboardPage() {
   const me = data?.me ?? null;
   const dashboard = data?.dashboard ?? null;
   const installUrl = data?.installUrl ?? '';
-  const githubAppInstalled = (me as { user?: { githubAppInstalled?: boolean } } | null)?.user
-    ?.githubAppInstalled;
+  const githubAppInstalled = me?.user?.githubAppInstalled;
   const showInstallBanner = !loading && (installUrl || githubAppInstalled === false);
 
   const displayName = me?.user?.username || me?.user?.githubLogin || 'Developer';
@@ -172,14 +150,21 @@ export default function DashboardPage() {
   );
 
   const overdueMilestones = useMemo(
-    () => datedMilestones.filter((m) => daysUntil(m.dueAt!) < 0 && m.statusLabel !== 'approved'),
+    () =>
+      datedMilestones.filter((m) => {
+        const d = daysUntil(m.dueAt);
+        return d !== null && d < 0 && m.statusLabel !== 'approved';
+      }),
     [datedMilestones]
   );
 
   const upcomingMilestones = useMemo(
     () =>
       datedMilestones
-        .filter((m) => daysUntil(m.dueAt!) >= 0 && m.statusLabel !== 'approved')
+        .filter((m) => {
+          const d = daysUntil(m.dueAt);
+          return d !== null && d >= 0 && m.statusLabel !== 'approved';
+        })
         .slice(0, 5),
     [datedMilestones]
   );
@@ -200,7 +185,7 @@ export default function DashboardPage() {
       return `⚠️ You have ${overdueMilestones.length} overdue milestone${overdueMilestones.length > 1 ? 's' : ''} — check deadlines below.`;
     if (upcomingMilestones.length > 0) {
       const next = upcomingMilestones[0];
-      const days = daysUntil(next.dueAt!);
+      const days = daysUntil(next.dueAt) ?? 0;
       return `📅 Next deadline: ${next.title} — ${days === 0 ? 'today!' : days === 1 ? 'tomorrow' : `in ${days} days`}`;
     }
     if (totals.total > 0) return `🎉 All caught up! ${completionPct}% of milestones approved.`;
@@ -313,7 +298,7 @@ export default function DashboardPage() {
         <article className={styles.statCard}>
           <div
             className={styles.statIcon}
-            style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
+            style={{ background: 'rgba(52,211,153,0.12)', color: 'var(--success)' }}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <path
@@ -340,7 +325,7 @@ export default function DashboardPage() {
         <article className={styles.statCard}>
           <div
             className={styles.statIcon}
-            style={{ background: 'rgba(167,139,250,0.12)', color: '#a78bfa' }}
+            style={{ background: 'rgba(167,139,250,0.12)', color: 'var(--purple)' }}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5" />
@@ -365,7 +350,7 @@ export default function DashboardPage() {
         <article className={styles.statCard}>
           <div
             className={styles.statIcon}
-            style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa' }}
+            style={{ background: 'rgba(59,130,246,0.12)', color: 'var(--primary-strong)' }}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <rect
@@ -468,9 +453,9 @@ export default function DashboardPage() {
                     total={totals.total}
                   />
                   <div className={styles.barLegend}>
-                    <span className={styles.legendDot} style={{ background: '#34d399' }} />
+                    <span className={styles.legendDot} style={{ background: 'var(--success)' }} />
                     <span>Approved</span>
-                    <span className={styles.legendDot} style={{ background: '#a78bfa' }} />
+                    <span className={styles.legendDot} style={{ background: 'var(--purple)' }} />
                     <span>Review</span>
                     <span
                       className={styles.legendDot}
@@ -483,7 +468,12 @@ export default function DashboardPage() {
                 {/* Per-project rows */}
                 {activeProjects.map(({ project, stats }) => {
                   const pct = stats?.completion ?? 0;
-                  const dotColor = pct >= 80 ? '#34d399' : pct >= 40 ? '#fbbf24' : '#60a5fa';
+                  const dotColor =
+                    pct >= 80
+                      ? 'var(--success)'
+                      : pct >= 40
+                        ? 'var(--warning)'
+                        : 'var(--primary-strong)';
                   return (
                     <div key={project.id} className={styles.projectProgressRow}>
                       <span
@@ -593,7 +583,12 @@ export default function DashboardPage() {
               <div className={styles.courseList}>
                 {activeProjects.map(({ project, stats }) => {
                   const pct = stats?.completion ?? 0;
-                  const dotColor = pct >= 80 ? '#34d399' : pct >= 40 ? '#fbbf24' : '#60a5fa';
+                  const dotColor =
+                    pct >= 80
+                      ? 'var(--success)'
+                      : pct >= 40
+                        ? 'var(--warning)'
+                        : 'var(--primary-strong)';
                   return (
                     <div key={project.id} className={styles.courseCard}>
                       <div
@@ -682,7 +677,7 @@ export default function DashboardPage() {
             ) : (
               <div className={styles.deadlineList}>
                 {overdueMilestones.slice(0, 3).map((m) => {
-                  const d = daysUntil(m.dueAt!);
+                  const d = daysUntil(m.dueAt) ?? 0;
                   return (
                     <div key={m.id} className={`${styles.deadlineRow} ${styles.deadlineOverdue}`}>
                       <span className={`${styles.deadlineDot} ${styles.dotRed}`} />
@@ -699,13 +694,13 @@ export default function DashboardPage() {
                   );
                 })}
                 {upcomingMilestones.map((m) => {
-                  const d = daysUntil(m.dueAt!);
+                  const d = daysUntil(m.dueAt) ?? 0;
                   const urgent = d <= 2;
                   return (
                     <div key={m.id} className={styles.deadlineRow}>
                       <span
                         className={styles.deadlineDot}
-                        style={{ background: urgent ? '#fbbf24' : 'var(--primary)' }}
+                        style={{ background: urgent ? 'var(--warning)' : 'var(--primary)' }}
                       />
                       <div className={styles.deadlineBody}>
                         <strong>{m.title}</strong>
@@ -713,7 +708,7 @@ export default function DashboardPage() {
                       </div>
                       <time
                         className={styles.deadlineDate}
-                        style={{ color: urgent ? '#fbbf24' : undefined }}
+                        style={{ color: urgent ? 'var(--warning)' : undefined }}
                       >
                         {d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : formatShortDate(m.dueAt)}
                       </time>

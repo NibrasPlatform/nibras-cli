@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import NibrasLogo from '@/app/_components/nibras-logo';
+import { getInitials } from '../../lib/utils';
+import { prefs } from '../../lib/prefs';
 import { appNavItems } from './nav-config';
 
 type ShellSessionUser = {
@@ -15,18 +17,6 @@ type ShellSessionUser = {
   githubAppInstalled: boolean;
   systemRole?: string;
 };
-
-function initials(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return 'NB';
-  return (
-    trimmed
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() || '')
-      .join('') || trimmed.slice(0, 2).toUpperCase()
-  );
-}
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
   Dashboard: (
@@ -118,22 +108,13 @@ export default function Sidebar({
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('nibras.sidebar.collapsed');
-      if (saved === 'true') setCollapsed(true);
-    } catch {
-      // ignore
-    }
+    if (prefs.getSidebarCollapsed()) setCollapsed(true);
   }, []);
 
   function toggleCollapse() {
     const next = !collapsed;
     setCollapsed(next);
-    try {
-      localStorage.setItem('nibras.sidebar.collapsed', String(next));
-    } catch {
-      // ignore
-    }
+    prefs.setSidebarCollapsed(next);
   }
 
   return (
@@ -257,7 +238,7 @@ export default function Sidebar({
       {!collapsed && (
         <div className="sidebarFooter">
           <div className="sidebarProfile">
-            <span className="avatarCircle">{loading ? '…' : initials(displayName)}</span>
+            <span className="avatarCircle">{loading ? '…' : getInitials(displayName)}</span>
             <div>
               <strong>{loading ? 'Loading session' : displayName}</strong>
               <span>{user?.email || 'GitHub-linked account'}</span>
@@ -273,7 +254,7 @@ export default function Sidebar({
       {collapsed && (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
           <span className="avatarCircle" title={displayName}>
-            {loading ? '…' : initials(displayName)}
+            {loading ? '…' : getInitials(displayName)}
           </span>
         </div>
       )}

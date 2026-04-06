@@ -7,6 +7,7 @@ import type {
   TrackingProjectSummary,
 } from '@nibras/contracts';
 import { apiFetch, discoverApiBaseUrl } from '../../../lib/session';
+import { daysUntil } from '../../../lib/utils';
 import styles from './projects.module.css';
 
 type SubmissionType = 'github' | 'link' | 'text';
@@ -18,15 +19,6 @@ function statusColor(status: string): string {
   if (status === 'submitted' || status === 'under_review') return styles.statusReview;
   if (status === 'changes_requested') return styles.statusChanges;
   return styles.statusOpen;
-}
-
-function daysUntil(dateStr: string | null | undefined): number | null {
-  if (!dateStr) return null;
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const d = new Date(dateStr);
-  d.setHours(0, 0, 0, 0);
-  return Math.round((d.getTime() - now.getTime()) / 86_400_000);
 }
 
 function dueDateColor(dueAt: string | null | undefined, status: string): string {
@@ -481,11 +473,11 @@ export default function ProjectsDashboard({
 
                 <div className={styles.segLegend}>
                   <span>
-                    <span className={styles.dot} style={{ background: '#34d399' }} />
+                    <span className={styles.dot} style={{ background: 'var(--success)' }} />
                     Approved ({approved})
                   </span>
                   <span>
-                    <span className={styles.dot} style={{ background: '#a78bfa' }} />
+                    <span className={styles.dot} style={{ background: 'var(--purple)' }} />
                     Review ({underReview})
                   </span>
                   <span>

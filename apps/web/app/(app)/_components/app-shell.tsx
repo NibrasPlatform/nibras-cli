@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/session';
+import { prefs } from '../../lib/prefs';
+import { SessionProvider } from './session-context';
 import Sidebar from './sidebar';
 import TopHeader from './top-header';
 import styles from './app-shell.module.css';
@@ -27,7 +29,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Apply compact mode from localStorage and listen for changes
   useEffect(() => {
     function applyCompact() {
-      const compact = localStorage.getItem('nibras.compact') === 'true';
+      const compact = prefs.getCompact();
       shellRef.current?.setAttribute('data-compact', String(compact));
     }
 
@@ -75,12 +77,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div ref={shellRef} className={styles.appShell}>
-      <Sidebar user={session} loading={loading} />
-      <div className={styles.mainArea}>
-        <TopHeader user={session} loading={loading} />
-        <div className={styles.pageBody}>{children}</div>
+    <SessionProvider value={{ user: session, loading }}>
+      <div ref={shellRef} className={styles.appShell}>
+        <Sidebar user={session} loading={loading} />
+        <div className={styles.mainArea}>
+          <TopHeader user={session} loading={loading} />
+          <div className={styles.pageBody}>{children}</div>
+        </div>
       </div>
-    </div>
+    </SessionProvider>
   );
 }

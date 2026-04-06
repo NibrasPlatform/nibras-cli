@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
-import { apiFetch } from '../../../../../../../../lib/session';
+import { useFormSubmit } from '../../../../../../../../lib/use-form-submit';
 import styles from '../../../../../../instructor.module.css';
 
 export default function NewMilestonePage({
@@ -14,41 +14,22 @@ export default function NewMilestonePage({
 }) {
   const { courseId, projectId } = use(params);
   const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { submitting, error, submit } = useFormSubmit({
+    url: `/v1/tracking/projects/${projectId}/milestones`,
+    onSuccess: () => router.push(`/instructor/courses/${courseId}/projects/${projectId}`),
+  });
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setSubmitting(true);
-
     const form = new FormData(event.currentTarget);
     const dueAtRaw = form.get('dueAt') as string;
-
-    const payload = {
+    void submit({
       title: (form.get('title') as string).trim(),
       description: (form.get('description') as string).trim(),
       order: parseInt(form.get('order') as string, 10) || 1,
       dueAt: dueAtRaw ? new Date(dueAtRaw).toISOString() : null,
       isFinal: form.get('isFinal') === 'on',
-    };
-
-    try {
-      const res = await apiFetch(`/v1/tracking/projects/${projectId}/milestones`, {
-        method: 'POST',
-        auth: true,
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        throw new Error(body.error || `Request failed (${res.status}).`);
-      }
-      router.push(`/instructor/courses/${courseId}/projects/${projectId}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error.');
-      setSubmitting(false);
-    }
+    });
   }
 
   return (
