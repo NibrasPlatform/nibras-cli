@@ -103,20 +103,20 @@ export default function HomePage() {
       <div className={styles.hero}>
         <div className={styles.heroBadge}>
           <span className={styles.badgeDot} />
-          Now in Early Access
+          Early Access for Modern Coding Educators
         </div>
 
         <h1 className={styles.headline}>
-          <span className={styles.headlineBright}>The developer education</span>
+          <span className={styles.headlineBright}>Run your coding course</span>
           <br />
-          <span className={styles.headlineGrad}>platform built for</span>
+          <span className={styles.headlineGrad}>like a real</span>
           <br />
-          <span className={styles.headlineMuted}>serious instructors.</span>
+          <span className={styles.headlineMuted}>dev team.</span>
         </h1>
 
         <p className={styles.sub}>
-          GitHub-backed submissions, automated grading, and real-time progress tracking — all from a
-          single CLI and web dashboard.
+          GitHub-native submissions, automated grading, and live student progress — one workflow,
+          less admin, more teaching.
         </p>
 
         <div className={styles.heroCtas}>
@@ -140,22 +140,22 @@ export default function HomePage() {
       <div className={styles.statsBar}>
         <div className={styles.statItem}>
           <span className={styles.statNumber}>500+</span>
-          <span className={styles.statLabel}>Instructors</span>
+          <span className={styles.statLabel}>Instructors using Nibras</span>
         </div>
         <div className={styles.statDivider} />
         <div className={styles.statItem}>
           <span className={styles.statNumber}>50k+</span>
-          <span className={styles.statLabel}>Submissions graded</span>
+          <span className={styles.statLabel}>Submissions processed</span>
         </div>
         <div className={styles.statDivider} />
         <div className={styles.statItem}>
           <span className={styles.statNumber}>1,200+</span>
-          <span className={styles.statLabel}>Courses created</span>
+          <span className={styles.statLabel}>Courses launched</span>
         </div>
         <div className={styles.statDivider} />
         <div className={styles.statItem}>
           <span className={styles.statNumber}>99.9%</span>
-          <span className={styles.statLabel}>Uptime SLA</span>
+          <span className={styles.statLabel}>Platform uptime</span>
         </div>
       </div>
 
@@ -163,9 +163,10 @@ export default function HomePage() {
       <section id="features" className={styles.section}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionEyebrow}>Features</span>
-          <h2 className={styles.sectionTitle}>Everything you need to run a serious course</h2>
+          <h2 className={styles.sectionTitle}>Everything you need to run a modern coding course</h2>
           <p className={styles.sectionSub}>
-            Built for instructors who want automation, transparency, and zero guesswork.
+            From course setup to grading, Nibras turns scattered tools and manual work into one
+            clean, developer-first workflow.
           </p>
         </div>
 
@@ -188,7 +189,7 @@ export default function HomePage() {
                 </svg>
               ),
               title: 'Unified Dashboard',
-              desc: 'Track submissions, milestones, and student progress at a glance with real-time indicators.',
+              desc: 'See every student, milestone, and submission in one live view.',
             },
             {
               icon: (
@@ -207,7 +208,7 @@ export default function HomePage() {
                 </svg>
               ),
               title: 'GitHub-Backed',
-              desc: 'Every submission is a real git commit. Provision repos, link installs, and track history.',
+              desc: 'Every submission is a real commit in a real repo — with history you can actually trust.',
             },
             {
               icon: (
@@ -225,8 +226,8 @@ export default function HomePage() {
                   <path d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 3.741-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
                 </svg>
               ),
-              title: 'Instructor Tools',
-              desc: 'Create courses, define rubrics, assign milestones, and review submissions with a single UI.',
+              title: 'Full Course Control',
+              desc: 'Build courses, set rubrics, assign milestones, and review work without the admin mess.',
             },
             {
               icon: (
@@ -244,8 +245,8 @@ export default function HomePage() {
                   <path d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
                 </svg>
               ),
-              title: 'Student Portal',
-              desc: 'Students join via invite, install the CLI, and submit directly — no friction.',
+              title: 'Zero-Friction Setup',
+              desc: 'Invite students in, get them set up fast, and let them submit without friction.',
             },
             {
               icon: (
@@ -264,7 +265,7 @@ export default function HomePage() {
                 </svg>
               ),
               title: 'Automated Grading',
-              desc: 'AI-powered semantic grading runs in the background. Disable it anytime with zero breaking change.',
+              desc: 'Get fast, consistent grading in the background — with full control whenever you want it.',
             },
             {
               icon: (
@@ -283,7 +284,7 @@ export default function HomePage() {
                 </svg>
               ),
               title: 'Developer CLI',
-              desc: 'A polished `nibras` CLI with spinners, progress bars, and rich output — built for real developers.',
+              desc: 'A polished CLI your students will actually enjoy using, with clear feedback at every step.',
             },
           ].map((f) => (
             <div key={f.title} className={styles.featureCard6}>
@@ -300,7 +301,7 @@ export default function HomePage() {
         <div className={styles.sectionHeader}>
           <span className={styles.sectionEyebrow}>How it works</span>
           <h2 className={styles.sectionTitle}>
-            From course creation to graded submission in minutes
+            From course setup to graded submissions in minutes
           </h2>
         </div>
 
@@ -308,22 +309,22 @@ export default function HomePage() {
           {[
             {
               step: '01',
-              title: 'Create your course',
-              desc: 'Set up courses, add projects, define milestones, and configure rubrics — all from the web dashboard.',
+              title: 'Launch your course',
+              desc: 'Create projects, milestones, and rubrics in one streamlined dashboard — no setup maze.',
               cta: 'Open dashboard →',
               href: '/dashboard',
             },
             {
               step: '02',
-              title: 'Students install the CLI',
-              desc: 'One command: `npm i -g @nibras/cli`. Authenticate with GitHub, run `nibras setup`, start coding.',
+              title: 'Students get started fast',
+              desc: 'Install the CLI, connect GitHub, run setup, and start building in minutes.',
               cta: 'View CLI guide →',
               href: '/instructor/onboarding',
             },
             {
               step: '03',
-              title: 'Submit and get graded',
-              desc: '`nibras submit` stages allowed files, pushes a commit, and polls for automated verification and grading.',
+              title: 'Submit. Verify. Grade.',
+              desc: 'Students submit from the terminal while Nibras verifies work and delivers results automatically.',
               cta: null,
               href: null,
             },
@@ -349,10 +350,10 @@ export default function HomePage() {
       <section id="cli" className={styles.section}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionEyebrow}>CLI</span>
-          <h2 className={styles.sectionTitle}>A terminal experience worth loving</h2>
+          <h2 className={styles.sectionTitle}>A CLI students will actually love</h2>
           <p className={styles.sectionSub}>
-            Spinners, progress bars, coloured output, and clear error messages — no more cryptic
-            logs.
+            Most CLI tools get in the way. Nibras gets out of it — with live feedback, clean output,
+            and human-readable errors that make every submission feel smooth.
           </p>
         </div>
 
@@ -409,17 +410,17 @@ export default function HomePage() {
 
           <div className={styles.cliFeatures}>
             {[
-              { icon: '◉', label: 'Live spinners', desc: 'Real-time feedback on every async step' },
-              { icon: '█', label: 'Progress bars', desc: 'Visual verification polling with ETA' },
+              { icon: '◉', label: 'Live feedback on every step', desc: 'Real-time status on every async operation' },
+              { icon: '█', label: 'Progress you can actually see', desc: 'Visual verification polling with ETA' },
               {
                 icon: '╭',
-                label: 'Framed summaries',
-                desc: 'Boxed pass/fail cards with coloured borders',
+                label: 'Clear pass/fail summaries',
+                desc: 'Boxed result cards with coloured borders',
               },
               {
                 icon: '∿',
-                label: 'Gradient banner',
-                desc: 'Indigo-to-cyan ASCII art on every launch',
+                label: 'Built for real developer workflows',
+                desc: 'Feels native to the terminal, not bolted on',
               },
             ].map((f) => (
               <div key={f.label} className={styles.cliFeat}>
@@ -437,8 +438,8 @@ export default function HomePage() {
       {/* ── Social proof ────────────────────────────────────────────────────── */}
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <span className={styles.sectionEyebrow}>Trusted by educators</span>
-          <h2 className={styles.sectionTitle}>What instructors are saying</h2>
+          <span className={styles.sectionEyebrow}>Why instructors switch to Nibras</span>
+          <h2 className={styles.sectionTitle}>Less admin. Faster grading. A better experience for both.</h2>
         </div>
 
         <div className={styles.testimonials}>
@@ -488,9 +489,10 @@ export default function HomePage() {
       {/* ── Sign-in card ────────────────────────────────────────────────────── */}
       <section className={styles.ctaSection}>
         <div className={styles.ctaCard}>
-          <h2 className={styles.ctaTitle}>Ready to build a better course?</h2>
+          <h2 className={styles.ctaTitle}>Build the coding course students actually want to use</h2>
           <p className={styles.ctaSub}>
-            Sign in with GitHub and launch your first course in under 5 minutes.
+            Sign in with GitHub, launch your first course, and start teaching with a workflow built
+            for real developers.
           </p>
 
           {error && <p className={styles.errorMsg}>{error}</p>}
@@ -513,7 +515,7 @@ export default function HomePage() {
           </button>
 
           <p className={styles.formHint}>
-            Free to use during early access. No credit card required.
+            Free during early access. No credit card.
           </p>
         </div>
       </section>
