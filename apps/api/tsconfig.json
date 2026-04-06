@@ -2,7 +2,14 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "fastify": ["../../node_modules/fastify"],
+      "fastify-raw-body": ["../../node_modules/fastify-raw-body"],
+      "@fastify/*": ["../../node_modules/@fastify/*"],
+      "zod": ["../../node_modules/zod"]
+    }
   },
   "include": ["src/**/*.ts"]
 }
