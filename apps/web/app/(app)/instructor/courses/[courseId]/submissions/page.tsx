@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { use } from 'react';
 import { useFetch } from '../../../../../lib/use-fetch';
+import { apiFetch } from '../../../../../lib/session';
 import styles from '../../../instructor.module.css';
 
 type Submission = {
@@ -25,6 +26,26 @@ export default function CourseSubmissionsPage({
 }) {
   const { courseId } = use(params);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      const res = await apiFetch(`/v1/tracking/courses/${courseId}/export.csv`, { auth: true });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `course-${courseId}-grades.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('CSV export failed. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  }
   const { data, loading, error } = useFetch<{ submissions: Submission[] }>(
     `/v1/tracking/review-queue?courseId=${courseId}`
   );
@@ -50,19 +71,14 @@ export default function CourseSubmissionsPage({
           <h1>Submission Review Queue</h1>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <a
-            href={`/v1/tracking/courses/${courseId}/export.csv`}
+          <button
+            onClick={handleExportCsv}
+            disabled={exporting}
             className={styles.btnSecondary}
-            style={{
-              padding: '8px 16px',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
+            style={{ padding: '8px 16px', cursor: exporting ? 'wait' : 'pointer' }}
           >
-            ↓ Export CSV
-          </a>
+            {exporting ? 'Exporting…' : '↓ Export CSV'}
+          </button>
           <select
             className={styles.btnSecondary}
             value={statusFilter}

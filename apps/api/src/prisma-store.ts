@@ -2638,33 +2638,27 @@ export class PrismaStore implements AppStore {
     }>
   > {
     await this.seed(apiBaseUrl);
-    const memberships = await this.prisma.courseMembership.findMany({
-      where: { courseId, role: CourseRole.student },
+    // Export all submissions for this course regardless of membership role
+    const submissions = await this.prisma.submissionAttempt.findMany({
+      where: { project: { courseId } },
       include: {
+        project: true,
+        milestone: true,
         user: {
-          include: {
-            githubAccount: { select: { login: true } },
-            submissionAttempts: {
-              where: { project: { courseId } },
-              include: { project: true, milestone: true },
-              orderBy: { createdAt: 'desc' },
-            },
-          },
+          include: { githubAccount: { select: { login: true } } },
         },
       },
+      orderBy: { createdAt: 'desc' },
     });
-    return memberships.flatMap((m) => {
-      const login = m.user.githubAccount?.login ?? '';
-      return m.user.submissionAttempts.map((s) => ({
-        githubLogin: login,
-        username: m.user.username,
-        milestoneTitle: s.milestone?.title ?? '',
-        projectKey: s.project.slug,
-        status: s.status,
-        submittedAt: s.submittedAt?.toISOString() ?? null,
-        commitSha: s.commitSha,
-      }));
-    });
+    return submissions.map((s) => ({
+      githubLogin: s.user.githubAccount?.login ?? s.user.username,
+      username: s.user.username,
+      milestoneTitle: s.milestone?.title ?? '',
+      projectKey: s.project.slug,
+      status: s.status,
+      submittedAt: s.submittedAt?.toISOString() ?? null,
+      commitSha: s.commitSha,
+    }));
   }
 
   async close(): Promise<void> {
