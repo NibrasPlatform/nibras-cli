@@ -118,6 +118,7 @@ async function githubRequest<T>(
 export async function startGitHubDeviceFlow(config: GitHubAppConfig): Promise<GitHubDeviceStart> {
   const params = new URLSearchParams({
     client_id: config.clientId,
+    scope: 'repo user:email',
   });
   const response = await fetch('https://github.com/login/device/code', {
     method: 'POST',
@@ -285,6 +286,7 @@ export function buildGitHubOAuthUrl(config: GitHubAppConfig, state: string): str
   url.searchParams.set('client_id', config.clientId);
   url.searchParams.set('state', state);
   url.searchParams.set('allow_signup', 'true');
+  url.searchParams.set('scope', 'repo user:email');
   return url.toString();
 }
 

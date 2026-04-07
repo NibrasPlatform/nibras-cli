@@ -215,7 +215,8 @@ export function registerHostedCliRoutes(
       );
       if (githubConfig && store instanceof PrismaStore) {
         const account = await store.getGithubAccountForUser(auth.user.id);
-        if (account?.userAccessToken && account.installationId) {
+        // Only need the user's OAuth token — installationId not required for repo creation
+        if (account?.userAccessToken) {
           try {
             repo = await store.provisionProjectRepoFromGitHub(
               requestBaseUrl(request),
@@ -224,7 +225,7 @@ export function registerHostedCliRoutes(
               githubConfig
             );
           } catch {
-            // Keep the DB-backed fallback record if GitHub template provisioning is not configured yet.
+            // Keep the DB-backed fallback record if GitHub template provisioning fails.
           }
         }
       }
