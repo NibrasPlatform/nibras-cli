@@ -221,7 +221,9 @@
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
-  transition: background 0.15s, transform 0.13s;
+  transition:
+    background 0.15s,
+    transform 0.13s;
 }
 
 .installAppBtn:hover {
@@ -277,7 +279,9 @@
   text-decoration: none;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: background 0.15s, transform 0.13s;
+  transition:
+    background 0.15s,
+    transform 0.13s;
 }
 
 .installCalloutBtn:hover {

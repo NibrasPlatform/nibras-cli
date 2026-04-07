@@ -49,19 +49,34 @@ export default function CourseSubmissionsPage({
           </p>
           <h1>Submission Review Queue</h1>
         </div>
-        <select
-          className={styles.btnSecondary}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ padding: '8px 12px', cursor: 'pointer' }}
-        >
-          <option value="all">All statuses</option>
-          <option value="needs_review">Needs review</option>
-          <option value="passed">Passed</option>
-          <option value="failed">Failed</option>
-          <option value="queued">Queued</option>
-          <option value="running">Running</option>
-        </select>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <a
+            href={`/v1/tracking/courses/${courseId}/export.csv`}
+            className={styles.btnSecondary}
+            style={{
+              padding: '8px 16px',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            ↓ Export CSV
+          </a>
+          <select
+            className={styles.btnSecondary}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ padding: '8px 12px', cursor: 'pointer' }}
+          >
+            <option value="all">All statuses</option>
+            <option value="needs_review">Needs review</option>
+            <option value="passed">Passed</option>
+            <option value="failed">Failed</option>
+            <option value="queued">Queued</option>
+            <option value="running">Running</option>
+          </select>
+        </div>
       </div>
 
       {loading && <p className={styles.muted}>Loading…</p>}

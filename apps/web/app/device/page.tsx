@@ -98,9 +98,7 @@ function DeviceApprovalContent() {
 
         {!sessionUser ? (
           <div className={styles.section}>
-            <p className={styles.muted}>
-              Sign in with GitHub to approve this login request.
-            </p>
+            <p className={styles.muted}>Sign in with GitHub to approve this login request.</p>
             <a href={signInUrl} className={`buttonPrimary ${styles.signInBtn}`}>
               Sign in with GitHub →
             </a>
@@ -116,10 +114,7 @@ function DeviceApprovalContent() {
         ) : (
           <div className={styles.section}>
             <p className={styles.muted}>
-              Signed in as{' '}
-              <strong>
-                @{sessionUser.githubLogin || sessionUser.username}
-              </strong>
+              Signed in as <strong>@{sessionUser.githubLogin || sessionUser.username}</strong>
             </p>
             {status && <p className={styles.error}>{status}</p>}
             <div className={styles.actions}>

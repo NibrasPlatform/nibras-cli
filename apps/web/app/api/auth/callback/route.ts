@@ -24,21 +24,16 @@ export async function GET(request: NextRequest) {
   // Never use request.url directly — it contains the internal container address.
   const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https';
   const forwardedHost =
-    request.headers.get('x-forwarded-host') ??
-    request.headers.get('host') ??
-    '';
-  const publicOrigin =
-    forwardedHost
-      ? `${forwardedProto}://${forwardedHost}`
-      : (process.env.NEXT_PUBLIC_NIBRAS_WEB_BASE_URL ?? 'https://nibras-web.fly.dev');
+    request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? '';
+  const publicOrigin = forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : (process.env.NEXT_PUBLIC_NIBRAS_WEB_BASE_URL ?? 'https://nibras-web.fly.dev');
 
   if (!code || !state) {
     return NextResponse.redirect(`${publicOrigin}/?auth=required`);
   }
 
-  const apiInternalUrl =
-    process.env.NIBRAS_API_INTERNAL_URL ||
-    'https://nibras-api.fly.dev';
+  const apiInternalUrl = process.env.NIBRAS_API_INTERNAL_URL || 'https://nibras-api.fly.dev';
 
   const callbackUrl =
     `${apiInternalUrl}/v1/github/oauth/callback` +

@@ -49,7 +49,8 @@ async function main() {
       courseId: course.id,
       slug: 'cs161/exam1',
       name: 'Exam 1',
-      description: 'First exam: implement basic JavaScript functions and pass the automated test suite.',
+      description:
+        'First exam: implement basic JavaScript functions and pass the automated test suite.',
       status: ProjectStatus.published,
       deliveryMode: DeliveryMode.individual,
       defaultBranch: 'main',

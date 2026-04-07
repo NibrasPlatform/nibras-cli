@@ -9,13 +9,17 @@ import styles from '../../../../../instructor.module.css';
 
 type Submission = {
   id: string;
+  userId: string;
   projectId: string;
   projectKey: string;
   milestoneId: string | null;
   commitSha: string;
+  repoUrl: string;
   branch: string;
   status: string;
   submissionType: string;
+  summary: string;
+  localTestExitCode: number | null;
   notes: string | null;
   createdAt: string;
 };
@@ -270,6 +274,47 @@ export default function SubmissionReviewPage({
               </tbody>
             </table>
           </div>
+
+          {/* ── Test Output Panel ── */}
+          {submission.summary && (
+            <div className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <h2>Test Output</h2>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: 999,
+                    background:
+                      submission.localTestExitCode === 0
+                        ? 'rgba(34,197,94,0.1)'
+                        : 'rgba(239,68,68,0.1)',
+                    color: submission.localTestExitCode === 0 ? 'var(--success)' : 'var(--danger)',
+                    border: `1px solid ${submission.localTestExitCode === 0 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                  }}
+                >
+                  exit {submission.localTestExitCode ?? '?'}
+                </span>
+              </div>
+              <pre
+                style={{
+                  margin: 0,
+                  padding: '12px 16px',
+                  background: 'rgba(0,0,0,0.3)',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  lineHeight: 1.6,
+                  overflowX: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  color: 'var(--text-soft)',
+                  fontFamily: 'monospace',
+                }}
+              >
+                {submission.summary}
+              </pre>
+            </div>
+          )}
 
           {/* ── AI Analysis Panel ── */}
           {hasAi && reviewData && (

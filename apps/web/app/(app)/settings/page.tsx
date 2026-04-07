@@ -294,7 +294,9 @@ export default function SettingsPage() {
               {manualInstallStatus && (
                 <p
                   className={styles.manualInstallStatus}
-                  style={{ color: manualInstallStatus.startsWith('✓') ? 'var(--success)' : 'var(--danger)' }}
+                  style={{
+                    color: manualInstallStatus.startsWith('✓') ? 'var(--success)' : 'var(--danger)',
+                  }}
                 >
                   {manualInstallStatus}
                 </p>

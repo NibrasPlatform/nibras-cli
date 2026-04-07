@@ -86,10 +86,11 @@ export async function commandSetup(args: string[], plain: boolean): Promise<void
   writeTaskText(projectDir, response.task);
 
   // ── Set git remote to the student's GitHub repo ───────────────────────────
-  const hasRemote = spawnSync('git', ['remote', 'get-url', 'origin'], {
-    cwd: projectDir,
-    stdio: 'pipe',
-  }).status === 0;
+  const hasRemote =
+    spawnSync('git', ['remote', 'get-url', 'origin'], {
+      cwd: projectDir,
+      stdio: 'pipe',
+    }).status === 0;
 
   if (!hasRemote) {
     git(['remote', 'add', 'origin', studentRepoUrl], projectDir);
@@ -101,10 +102,11 @@ export async function commandSetup(args: string[], plain: boolean): Promise<void
   } else if (isGitHubUrl(templateCloneUrl)) {
     // Stage and commit any manifest changes before pushing
     git(['add', '.nibras/'], projectDir);
-    const hasStagedChanges = spawnSync('git', ['diff', '--cached', '--quiet'], {
-      cwd: projectDir,
-      stdio: 'ignore',
-    }).status !== 0;
+    const hasStagedChanges =
+      spawnSync('git', ['diff', '--cached', '--quiet'], {
+        cwd: projectDir,
+        stdio: 'ignore',
+      }).status !== 0;
     if (hasStagedChanges) {
       git(['commit', '-m', 'nibras: add project manifest'], projectDir);
     }

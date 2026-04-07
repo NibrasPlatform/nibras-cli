@@ -257,7 +257,11 @@ export type StoreData = {
 
 export interface AppStore {
   createDeviceCode(apiBaseUrl: string): Promise<DeviceCodeRecord>;
-  authorizeDeviceCode(apiBaseUrl: string, userCode: string, userId?: string): Promise<DeviceCodeRecord | null>;
+  authorizeDeviceCode(
+    apiBaseUrl: string,
+    userCode: string,
+    userId?: string
+  ): Promise<DeviceCodeRecord | null>;
   pollDeviceCode(
     apiBaseUrl: string,
     deviceCode: string
