@@ -66,7 +66,7 @@ async function main() {
     buildpack: { node: '20' },
     test: {
       mode: 'public-grading',
-      command: 'npm test',
+      command: 'node --test test/solution.test.js',
       supportsPrevious: true,
     },
     submission: {
