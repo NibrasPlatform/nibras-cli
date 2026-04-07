@@ -46,4 +46,4 @@ EXPOSE 9090
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s \
   CMD wget -qO- http://127.0.0.1:9090/healthz || exit 1
 
-CMD ["node", "apps/worker/dist/worker.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node apps/worker/dist/worker.js"]
