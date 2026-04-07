@@ -229,9 +229,14 @@ export function registerHostedCliRoutes(
         }
       }
       project.manifest.apiBaseUrl = requestBaseUrl(request);
+      const templateCloneUrl =
+        githubConfig?.templateOwner && githubConfig?.templateRepo
+          ? `https://github.com/${githubConfig.templateOwner}/${githubConfig.templateRepo}`
+          : null;
       return ProjectSetupResponseSchema.parse({
         projectKey: project.projectKey,
         repo,
+        templateCloneUrl,
         manifest: project.manifest,
         task: project.task,
       });

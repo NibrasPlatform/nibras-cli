@@ -111,6 +111,7 @@ export const ProjectSetupResponseSchema = z.object({
     defaultBranch: z.string().min(1),
     visibility: z.enum(['private', 'public']),
   }),
+  templateCloneUrl: z.string().nullable().optional(),
   manifest: ProjectManifestSchema,
   task: z.string().min(1),
 });
