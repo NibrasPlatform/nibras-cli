@@ -43,6 +43,9 @@ export default function SettingsPage() {
   const [compact, setCompact] = useState(false);
   const [installUrl, setInstallUrl] = useState<string | null>(null);
   const [installUrlLoading, setInstallUrlLoading] = useState(false);
+  const [manualInstallId, setManualInstallId] = useState('');
+  const [manualInstallStatus, setManualInstallStatus] = useState('');
+  const [manualInstallSubmitting, setManualInstallSubmitting] = useState(false);
 
   useEffect(() => {
     setCompact(prefs.getCompact());
@@ -75,6 +78,35 @@ export default function SettingsPage() {
       // GitHub App not configured on server — ignore silently
     } finally {
       setInstallUrlLoading(false);
+    }
+  }
+
+  async function handleManualInstall(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const id = manualInstallId.trim();
+    if (!id) return;
+    setManualInstallSubmitting(true);
+    setManualInstallStatus('');
+    try {
+      const res = await apiFetch('/v1/github/setup/complete', {
+        method: 'POST',
+        auth: true,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ installationId: id }),
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { message?: string };
+        setManualInstallStatus(err.message ?? `Error ${res.status}`);
+        return;
+      }
+      const payload = (await res.json()) as { installationId: string };
+      setManualInstallStatus(`✓ Installation ${payload.installationId} linked successfully.`);
+      setManualInstallId('');
+      setUser((u) => (u ? { ...u, githubAppInstalled: true } : u));
+    } catch (err) {
+      setManualInstallStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setManualInstallSubmitting(false);
     }
   }
 
@@ -233,6 +265,52 @@ export default function SettingsPage() {
               <a href={installUrl} className={styles.installCalloutBtn}>
                 Install now →
               </a>
+            </div>
+          )}
+
+          {/* Manual installation ID entry — for users who already installed via GitHub */}
+          {appInstalled === false && (
+            <div className={styles.manualInstall}>
+              <p className={styles.manualInstallLabel}>
+                Already installed? Enter your installation ID:
+              </p>
+              <form className={styles.manualInstallForm} onSubmit={handleManualInstall}>
+                <input
+                  className={`formInput ${styles.manualInstallInput}`}
+                  type="text"
+                  placeholder="e.g. 119576492"
+                  value={manualInstallId}
+                  onChange={(e) => setManualInstallId(e.target.value)}
+                  disabled={manualInstallSubmitting}
+                />
+                <button
+                  className="buttonPrimary"
+                  type="submit"
+                  disabled={manualInstallSubmitting || !manualInstallId.trim()}
+                >
+                  {manualInstallSubmitting ? 'Linking…' : 'Link'}
+                </button>
+              </form>
+              {manualInstallStatus && (
+                <p
+                  className={styles.manualInstallStatus}
+                  style={{ color: manualInstallStatus.startsWith('✓') ? 'var(--success)' : 'var(--danger)' }}
+                >
+                  {manualInstallStatus}
+                </p>
+              )}
+              <p className={styles.manualInstallHint}>
+                Find your ID at{' '}
+                <a
+                  href="https://github.com/settings/installations"
+                  target="_blank"
+                  rel="noreferrer"
+                  className={styles.manualInstallLink}
+                >
+                  github.com/settings/installations
+                </a>{' '}
+                — it&apos;s the number in the URL when you click your installation.
+              </p>
             </div>
           )}
 
