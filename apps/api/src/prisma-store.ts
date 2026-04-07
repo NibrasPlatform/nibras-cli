@@ -949,10 +949,11 @@ export class PrismaStore implements AppStore {
 
   async authorizeDeviceCode(
     apiBaseUrl: string,
-    userCode: string
+    userCode: string,
+    userId?: string
   ): Promise<DeviceCodeRecord | null> {
     await this.seed(apiBaseUrl);
-    const defaultUser = await this.getDefaultUser();
+    const resolvedUserId = userId ?? (await this.getDefaultUser()).id;
     const found = await this.prisma.deviceCode.findUnique({ where: { userCode } });
     if (!found) {
       return null;
@@ -961,7 +962,7 @@ export class PrismaStore implements AppStore {
       where: { userCode },
       data: {
         status: 'authorized',
-        userId: defaultUser.id,
+        userId: resolvedUserId,
         approvedAt: new Date(),
       },
     });

@@ -257,7 +257,7 @@ export type StoreData = {
 
 export interface AppStore {
   createDeviceCode(apiBaseUrl: string): Promise<DeviceCodeRecord>;
-  authorizeDeviceCode(apiBaseUrl: string, userCode: string): Promise<DeviceCodeRecord | null>;
+  authorizeDeviceCode(apiBaseUrl: string, userCode: string, userId?: string): Promise<DeviceCodeRecord | null>;
   pollDeviceCode(
     apiBaseUrl: string,
     deviceCode: string
@@ -866,7 +866,8 @@ export class FileStore implements AppStore {
 
   async authorizeDeviceCode(
     apiBaseUrl: string,
-    userCode: string
+    userCode: string,
+    userId?: string
   ): Promise<DeviceCodeRecord | null> {
     const data = this.read(apiBaseUrl);
     const record = data.deviceCodes.find((entry) => entry.userCode === userCode);
@@ -874,7 +875,7 @@ export class FileStore implements AppStore {
       return null;
     }
     record.status = 'authorized';
-    record.userId = 'user_demo';
+    record.userId = userId ?? 'user_demo';
     this.write(data);
     return record;
   }

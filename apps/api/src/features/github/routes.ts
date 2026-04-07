@@ -86,24 +86,29 @@ export function registerGitHubRoutes(
     },
     async (request) => {
       if (githubConfig && store instanceof PrismaStore) {
-        const device = await startGitHubDeviceFlow(githubConfig);
-        return DeviceStartResponseSchema.parse({
-          deviceCode: device.deviceCode,
-          userCode: device.userCode,
-          verificationUri: device.verificationUri,
-          verificationUriComplete: device.verificationUriComplete,
-          intervalSeconds: device.interval,
-          expiresInSeconds: device.expiresIn,
-        });
+        try {
+          const device = await startGitHubDeviceFlow(githubConfig);
+          return DeviceStartResponseSchema.parse({
+            deviceCode: device.deviceCode,
+            userCode: device.userCode,
+            verificationUri: device.verificationUri,
+            verificationUriComplete: device.verificationUriComplete,
+            intervalSeconds: device.interval,
+            expiresInSeconds: device.expiresIn,
+          });
+        } catch {
+          // GitHub device flow is disabled or unreachable — fall through to local flow
+        }
       }
 
       const baseUrl = requestBaseUrl(request);
+      const webBaseUrl = githubConfig?.webBaseUrl || baseUrl;
       const device = await store.createDeviceCode(baseUrl);
       return DeviceStartResponseSchema.parse({
         deviceCode: device.deviceCode,
         userCode: device.userCode,
-        verificationUri: `${baseUrl}/dev/approve`,
-        verificationUriComplete: `${baseUrl}/dev/approve?user_code=${encodeURIComponent(device.userCode)}`,
+        verificationUri: `${webBaseUrl}/device`,
+        verificationUriComplete: `${webBaseUrl}/device?user_code=${encodeURIComponent(device.userCode)}`,
         intervalSeconds: device.intervalSeconds,
         expiresInSeconds: 600,
       });
@@ -144,6 +149,30 @@ export function registerGitHubRoutes(
       }
 
       if (githubConfig && store instanceof PrismaStore) {
+        // Check if this is a local device code (created as fallback when GitHub device flow failed)
+        const localResult = await store.pollDeviceCode(requestBaseUrl(request), body.deviceCode);
+        if (localResult.record) {
+          // Local device code — handle without calling GitHub
+          if (!localResult.session || !localResult.record.userId) {
+            return DevicePollResponseSchema.parse({ status: 'pending' });
+          }
+          const localUser = await store.getUserByToken(
+            requestBaseUrl(request),
+            localResult.session.accessToken
+          );
+          if (!localUser) {
+            reply.code(500).send(Errors.internal());
+            return;
+          }
+          return DevicePollResponseSchema.parse({
+            status: 'authorized',
+            accessToken: localResult.session.accessToken,
+            refreshToken: localResult.session.refreshToken,
+            user: localUser,
+          });
+        }
+
+        // Not a local code — use GitHub device flow poll
         const tokenResponse = await pollGitHubDeviceFlow(githubConfig, body.deviceCode);
         if (!tokenResponse) {
           return DevicePollResponseSchema.parse({ status: 'pending' });
@@ -188,6 +217,37 @@ export function registerGitHubRoutes(
         refreshToken: session.refreshToken,
         user,
       });
+    }
+  );
+
+  app.post(
+    '/v1/device/authorize',
+    {
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      schema: { tags: ['auth'], summary: 'Authorize a pending device code (web session required)' },
+    },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      if (!(store instanceof PrismaStore)) {
+        reply.code(503).send(Errors.unavailable('Device authorization requires database store.'));
+        return;
+      }
+      const body = request.body as { userCode?: string };
+      if (!body?.userCode) {
+        reply.code(400).send(Errors.validation('userCode is required.'));
+        return;
+      }
+      const record = await store.authorizeDeviceCode(
+        requestBaseUrl(request),
+        body.userCode,
+        auth.user.id
+      );
+      if (!record) {
+        reply.code(404).send(Errors.notFound('Device code'));
+        return;
+      }
+      return reply.code(200).send({ ok: true, userCode: record.userCode });
     }
   );
 
