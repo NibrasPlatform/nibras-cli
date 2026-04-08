@@ -22,9 +22,9 @@ ENV NEXT_PUBLIC_NIBRAS_WEB_BASE_URL=$NEXT_PUBLIC_NIBRAS_WEB_BASE_URL
 ENV NIBRAS_API_INTERNAL_URL=$NIBRAS_API_INTERNAL_URL
 # Next.js requires .env.local to exist (even if empty) during build
 RUN touch apps/web/.env.local
-# Build contracts first so its type declarations are available to the web build
-RUN npm run build -w @nibras/contracts
-RUN npm run build -w @nibras/web
+# Build only the packages needed for web (don't build CLI)
+RUN npm run build -w @nibras/contracts && \
+    npm run build -w @nibras/web
 
 # ── Runtime ────────────────────────────────────────────────────────────────────
 # next.config.ts sets output: 'standalone' + outputFileTracingRoot pointing to

@@ -20,10 +20,11 @@ COPY packages/github ./packages/github
 COPY apps/worker ./apps/worker
 COPY tsconfig.base.json ./
 RUN npm run db:generate
-RUN npm run build -w @nibras/contracts
-RUN npm run build -w @nibras/grading
-RUN npm run build -w @nibras/github
-RUN npm run build -w @nibras/worker
+# Build only the packages needed for worker (don't build CLI)
+RUN npm run build -w @nibras/contracts && \
+    npm run build -w @nibras/grading && \
+    npm run build -w @nibras/github && \
+    npm run build -w @nibras/worker
 
 # ── Production image ──────────────────────────────────────────────────────────
 FROM base AS runner
