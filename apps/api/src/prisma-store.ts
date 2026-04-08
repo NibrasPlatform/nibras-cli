@@ -1358,9 +1358,7 @@ export class PrismaStore implements AppStore {
     }
     // Auto-assign the latest (highest order) milestone for this project
     const latestMilestone =
-      project.milestones.length > 0
-        ? project.milestones[project.milestones.length - 1]
-        : null;
+      project.milestones.length > 0 ? project.milestones[project.milestones.length - 1] : null;
     const repo = await this.prisma.userProjectRepo.findUnique({
       where: {
         userId_projectId: {
