@@ -10,6 +10,9 @@ export { gradeMCQ } from "./validators/mcq";
 export { gradeExam } from "./validators/exam";
 export { gradeFile } from "./validators/file";
 
+// Backwards compatibility: old semantic grading API for @nibras/worker
+export { gradeSemanticAnswer } from "./compat";
+
 // Types
 export type {
   // Config
@@ -34,3 +37,13 @@ export type {
   GradingInput,
   GradingResult,
 } from "./types";
+
+// Backwards compatibility types
+export type {
+  AiConfig,
+  GradingQuestion,
+  GradingRubricItem,
+  GradingExample,
+  CriterionScore,
+  AiGradeResult,
+} from "./compat";
