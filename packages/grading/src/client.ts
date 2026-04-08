@@ -3,10 +3,10 @@
 // Compatible with: OpenAI, Azure, Ollama, any OpenAI-compatible provider
 // ============================================================
 
-import { GradingConfig } from "./types";
+import { GradingConfig } from './types';
 
 interface Message {
-  role: "system" | "user" | "assistant";
+  role: 'system' | 'user' | 'assistant';
   content: string;
 }
 
@@ -20,8 +20,8 @@ export async function chatCompletion(
   config: GradingConfig,
   jsonMode = true
 ): Promise<ChatResponse> {
-  const baseURL = config.baseURL ?? "https://api.openai.com/v1";
-  const model = config.model ?? "gpt-4o-mini";
+  const baseURL = config.baseURL ?? 'https://api.openai.com/v1';
+  const model = config.model ?? 'gpt-4o-mini';
 
   const body: Record<string, unknown> = {
     model,
@@ -30,13 +30,13 @@ export async function chatCompletion(
   };
 
   if (jsonMode) {
-    body.response_format = { type: "json_object" };
+    body.response_format = { type: 'json_object' };
   }
 
   const res = await fetch(`${baseURL}/chat/completions`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       Authorization: `Bearer ${config.apiKey}`,
     },
     body: JSON.stringify(body),
@@ -51,7 +51,7 @@ export async function chatCompletion(
     choices: Array<{ message: { content: string } }>;
   };
 
-  const text = data.choices[0]?.message?.content ?? "";
+  const text = data.choices[0]?.message?.content ?? '';
 
   let rawJson: unknown;
   if (jsonMode) {
