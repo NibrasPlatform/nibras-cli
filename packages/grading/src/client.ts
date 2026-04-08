@@ -3,7 +3,7 @@
 // Compatible with: OpenAI, Azure, Ollama, any OpenAI-compatible provider
 // ============================================================
 
-import { GradingConfig } from "./types.js";
+import { GradingConfig } from "./types";
 
 interface Message {
   role: "system" | "user" | "assistant";

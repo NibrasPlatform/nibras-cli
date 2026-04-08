@@ -3,10 +3,10 @@
 // بيختار الـ validator الصح بناءً على نوع الـ input
 // ============================================================
 
-import { gradeMCQ } from "./validators/mcq.js";
-import { gradeExam } from "./validators/exam.js";
-import { gradeFile } from "./validators/file.js";
-import type { GradingInput, GradingResult } from "./types.js";
+import { gradeMCQ } from "./validators/mcq";
+import { gradeExam } from "./validators/exam";
+import { gradeFile } from "./validators/file";
+import type { GradingInput, GradingResult } from "./types";
 
 export async function grade(input: GradingInput): Promise<GradingResult> {
   switch (input.type) {

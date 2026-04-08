@@ -3,12 +3,12 @@
 // ============================================================
 
 // Main runner
-export { grade } from "./runner.js";
+export { grade } from "./runner";
 
 // Individual validators (for direct use if needed)
-export { gradeMCQ } from "./validators/mcq.js";
-export { gradeExam } from "./validators/exam.js";
-export { gradeFile } from "./validators/file.js";
+export { gradeMCQ } from "./validators/mcq";
+export { gradeExam } from "./validators/exam";
+export { gradeFile } from "./validators/file";
 
 // Types
 export type {
@@ -33,4 +33,4 @@ export type {
   // Union types
   GradingInput,
   GradingResult,
-} from "./types.js";
+} from "./types";

@@ -3,13 +3,13 @@
 // يصحح MCQ بدون model answer — الـ AI بيحدد الإجابة الصح من السياق
 // ============================================================
 
-import { chatCompletion, chunk } from "../client.js";
+import { chatCompletion, chunk } from "../client";
 import type {
   GradingConfig,
   MCQQuestion,
   MCQGradingResult,
   MCQResult,
-} from "../types.js";
+} from "../types";
 
 const BATCH_SIZE = 10; // عدد الأسئلة في كل request
 

@@ -3,14 +3,14 @@
 // يصحح امتحانات mixed (MCQ + short + long answer) مع model answer بـ JSON
 // ============================================================
 
-import { chatCompletion, chunk } from "../client.js";
+import { chatCompletion, chunk } from "../client";
 import type {
   GradingConfig,
   ExamQuestion,
   StudentAnswer,
   ExamGradingResult,
   ExamQuestionResult,
-} from "../types.js";
+} from "../types";
 
 const BATCH_SIZE = 5; // أسئلة أقل في الـ batch لأن الـ answers أطول
 

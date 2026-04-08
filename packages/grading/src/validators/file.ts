@@ -4,14 +4,14 @@
 // بيعمل match بين محتوى الملف والـ model answer
 // ============================================================
 
-import { chatCompletion } from "../client.js";
-import { gradeExam } from "./exam.js";
+import { chatCompletion } from "../client";
+import { gradeExam } from "./exam";
 import type {
   GradingConfig,
   FileGradingInput,
   FileGradingResult,
   StudentAnswer,
-} from "../types.js";
+} from "../types";
 
 // ----------------------------------------------------------------
 // Step 1: استخراج إجابات الطالب من محتوى الملف
