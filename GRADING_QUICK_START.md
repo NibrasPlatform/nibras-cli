@@ -6,9 +6,11 @@
 ---
 
 ## 📦 Installation
+
 ```bash
 # Inside monorepo root
 pnpm install
 
 # Or install directly in your worker/app
 pnpm add @nibras/grading
+```
