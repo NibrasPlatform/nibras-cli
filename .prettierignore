@@ -13,3 +13,7 @@ prisma/migrations/
 
 # Package lock (managed by npm)
 package-lock.json
+
+GITHUB_CLEANUP_AUDIT.md
+GRADING_QUICK_START.md
+GRADING_SYSTEM_TESTING.md
