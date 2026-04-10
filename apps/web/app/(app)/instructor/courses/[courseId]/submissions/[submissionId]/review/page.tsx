@@ -19,6 +19,7 @@ type Submission = {
   status: string;
   submissionType: string;
   summary: string;
+  submissionValue: string | null;
   localTestExitCode: number | null;
   notes: string | null;
   createdAt: string;
@@ -96,6 +97,7 @@ export default function SubmissionReviewPage({
   const [rubricScores, setRubricScores] = useState<RubricScore[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -156,6 +158,17 @@ export default function SubmissionReviewPage({
     setRubricScores((prev) => prev.map((row, i) => (i === index ? { ...row, score: value } : row)));
   }
 
+  function downloadAnswer() {
+    if (!submission?.submissionValue) return;
+    const blob = new Blob([submission.submissionValue], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${submission.projectKey}-${submission.commitSha.slice(0, 7)}-answer.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitError(null);
@@ -182,7 +195,10 @@ export default function SubmissionReviewPage({
         const body = (await res.json()) as { error?: string };
         throw new Error(body.error || `Request failed (${res.status}).`);
       }
-      router.push(`/instructor/courses/${courseId}/submissions`);
+      setSuccessMsg('✅ Review submitted! The student has been notified.');
+      setTimeout(() => {
+        router.push(`/instructor/courses/${courseId}/submissions`);
+      }, 2000);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Unknown error.');
       setSubmitting(false);
@@ -313,6 +329,41 @@ export default function SubmissionReviewPage({
                 }}
               >
                 {submission.summary}
+              </pre>
+            </div>
+          )}
+
+          {/* ── Student Answer Panel ── */}
+          {submission.submissionValue && (
+            <div className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <h2>Student Answer</h2>
+                <button
+                  type="button"
+                  onClick={downloadAnswer}
+                  className={styles.btnSecondary}
+                  style={{ padding: '4px 12px', fontSize: 12, cursor: 'pointer' }}
+                >
+                  ↓ Download .txt
+                </button>
+              </div>
+              <pre
+                style={{
+                  margin: 0,
+                  padding: '12px 16px',
+                  background: 'rgba(0,0,0,0.3)',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  lineHeight: 1.7,
+                  overflowX: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  color: 'var(--text)',
+                  fontFamily: 'monospace',
+                  maxHeight: 400,
+                  overflowY: 'auto',
+                }}
+              >
+                {submission.submissionValue}
               </pre>
             </div>
           )}
@@ -587,6 +638,23 @@ export default function SubmissionReviewPage({
               )}
 
               {submitError && <p className={styles.errorText}>{submitError}</p>}
+
+              {successMsg && (
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: 10,
+                    background: 'rgba(34,197,94,0.1)',
+                    border: '1px solid rgba(34,197,94,0.3)',
+                    color: 'var(--success)',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    marginBottom: 12,
+                  }}
+                >
+                  {successMsg}
+                </div>
+              )}
 
               <div className={styles.formActions}>
                 <button type="submit" className={styles.btnPrimary} disabled={submitting}>
