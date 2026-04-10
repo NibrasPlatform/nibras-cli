@@ -19,6 +19,7 @@ import {
   UpdateTrackingSubmissionRequestSchema,
 } from '@nibras/contracts';
 import { requireUser } from '../../lib/auth';
+import { sendReviewSubmittedEmail } from '../../lib/email';
 import { Errors, apiError } from '../../lib/errors';
 import { requestBaseUrl } from '../../lib/request-base-url';
 import { validateId } from '../../lib/validate';
@@ -702,6 +703,29 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
         params.submissionId,
         payload
       );
+
+      // Notify student by email (fire-and-forget; silently skipped if RESEND_API_KEY unset)
+      void store
+        .getSubmissionStudentEmail(requestBaseUrl(request), params.submissionId)
+        .then((student) => {
+          if (!student) return;
+          const webBase =
+            process.env.NIBRAS_WEB_BASE_URL ??
+            process.env.NEXT_PUBLIC_NIBRAS_WEB_BASE_URL ??
+            requestBaseUrl(request);
+          return sendReviewSubmittedEmail({
+            studentEmail: student.email,
+            studentName: student.username,
+            projectName: project?.key ?? submission.projectId,
+            reviewStatus: payload.status as 'approved' | 'graded' | 'changes_requested' | 'pending',
+            feedback: payload.feedback,
+            submissionUrl: `${webBase}/submissions/${params.submissionId}`,
+          });
+        })
+        .catch(() => {
+          /* email errors are non-fatal */
+        });
+
       reply.code(201);
       return TrackingReviewSchema.parse(review);
     }
