@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import CliCodeBlock from '../../_components/cli-code-block';
 import TerminalMockup, { type TerminalLine } from '../../_components/terminal-mockup';
 import { prefs } from '../../../lib/prefs';
@@ -39,8 +39,12 @@ function OsCode({
 const loginOutput: TerminalLine[] = [
   { type: 'cmd', text: 'nibras login' },
   { type: 'blank' },
-  { type: 'output', text: '  Open  https://nibras-web.fly.dev/device?user_code=ABCD-1234' },
-  { type: 'output', text: '  Code  ABCD-1234' },
+  { type: 'success', text: '╭──────────────────────────────────────────────────────────────╮' },
+  { type: 'success', text: '│  ℹ  Authorize this device                                   │' },
+  { type: 'muted', text: '│  Open in browser: https://nibras-web.fly.dev/dev/approve?...│' },
+  { type: 'muted', text: '│  Code:            ABCD-1234                                 │' },
+  { type: 'muted', text: '│  Browser launch: automatic                                  │' },
+  { type: 'success', text: '╰──────────────────────────────────────────────────────────────╯' },
   { type: 'blank' },
   { type: 'muted', text: '  ⠋ Waiting for browser authorization…' },
   { type: 'blank' },
@@ -364,9 +368,20 @@ export default function OnboardingPage() {
           {/* 02 Install */}
           <Section id="step-02" number="02" title="Install the CLI">
             <p className={styles.bodyText}>
-              Install <code className={styles.inlineCode}>@nibras/cli</code> globally via npm to get
-              the <code className={styles.inlineCode}>nibras</code> command available anywhere.
+              Install the current CLI release directly from GitHub. This pins the onboarding flow to{' '}
+              <code className={styles.inlineCode}>v1.0.1</code> and makes the{' '}
+              <code className={styles.inlineCode}>nibras</code> command available anywhere.
             </p>
+
+            <div className={`${styles.callout} ${styles.calloutInfo}`}>
+              <span className={styles.calloutIcon}>ℹ</span>
+              <p>
+                The npm package is not published yet. Right now{' '}
+                <code className={styles.inlineCode}>npm install -g @nibras/cli</code> and{' '}
+                <code className={styles.inlineCode}>npx @nibras/cli</code> will fail with a 404.
+                Until that is fixed, install from the Git tag instead.
+              </p>
+            </div>
 
             {os === 'windows' && (
               <div className={`${styles.callout} ${styles.calloutInfo}`}>
@@ -381,14 +396,13 @@ export default function OnboardingPage() {
 
             <OsCode
               os={os}
-              mac="npm install -g @nibras/cli"
-              linux="npm install -g @nibras/cli"
-              windows="npm install -g @nibras/cli"
+              mac="npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.1"
+              linux="npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.1"
+              windows="npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.1"
             />
-            <p className={styles.bodyText}>Or run without installing using npx:</p>
-            <CliCodeBlock code="npx @nibras/cli --help" />
             <p className={styles.hint}>
-              Verify the install: <code className={styles.inlineCode}>nibras --version</code>
+              Verify the install: <code className={styles.inlineCode}>nibras --version</code> should
+              show <code className={styles.inlineCode}>v1.0.1</code>.
             </p>
           </Section>
 
@@ -523,7 +537,7 @@ export default function OnboardingPage() {
             <div className={styles.shareCard}>
               <div className={styles.shareCardTitle}>Student quick-start</div>
               <CliCodeBlock
-                code={`npm install -g @nibras/cli\nnibras login\nnibras setup --project cs101/assignment-1\nnibras test\nnibras submit`}
+                code={`npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.1\nnibras --version\nnibras login\nnibras setup --project cs101/assignment-1\nnibras test\nnibras submit`}
               />
             </div>
             <p className={styles.hint}>
