@@ -2,6 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ProjectManifest } from '@nibras/contracts';
+import {
+  buildCs106lManifest,
+  buildCs106lStarter,
+  CS106L_COURSE,
+  listCs106lProjectDefinitions,
+  readCs106lTaskText,
+} from './lib/cs106l';
 
 export type PaginationOpts = { limit?: number; offset?: number };
 
@@ -87,6 +94,11 @@ export type RepoRecord = {
   visibility: 'private' | 'public';
 };
 
+export type ProjectStarterRecord =
+  | { kind: 'none' }
+  | { kind: 'bundle'; storageKey: string; fileName: string }
+  | { kind: 'github-template'; cloneUrl: string };
+
 export type ProjectRecord = {
   id: string;
   projectKey: string;
@@ -101,6 +113,7 @@ export type ProjectRecord = {
   instructorUserId: string | null;
   manifest: ProjectManifest;
   task: string;
+  starter: ProjectStarterRecord;
   repoByUserId: Record<string, RepoRecord>;
   createdAt: string;
   updatedAt: string;
@@ -665,12 +678,14 @@ function makeActivityRecord(args: {
 
 function seedData(apiBaseUrl: string): StoreData {
   const createdAt = nowIso();
-  const courseId = 'course_cs161';
-  const projectId = 'project_cs161_exam1';
+  const cs161CourseId = 'course_cs161';
+  const cs106lCourseId = 'course_cs106l';
+  const cs161ProjectId = 'project_cs161_exam1';
   const instructorId = 'user_instructor';
   const studentId = 'user_demo';
   const milestone1Id = 'milestone_exam1_design';
   const milestone2Id = 'milestone_exam1_final';
+  const cs106lProjects = listCs106lProjectDefinitions();
 
   return {
     users: [
@@ -695,7 +710,7 @@ function seedData(apiBaseUrl: string): StoreData {
     ],
     courses: [
       {
-        id: courseId,
+        id: cs161CourseId,
         slug: 'cs161',
         title: 'CS 161: Foundations of Systems',
         termLabel: 'Spring 2026',
@@ -704,11 +719,21 @@ function seedData(apiBaseUrl: string): StoreData {
         createdAt,
         updatedAt: createdAt,
       },
+      {
+        id: cs106lCourseId,
+        slug: CS106L_COURSE.slug,
+        title: CS106L_COURSE.title,
+        termLabel: CS106L_COURSE.termLabel,
+        courseCode: CS106L_COURSE.courseCode,
+        isActive: true,
+        createdAt,
+        updatedAt: createdAt,
+      },
     ],
     courseMemberships: [
       {
         id: 'membership_demo_cs161',
-        courseId,
+        courseId: cs161CourseId,
         userId: studentId,
         role: 'student',
         createdAt,
@@ -716,7 +741,23 @@ function seedData(apiBaseUrl: string): StoreData {
       },
       {
         id: 'membership_instructor_cs161',
-        courseId,
+        courseId: cs161CourseId,
+        userId: instructorId,
+        role: 'instructor',
+        createdAt,
+        updatedAt: createdAt,
+      },
+      {
+        id: 'membership_demo_cs106l',
+        courseId: cs106lCourseId,
+        userId: studentId,
+        role: 'student',
+        createdAt,
+        updatedAt: createdAt,
+      },
+      {
+        id: 'membership_instructor_cs106l',
+        courseId: cs106lCourseId,
         userId: instructorId,
         role: 'instructor',
         createdAt,
@@ -730,10 +771,10 @@ function seedData(apiBaseUrl: string): StoreData {
     verificationLogs: [],
     projects: [
       {
-        id: projectId,
+        id: cs161ProjectId,
         projectKey: 'cs161/exam1',
         slug: 'cs161/exam1',
-        courseId,
+        courseId: cs161CourseId,
         title: 'Exam 1',
         description:
           'Design, implement, and defend your solution for the first project milestone sequence.',
@@ -751,15 +792,35 @@ function seedData(apiBaseUrl: string): StoreData {
         instructorUserId: instructorId,
         manifest: defaultManifest(apiBaseUrl),
         task: defaultTask(),
+        starter: { kind: 'none' },
         repoByUserId: {},
         createdAt,
         updatedAt: createdAt,
       },
+      ...cs106lProjects.map((project) => ({
+        id: `project_${project.projectKey.replace(/\//g, '_')}`,
+        projectKey: project.projectKey,
+        slug: project.projectKey,
+        courseId: cs106lCourseId,
+        title: project.title,
+        description: project.description,
+        status: 'published' as const,
+        deliveryMode: 'individual' as const,
+        rubric: [],
+        resources: [],
+        instructorUserId: instructorId,
+        manifest: buildCs106lManifest(apiBaseUrl, project.projectKey),
+        task: readCs106lTaskText(project.projectKey),
+        starter: buildCs106lStarter(project.projectKey),
+        repoByUserId: {},
+        createdAt,
+        updatedAt: createdAt,
+      })),
     ],
     milestones: [
       {
         id: milestone1Id,
-        projectId,
+        projectId: cs161ProjectId,
         title: 'Design Review',
         description: 'Submit an initial design, edge cases, and implementation plan.',
         order: 1,
@@ -770,7 +831,7 @@ function seedData(apiBaseUrl: string): StoreData {
       },
       {
         id: milestone2Id,
-        projectId,
+        projectId: cs161ProjectId,
         title: 'Final Project Submission',
         description: 'Submit the final repository state and project write-up.',
         order: 2,
@@ -779,6 +840,17 @@ function seedData(apiBaseUrl: string): StoreData {
         createdAt,
         updatedAt: createdAt,
       },
+      ...cs106lProjects.map((project) => ({
+        id: `milestone_${project.projectKey.replace(/\//g, '_')}_initial`,
+        projectId: `project_${project.projectKey.replace(/\//g, '_')}`,
+        title: 'Initial Submission',
+        description: project.milestoneDescription,
+        order: 1,
+        dueAt: null,
+        isFinal: true,
+        createdAt,
+        updatedAt: createdAt,
+      })),
     ],
     reviews: [],
     githubDeliveries: [],
@@ -786,13 +858,24 @@ function seedData(apiBaseUrl: string): StoreData {
     activity: [
       makeActivityRecord({
         actorUserId: instructorId,
-        courseId,
-        projectId,
+        courseId: cs161CourseId,
+        projectId: cs161ProjectId,
         milestoneId: null,
         submissionId: null,
         action: 'project.published',
         summary: 'Exam 1 is now published.',
       }),
+      ...cs106lProjects.map((project) =>
+        makeActivityRecord({
+          actorUserId: instructorId,
+          courseId: cs106lCourseId,
+          projectId: `project_${project.projectKey.replace(/\//g, '_')}`,
+          milestoneId: null,
+          submissionId: null,
+          action: 'project.published',
+          summary: `${project.title} is now published.`,
+        })
+      ),
     ],
   };
 }
@@ -1508,6 +1591,7 @@ export class FileStore implements AppStore {
         projectKey: payload.slug,
       },
       task: `# ${payload.title}\n\n${payload.description}\n`,
+      starter: { kind: 'none' },
       repoByUserId: {},
       createdAt: nowIso(),
       updatedAt: nowIso(),

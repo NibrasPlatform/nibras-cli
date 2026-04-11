@@ -106,6 +106,22 @@ export const ProjectTaskResponseSchema = z.object({
   task: z.string().min(1),
 });
 
+export const ProjectStarterSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('none'),
+  }),
+  z.object({
+    kind: z.literal('bundle'),
+    downloadUrl: z.string().url(),
+    archiveFormat: z.literal('zip'),
+    fileName: z.string().min(1),
+  }),
+  z.object({
+    kind: z.literal('github-template'),
+    cloneUrl: z.string().min(1),
+  }),
+]);
+
 export const ProjectSetupResponseSchema = z.object({
   projectKey: z.string().min(1),
   repo: z.object({
@@ -116,6 +132,7 @@ export const ProjectSetupResponseSchema = z.object({
     visibility: z.enum(['private', 'public']),
   }),
   templateCloneUrl: z.string().nullable().optional(),
+  starter: ProjectStarterSchema.optional(),
   manifest: ProjectManifestSchema,
   task: z.string().min(1),
 });
@@ -192,6 +209,7 @@ export type DeviceStartResponse = z.infer<typeof DeviceStartResponseSchema>;
 export type DevicePollResponse = z.infer<typeof DevicePollResponseSchema>;
 export type MeResponse = z.infer<typeof MeResponseSchema>;
 export type ProjectTaskResponse = z.infer<typeof ProjectTaskResponseSchema>;
+export type ProjectStarter = z.infer<typeof ProjectStarterSchema>;
 export type ProjectSetupResponse = z.infer<typeof ProjectSetupResponseSchema>;
 export type SubmissionPrepareRequest = z.infer<typeof SubmissionPrepareRequestSchema>;
 export type SubmissionPrepareResponse = z.infer<typeof SubmissionPrepareResponseSchema>;

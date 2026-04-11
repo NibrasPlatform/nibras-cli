@@ -52,20 +52,22 @@ export async function GET(request: NextRequest) {
   const setCookie = apiResponse.headers.get('set-cookie');
   const location = apiResponse.headers.get('location');
 
-  // Redirect destination: prefer what the API sent (it contains the return_to),
-  // but always keep it on the public web origin for safety.
-  let redirectTo: string;
+  // Always land the user at /auth/complete on the public web origin.
+  // Extract the ?st= session token from whatever URL the API redirected to
+  // so it always arrives at /auth/complete — regardless of origin comparison.
+  // The previous origin check was fragile: if x-forwarded-host is absent
+  // during the server-to-server call, publicOrigin mismatches and ?st= gets dropped.
+  let sessionToken: string | null = null;
   if (location) {
     try {
-      const loc = new URL(location);
-      // Only allow redirects to the same public web origin
-      redirectTo = loc.origin === publicOrigin ? loc.href : `${publicOrigin}/auth/complete`;
+      sessionToken = new URL(location).searchParams.get('st');
     } catch {
-      redirectTo = `${publicOrigin}/auth/complete`;
+      // malformed URL — no token
     }
-  } else {
-    redirectTo = `${publicOrigin}/auth/complete`;
   }
+
+  const completePath = `/auth/complete${sessionToken ? `?st=${encodeURIComponent(sessionToken)}` : ''}`;
+  const redirectTo = `${publicOrigin}${completePath}`;
 
   const response = NextResponse.redirect(redirectTo);
 

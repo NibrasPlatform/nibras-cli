@@ -2,7 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { ProjectSetupResponseSchema } from '@nibras/contracts';
-import { apiRequest, writeProjectManifest, writeTaskText } from '@nibras/core';
+import JSZip from 'jszip';
+import {
+  apiRequest,
+  ensureGitIdentity,
+  readCliConfig,
+  writeProjectManifest,
+  writeTaskText,
+} from '@nibras/core';
 import { createSpinner } from '../ui/spinner';
 import { printBox } from '../ui/box';
 
@@ -20,6 +27,63 @@ function isGitHubUrl(url: string | null | undefined): url is string {
 function git(args: string[], cwd: string): boolean {
   const result = spawnSync('git', args, { cwd, stdio: 'ignore' });
   return result.status === 0;
+}
+
+function gitHasRemote(cwd: string): boolean {
+  return (
+    spawnSync('git', ['remote', 'get-url', 'origin'], {
+      cwd,
+      stdio: 'pipe',
+    }).status === 0
+  );
+}
+
+function gitHasHeadCommit(cwd: string): boolean {
+  return (
+    spawnSync('git', ['rev-parse', '--verify', 'HEAD'], {
+      cwd,
+      stdio: 'ignore',
+    }).status === 0
+  );
+}
+
+function gitHasStagedChanges(cwd: string): boolean {
+  return (
+    spawnSync('git', ['diff', '--cached', '--quiet'], {
+      cwd,
+      stdio: 'ignore',
+    }).status !== 0
+  );
+}
+
+async function downloadStarterBundle(downloadUrl: string): Promise<Buffer> {
+  const config = readCliConfig();
+  const headers = new Headers();
+  if (config.accessToken) {
+    headers.set('authorization', `Bearer ${config.accessToken}`);
+  }
+  const response = await fetch(downloadUrl, { headers });
+  if (!response.ok) {
+    throw new Error(`Failed to download starter bundle (${response.status}).`);
+  }
+  return Buffer.from(await response.arrayBuffer());
+}
+
+async function extractZipArchive(archive: Buffer, destinationDir: string): Promise<void> {
+  const zip = await JSZip.loadAsync(archive);
+  for (const [entryName, entry] of Object.entries(zip.files)) {
+    const normalized = path.posix.normalize(entryName);
+    if (!normalized || normalized === '.' || normalized.startsWith('../') || normalized.includes('/../')) {
+      throw new Error(`Unsafe path in starter bundle: ${entryName}`);
+    }
+    const targetPath = path.join(destinationDir, normalized);
+    if (entry.dir) {
+      fs.mkdirSync(targetPath, { recursive: true });
+      continue;
+    }
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, await entry.async('nodebuffer'));
+  }
 }
 
 export async function commandSetup(args: string[], plain: boolean): Promise<void> {
@@ -40,25 +104,49 @@ export async function commandSetup(args: string[], plain: boolean): Promise<void
 
   const cloneUrl = response.repo.cloneUrl;
   const templateCloneUrl = response.templateCloneUrl ?? null;
+  const starter = response.starter ?? { kind: 'none' as const };
   const repoName = response.repo.name;
   const repoFullName = `${response.repo.owner}/${repoName}`;
   const defaultBranch = response.repo.defaultBranch;
   const studentRepoUrl = `https://github.com/${repoFullName}.git`;
+  const remoteOriginUrl = cloneUrl ?? studentRepoUrl;
 
   // Determine the final project directory:
   //   - If --dir was explicitly given, use it as-is
   //   - Otherwise always create a named subdirectory (nibras-<project>)
   const projectDir = explicitDir ? baseDir : path.join(baseDir, repoName);
   const alreadyHasGit = fs.existsSync(path.join(projectDir, '.git'));
+  const shouldSkipStarterRestore = alreadyHasGit;
 
   fs.mkdirSync(projectDir, { recursive: true });
 
-  if (isGitHubUrl(cloneUrl) && !alreadyHasGit) {
+  if (starter.kind === 'bundle' && !shouldSkipStarterRestore) {
+    spinner.text('Initialising git repository');
+    git(['init', '-b', defaultBranch], projectDir);
+    spinner.text(`Downloading ${starter.fileName}`);
+    const archive = await downloadStarterBundle(starter.downloadUrl);
+    spinner.text('Extracting starter bundle');
+    await extractZipArchive(archive, projectDir);
+  } else if (isGitHubUrl(cloneUrl) && !alreadyHasGit && starter.kind !== 'bundle') {
     // ── Student's personal repo was provisioned — clone it directly ───────
     spinner.text(`Cloning ${repoFullName}`);
     if (!git(['clone', cloneUrl, projectDir], baseDir)) {
       spinner.text('Clone failed, initialising git repository');
       git(['init', '-b', defaultBranch], projectDir);
+    }
+  } else if (
+    starter.kind === 'github-template' &&
+    isGitHubUrl(starter.cloneUrl) &&
+    !shouldSkipStarterRestore
+  ) {
+    spinner.text('Cloning starter template');
+    const cloned = git(['clone', starter.cloneUrl, projectDir], baseDir);
+    if (!cloned) {
+      spinner.text('Template clone failed, initialising git repository');
+      git(['init', '-b', defaultBranch], projectDir);
+    } else {
+      git(['remote', 'remove', 'origin'], projectDir);
+      git(['checkout', '-B', defaultBranch], projectDir);
     }
   } else if (isGitHubUrl(templateCloneUrl) && !alreadyHasGit) {
     // ── Clone template as starter, then wire up the student's remote ──────
@@ -86,28 +174,31 @@ export async function commandSetup(args: string[], plain: boolean): Promise<void
   writeTaskText(projectDir, response.task);
 
   // ── Set git remote to the student's GitHub repo ───────────────────────────
-  const hasRemote =
-    spawnSync('git', ['remote', 'get-url', 'origin'], {
-      cwd: projectDir,
-      stdio: 'pipe',
-    }).status === 0;
-
-  if (!hasRemote) {
-    git(['remote', 'add', 'origin', studentRepoUrl], projectDir);
+  if (!gitHasRemote(projectDir)) {
+    git(['remote', 'add', 'origin', remoteOriginUrl], projectDir);
   }
 
   // ── Push initial commit to GitHub if repo was just provisioned ────────────
-  if (isGitHubUrl(cloneUrl)) {
+  if (starter.kind === 'bundle' && !shouldSkipStarterRestore) {
+    await ensureGitIdentity(projectDir, 'Nibras CLI', 'noreply@nibras.dev');
+    git(['add', '.'], projectDir);
+    if (gitHasStagedChanges(projectDir)) {
+      git(['commit', '-m', 'nibras: initialize project'], projectDir);
+    }
+    if (cloneUrl) {
+      spinner.text(`Pushing ${defaultBranch} to ${repoFullName}`);
+      git(['push', '-u', 'origin', defaultBranch], projectDir);
+    }
+  } else if (isGitHubUrl(cloneUrl)) {
     // Already cloned from the real repo — nothing to push
-  } else if (isGitHubUrl(templateCloneUrl)) {
+  } else if (
+    (starter.kind === 'github-template' && isGitHubUrl(starter.cloneUrl)) ||
+    isGitHubUrl(templateCloneUrl)
+  ) {
     // Stage and commit any manifest changes before pushing
+    await ensureGitIdentity(projectDir, 'Nibras CLI', 'noreply@nibras.dev');
     git(['add', '.nibras/'], projectDir);
-    const hasStagedChanges =
-      spawnSync('git', ['diff', '--cached', '--quiet'], {
-        cwd: projectDir,
-        stdio: 'ignore',
-      }).status !== 0;
-    if (hasStagedChanges) {
+    if (gitHasStagedChanges(projectDir)) {
       git(['commit', '-m', 'nibras: add project manifest'], projectDir);
     }
 
@@ -131,6 +222,12 @@ export async function commandSetup(args: string[], plain: boolean): Promise<void
           );
         }
       }
+    }
+  } else if (alreadyHasGit && !gitHasHeadCommit(projectDir)) {
+    await ensureGitIdentity(projectDir, 'Nibras CLI', 'noreply@nibras.dev');
+    git(['add', '.nibras/'], projectDir);
+    if (gitHasStagedChanges(projectDir)) {
+      git(['commit', '-m', 'nibras: add project manifest'], projectDir);
     }
   }
 

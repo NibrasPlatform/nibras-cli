@@ -13,12 +13,17 @@ import {
 } from '@nibras/contracts';
 import { GitHubAppConfig } from '@nibras/github';
 import { PrismaStore } from '../../prisma-store';
-import { AppStore } from '../../store';
+import { AppStore, ProjectRecord } from '../../store';
 import { Errors } from '../../lib/errors';
 import { validateId } from '../../lib/validate';
-import { getWebSessionToken, requireUser } from '../../lib/auth';
+import { getWebSessionToken, hasCourseAccess, requireUser, type AuthenticatedRequest } from '../../lib/auth';
 import { requestBaseUrl } from '../../lib/request-base-url';
 import { clearWebSessionCookie } from '../../lib/web-session';
+import { buildStarterBundleFromStorageKey } from '../../lib/starter-bundles';
+
+function canAccessProject(auth: AuthenticatedRequest, project: ProjectRecord): boolean {
+  return !project.courseId || hasCourseAccess(auth, project.courseId);
+}
 
 export function registerHostedCliRoutes(
   app: FastifyInstance,
@@ -196,6 +201,39 @@ export function registerHostedCliRoutes(
     }
   );
 
+  app.get(
+    '/v1/projects/:projectKey/starter-bundle',
+    { schema: { tags: ['projects'], summary: 'Download the latest starter bundle for a project' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { projectKey: string };
+      const project = await store.getProject(requestBaseUrl(request), params.projectKey);
+      if (!project) {
+        reply.code(404).send(Errors.notFound('Project'));
+        return;
+      }
+      if (!canAccessProject(auth, project)) {
+        reply.code(403).send(Errors.forbidden());
+        return;
+      }
+      if (project.starter.kind !== 'bundle') {
+        reply.code(404).send(Errors.notFound('Starter bundle'));
+        return;
+      }
+
+      const archive = await buildStarterBundleFromStorageKey(project.starter.storageKey);
+      void reply
+        .header('Content-Type', 'application/zip')
+        .header(
+          'Content-Disposition',
+          `attachment; filename="${project.starter.fileName.replace(/"/g, '')}"`
+        )
+        .header('Cache-Control', 'private, no-store');
+      return reply.send(archive);
+    }
+  );
+
   app.post(
     '/v1/projects/:projectKey/setup',
     { schema: { tags: ['projects'], summary: 'Provision student project repo' } },
@@ -206,6 +244,10 @@ export function registerHostedCliRoutes(
       const project = await store.getProject(requestBaseUrl(request), params.projectKey);
       if (!project) {
         reply.code(404).send(Errors.notFound('Project'));
+        return;
+      }
+      if (!canAccessProject(auth, project)) {
+        reply.code(403).send(Errors.forbidden());
         return;
       }
       let repo = await store.provisionProjectRepo(
@@ -234,10 +276,30 @@ export function registerHostedCliRoutes(
         githubConfig?.templateOwner && githubConfig?.templateRepo
           ? `https://github.com/${githubConfig.templateOwner}/${githubConfig.templateRepo}`
           : null;
+      const starter =
+        project.starter.kind === 'bundle'
+          ? {
+              kind: 'bundle' as const,
+              downloadUrl: `${requestBaseUrl(request)}/v1/projects/${encodeURIComponent(project.projectKey)}/starter-bundle`,
+              archiveFormat: 'zip' as const,
+              fileName: project.starter.fileName,
+            }
+          : project.starter.kind === 'github-template'
+            ? {
+                kind: 'github-template' as const,
+                cloneUrl: project.starter.cloneUrl,
+              }
+            : templateCloneUrl
+              ? {
+                  kind: 'github-template' as const,
+                  cloneUrl: templateCloneUrl,
+                }
+              : { kind: 'none' as const };
       return ProjectSetupResponseSchema.parse({
         projectKey: project.projectKey,
         repo,
         templateCloneUrl,
+        starter,
         manifest: project.manifest,
         task: project.task,
       });

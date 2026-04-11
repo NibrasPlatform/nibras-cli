@@ -18,6 +18,7 @@ COPY packages/contracts ./packages/contracts
 COPY packages/core ./packages/core
 COPY packages/github ./packages/github
 COPY apps/api ./apps/api
+COPY courses ./courses
 COPY tsconfig.base.json ./
 RUN npm run db:generate
 # Build only the packages needed for API (don't build CLI)
@@ -40,6 +41,7 @@ COPY --from=build /app/packages/github/dist ./packages/github/dist
 COPY --from=build /app/packages/github/package.json ./packages/github/
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/package.json ./apps/api/
+COPY --from=build /app/courses ./courses
 COPY --from=build /app/prisma ./prisma
 COPY package.json ./
 

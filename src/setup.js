@@ -84,27 +84,35 @@ async function setupProject({ cwd, subject, project, projectConfig, subjectConfi
   const zipName = projectConfig.setupZipName || `${subject}-${project}.zip`;
   const destDir = projectConfig.setupDir || cwd;
   const destPath = path.isAbsolute(destDir) ? destDir : path.join(cwd, destDir);
-
-  fs.mkdirSync(destPath, { recursive: true });
-
-  const zipPath = path.join(destPath, zipName);
   const localPath = resolveLocalPath(setupUrl, cwd);
   let shouldDeleteZip = true;
   if (localPath) {
     if (!fs.existsSync(localPath)) {
       throw new Error(`setupUrl points to a local file that doesn't exist: ${localPath}`);
     }
+    const stat = fs.statSync(localPath);
+    if (stat.isDirectory()) {
+      fs.mkdirSync(path.dirname(destPath), { recursive: true });
+      fs.cpSync(localPath, destPath, { recursive: true });
+      return { destPath, sourceType: 'directory' };
+    }
+    fs.mkdirSync(destPath, { recursive: true });
+    const zipPath = path.join(destPath, zipName);
     if (path.resolve(localPath) !== path.resolve(zipPath)) {
       fs.copyFileSync(localPath, zipPath);
     } else {
       shouldDeleteZip = false;
     }
   } else {
+    fs.mkdirSync(destPath, { recursive: true });
+    const zipPath = path.join(destPath, zipName);
     const download = await downloadFile(setupUrl, zipPath, destPath);
     if (download.code !== 0) {
       throw new Error(download.stderr || 'Failed to download setup zip.');
     }
   }
+
+  const zipPath = path.join(destPath, zipName);
 
   if (!isZipFile(zipPath)) {
     const snippet = readFileSnippet(zipPath);
@@ -120,7 +128,7 @@ async function setupProject({ cwd, subject, project, projectConfig, subjectConfi
   if (shouldDeleteZip) {
     fs.unlinkSync(zipPath);
   }
-  return { destPath, zipName };
+  return { destPath, zipName, sourceType: 'archive' };
 }
 
 module.exports = { setupProject };

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
+  AssetVisibility,
   CourseRole,
   DeliveryMode,
   Prisma,
@@ -11,9 +12,20 @@ import {
   SystemRole,
   TrackingSubmissionType,
 } from '@prisma/client';
-import { generateRepositoryFromTemplate, GitHubAppConfig } from '@nibras/github';
+import {
+  createPrivateRepository,
+  generateRepositoryFromTemplate,
+  GitHubAppConfig,
+} from '@nibras/github';
 import { encrypt as encryptValue, decrypt as decryptValue } from '@nibras/core';
 import { enqueueVerificationJob } from './lib/queue';
+import {
+  buildCs106lManifest,
+  buildCs106lStarter,
+  CS106L_COURSE,
+  listCs106lProjectDefinitions,
+  readCs106lTaskText,
+} from './lib/cs106l';
 import {
   ActivityRecord,
   AppStore,
@@ -27,6 +39,7 @@ import {
   MilestoneRecord,
   PaginationOpts,
   ProjectRecord,
+  ProjectStarterRecord,
   ProjectStatus,
   RepoRecord,
   ReviewRecord,
@@ -343,6 +356,33 @@ function projectStats(
   };
 }
 
+const latestReleaseInclude = {
+  orderBy: { createdAt: 'desc' as const },
+  take: 1,
+  include: { assets: true },
+};
+
+function toProjectStarterRecord(args: {
+  projectKey: string;
+  release?: {
+    assets?: Array<{
+      kind: string;
+      storageKey: string;
+    }>;
+  };
+}): ProjectStarterRecord {
+  const starterAsset = args.release?.assets?.find((asset) => asset.kind === 'starter-bundle');
+  if (starterAsset) {
+    const starter = buildCs106lStarter(args.projectKey);
+    return {
+      kind: 'bundle',
+      storageKey: starterAsset.storageKey,
+      fileName: starter.fileName,
+    };
+  }
+  return { kind: 'none' };
+}
+
 function toProjectRecord(project: {
   id: string;
   slug: string;
@@ -356,7 +396,11 @@ function toProjectRecord(project: {
   defaultBranch: string;
   createdAt: Date;
   updatedAt: Date;
-  releases: Array<{ manifestJson: unknown; taskText: string }>;
+  releases: Array<{
+    manifestJson: unknown;
+    taskText: string;
+    assets: Array<{ kind: string; storageKey: string }>;
+  }>;
 }): ProjectRecord {
   const release = project.releases[0];
   return {
@@ -378,6 +422,7 @@ function toProjectRecord(project: {
     manifest:
       (release?.manifestJson as ProjectRecord['manifest']) || defaultManifest('http://127.0.0.1'),
     task: release?.taskText || defaultTask(),
+    starter: toProjectStarterRecord({ projectKey: project.slug, release }),
     repoByUserId: {},
     createdAt: project.createdAt.toISOString(),
     updatedAt: project.updatedAt.toISOString(),
@@ -396,52 +441,6 @@ export class PrismaStore implements AppStore {
     if (this.seeded) {
       return;
     }
-    if (process.env.NODE_ENV === 'production' && process.env.NIBRAS_ENABLE_DEMO_SEED !== '1') {
-      this.seeded = true;
-      return;
-    }
-    const [
-      existingCourse,
-      existingProject,
-      existingDemoUser,
-      existingInstructorUser,
-      existingRelease,
-      existingMemberships,
-      existingMilestones,
-    ] = await Promise.all([
-      this.prisma.course.findUnique({ where: { slug: 'cs161' } }),
-      this.prisma.project.findUnique({ where: { slug: 'cs161/exam1' } }),
-      this.prisma.user.findUnique({ where: { email: 'demo@nibras.dev' } }),
-      this.prisma.user.findUnique({ where: { email: 'instructor@nibras.dev' } }),
-      this.prisma.projectRelease.findFirst({
-        where: {
-          project: { slug: 'cs161/exam1' },
-        },
-      }),
-      this.prisma.courseMembership.count({
-        where: {
-          course: { slug: 'cs161' },
-        },
-      }),
-      this.prisma.milestone.count({
-        where: {
-          project: { slug: 'cs161/exam1' },
-        },
-      }),
-    ]);
-    if (
-      existingCourse &&
-      existingProject &&
-      existingDemoUser &&
-      existingInstructorUser &&
-      existingRelease &&
-      existingMemberships >= 2 &&
-      existingMilestones >= 2
-    ) {
-      this.seeded = true;
-      return;
-    }
-
     const subject = await this.prisma.subject.upsert({
       where: { slug: 'cs161' },
       update: { name: 'CS161' },
@@ -505,6 +504,29 @@ export class PrismaStore implements AppStore {
           { label: 'Task brief', url: 'https://example.com/task-brief' },
           { label: 'Reference notes', url: 'https://example.com/reference-notes' },
         ],
+      },
+    });
+
+    const cs106lSubject = await this.prisma.subject.upsert({
+      where: { slug: CS106L_COURSE.slug },
+      update: { name: CS106L_COURSE.courseCode },
+      create: { slug: CS106L_COURSE.slug, name: CS106L_COURSE.courseCode },
+    });
+
+    const cs106lCourse = await this.prisma.course.upsert({
+      where: { slug: CS106L_COURSE.slug },
+      update: {
+        title: CS106L_COURSE.title,
+        termLabel: CS106L_COURSE.termLabel,
+        courseCode: CS106L_COURSE.courseCode,
+        isActive: true,
+      },
+      create: {
+        slug: CS106L_COURSE.slug,
+        title: CS106L_COURSE.title,
+        termLabel: CS106L_COURSE.termLabel,
+        courseCode: CS106L_COURSE.courseCode,
+        isActive: true,
       },
     });
 
@@ -676,6 +698,127 @@ export class PrismaStore implements AppStore {
           });
         });
     }
+
+    await this.prisma.courseMembership.upsert({
+      where: {
+        courseId_userId: {
+          courseId: cs106lCourse.id,
+          userId: user.id,
+        },
+      },
+      update: {
+        role: CourseRole.student,
+      },
+      create: {
+        courseId: cs106lCourse.id,
+        userId: user.id,
+        role: CourseRole.student,
+      },
+    });
+
+    await this.prisma.courseMembership.upsert({
+      where: {
+        courseId_userId: {
+          courseId: cs106lCourse.id,
+          userId: instructor.id,
+        },
+      },
+      update: {
+        role: CourseRole.instructor,
+      },
+      create: {
+        courseId: cs106lCourse.id,
+        userId: instructor.id,
+        role: CourseRole.instructor,
+      },
+    });
+
+    for (const definition of listCs106lProjectDefinitions()) {
+      const cs106lProject = await this.prisma.project.upsert({
+        where: { slug: definition.projectKey },
+        update: {
+          name: definition.title,
+          defaultBranch: 'main',
+          subjectId: cs106lSubject.id,
+          courseId: cs106lCourse.id,
+          description: definition.description,
+          status: PrismaProjectStatus.published,
+          deliveryMode: DeliveryMode.individual,
+          rubricJson: [],
+          resourcesJson: [],
+        },
+        create: {
+          slug: definition.projectKey,
+          name: definition.title,
+          defaultBranch: 'main',
+          subjectId: cs106lSubject.id,
+          courseId: cs106lCourse.id,
+          description: definition.description,
+          status: PrismaProjectStatus.published,
+          deliveryMode: DeliveryMode.individual,
+          rubricJson: [],
+          resourcesJson: [],
+        },
+      });
+
+      const cs106lManifest = buildCs106lManifest(apiBaseUrl, definition.projectKey);
+      const starter = buildCs106lStarter(definition.projectKey);
+      const release = await this.prisma.projectRelease.upsert({
+        where: {
+          projectId_version: {
+            projectId: cs106lProject.id,
+            version: cs106lManifest.releaseVersion,
+          },
+        },
+        update: {
+          taskText: readCs106lTaskText(definition.projectKey),
+          manifestJson: cs106lManifest,
+        },
+        create: {
+          projectId: cs106lProject.id,
+          version: cs106lManifest.releaseVersion,
+          taskText: readCs106lTaskText(definition.projectKey),
+          manifestJson: cs106lManifest,
+          publicAssetRef: 'public://seed',
+          privateAssetRef: 'private://seed',
+        },
+      });
+
+      await this.prisma.projectAsset.deleteMany({
+        where: { projectReleaseId: release.id, kind: 'starter-bundle' },
+      });
+      await this.prisma.projectAsset.create({
+        data: {
+          projectReleaseId: release.id,
+          visibility: AssetVisibility.private,
+          kind: 'starter-bundle',
+          storageKey: starter.storageKey,
+        },
+      });
+
+      await this.prisma.milestone.upsert({
+        where: {
+          projectId_order: {
+            projectId: cs106lProject.id,
+            order: 1,
+          },
+        },
+        update: {
+          title: 'Initial Submission',
+          description: definition.milestoneDescription,
+          dueAt: null,
+          isFinal: true,
+        },
+        create: {
+          projectId: cs106lProject.id,
+          title: 'Initial Submission',
+          description: definition.milestoneDescription,
+          order: 1,
+          dueAt: null,
+          isFinal: true,
+        },
+      });
+    }
     this.seeded = true;
   }
 
@@ -791,21 +934,25 @@ export class PrismaStore implements AppStore {
         /* non-fatal */
       });
 
-    // Auto-enroll every user in cs161 as a student so that Exam 1 & 2
-    // are always visible to all users (including brand-new sign-ups).
-    await this.prisma.course
-      .findUnique({ where: { slug: 'cs161' } })
-      .then(async (cs161) => {
-        if (!cs161) return;
-        await this.prisma.courseMembership.upsert({
-          where: { courseId_userId: { courseId: cs161.id, userId: user.id } },
-          update: {},
-          create: { courseId: cs161.id, userId: user.id, role: CourseRole.student },
-        });
+    // Auto-enroll every user in the seeded demo courses so hosted Fly
+    // environments are immediately usable for both the JS and C++ flows.
+    await Promise.all(
+      ['cs161', 'cs106l'].map(async (slug) => {
+        try {
+          const course = await this.prisma.course.findUnique({ where: { slug } });
+          if (!course) {
+            return;
+          }
+          await this.prisma.courseMembership.upsert({
+            where: { courseId_userId: { courseId: course.id, userId: user.id } },
+            update: {},
+            create: { courseId: course.id, userId: user.id, role: CourseRole.student },
+          });
+        } catch {
+          /* non-fatal: enrolment runs again next login */
+        }
       })
-      .catch(() => {
-        /* non-fatal: enrolment runs again next login */
-      });
+    );
 
     return {
       user: toUserRecord(hydrated),
@@ -1233,7 +1380,7 @@ export class PrismaStore implements AppStore {
     const project = await this.prisma.project.findUnique({
       where: { slug: projectKey },
       include: {
-        releases: { orderBy: { createdAt: 'desc' }, take: 1 },
+        releases: latestReleaseInclude,
       },
     });
     if (!project || project.releases.length === 0) {
@@ -1300,22 +1447,32 @@ export class PrismaStore implements AppStore {
     userId: string,
     githubConfig: GitHubAppConfig
   ): Promise<RepoRecord> {
-    const account = await this.prisma.githubAccount.findUnique({
-      where: { userId },
-    });
+    const account = await this.getGithubAccountForUser(userId);
     const project = await this.prisma.project.findUnique({
       where: { slug: projectKey },
+      include: {
+        releases: latestReleaseInclude,
+      },
     });
     if (!account?.userAccessToken || !project) {
       throw new Error('GitHub account or project is not ready for provisioning.');
     }
+    const hydratedProject = toProjectRecord(project);
     const repoName = `nibras-${projectKey.replace('/', '-')}`;
-    const generated = await generateRepositoryFromTemplate(
-      githubConfig,
-      account.userAccessToken,
-      account.login,
-      repoName
-    );
+    const generated =
+      hydratedProject.starter.kind === 'bundle'
+        ? await createPrivateRepository(
+            githubConfig,
+            account.userAccessToken,
+            account.login,
+            repoName
+          )
+        : await generateRepositoryFromTemplate(
+            githubConfig,
+            account.userAccessToken,
+            account.login,
+            repoName
+          );
     const record = await this.prisma.userProjectRepo.upsert({
       where: {
         userId_projectId: {
@@ -1365,7 +1522,7 @@ export class PrismaStore implements AppStore {
     const project = await this.prisma.project.findUnique({
       where: { slug: payload.projectKey },
       include: {
-        releases: { orderBy: { createdAt: 'desc' }, take: 1 },
+        releases: latestReleaseInclude,
         milestones: { orderBy: { order: 'asc' } },
       },
     });
@@ -1918,7 +2075,7 @@ export class PrismaStore implements AppStore {
     const projects = await this.prisma.project.findMany({
       where: { courseId },
       include: {
-        releases: { orderBy: { createdAt: 'desc' }, take: 1 },
+        releases: latestReleaseInclude,
       },
       orderBy: { createdAt: 'desc' },
       take,
@@ -1940,7 +2097,7 @@ export class PrismaStore implements AppStore {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       include: {
-        releases: { orderBy: { createdAt: 'desc' }, take: 1 },
+        releases: latestReleaseInclude,
       },
     });
     return project ? toProjectRecord(project) : null;
@@ -1995,7 +2152,7 @@ export class PrismaStore implements AppStore {
     });
     const hydrated = await this.prisma.project.findUniqueOrThrow({
       where: { id: created.id },
-      include: { releases: { orderBy: { createdAt: 'desc' }, take: 1 } },
+      include: { releases: latestReleaseInclude },
     });
     await this.prisma.auditLog.create({
       data: {
@@ -2043,7 +2200,7 @@ export class PrismaStore implements AppStore {
           resourcesJson: payload.resources,
         },
         include: {
-          releases: { orderBy: { createdAt: 'desc' }, take: 1 },
+          releases: latestReleaseInclude,
         },
       })
       .catch(() => null);
@@ -2252,7 +2409,7 @@ export class PrismaStore implements AppStore {
     await this.seed(apiBaseUrl);
     const milestone = await this.prisma.milestone.findUniqueOrThrow({
       where: { id: milestoneId },
-      include: { project: { include: { releases: { orderBy: { createdAt: 'desc' }, take: 1 } } } },
+      include: { project: { include: { releases: latestReleaseInclude } } },
     });
     const parsedRepo = parseGitHubRepoUrl(payload.repoUrl || payload.submissionValue);
     let repo = await this.prisma.userProjectRepo.findFirst({

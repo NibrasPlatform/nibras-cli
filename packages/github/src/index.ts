@@ -334,6 +334,32 @@ export async function generateRepositoryFromTemplate(
   };
 }
 
+export async function createPrivateRepository(
+  config: GitHubAppConfig,
+  userToken: string,
+  owner: string,
+  repoName: string
+): Promise<{ cloneUrl: string | null; htmlUrl: string | null; fullName: string }> {
+  const payload = await githubRequest<Record<string, unknown>>(
+    'https://api.github.com/user/repos',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        name: repoName,
+        private: true,
+        auto_init: false,
+      }),
+    },
+    userToken,
+    config.apiVersion
+  );
+  return {
+    cloneUrl: payload.clone_url ? String(payload.clone_url) : null,
+    htmlUrl: payload.html_url ? String(payload.html_url) : null,
+    fullName: payload.full_name ? String(payload.full_name) : `${owner}/${repoName}`,
+  };
+}
+
 export function createSignedState(
   secret: string,
   payload: Record<string, string>,

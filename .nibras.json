@@ -71,6 +71,49 @@
           "scoresFile": "scores.json"
         }
       }
+    },
+    "cs106l": {
+      "taskFile": "CS106L.md",
+      "projects": {
+        "gapbuffer": {
+          "type": "command",
+          "path": "courses/cs106l/assignments/GapBuffer",
+          "taskFile": "courses/cs106l/assignments/GapBuffer/README.md",
+          "setupUrl": "courses/cs106l/assignments/GapBuffer",
+          "setupDir": "nibras-cs106l-gapbuffer",
+          "command": "if ! command -v cmake >/dev/null 2>&1; then echo \"cmake is required to run CS106L checks.\" >&2; exit 2; fi; cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure",
+          "files": [
+            "gap_buffer.h"
+          ]
+        },
+        "hashmap": {
+          "type": "command",
+          "path": "courses/cs106l/assignments/HashMap",
+          "taskFile": "courses/cs106l/assignments/HashMap/README.md",
+          "setupUrl": "courses/cs106l/assignments/HashMap",
+          "setupDir": "nibras-cs106l-hashmap",
+          "command": "if ! command -v cmake >/dev/null 2>&1; then echo \"cmake is required to run CS106L checks.\" >&2; exit 2; fi; cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure",
+          "files": [
+            "hashmap.cpp",
+            "hashmap.h",
+            "hashmap_iterator.h",
+            "test_settings.h"
+          ]
+        },
+        "kdtree": {
+          "type": "command",
+          "path": "courses/cs106l/assignments/KDTree",
+          "taskFile": "courses/cs106l/assignments/KDTree/README.md",
+          "setupUrl": "courses/cs106l/assignments/KDTree",
+          "setupDir": "nibras-cs106l-kdtree",
+          "command": "if ! command -v cmake >/dev/null 2>&1; then echo \"cmake is required to run CS106L checks.\" >&2; exit 2; fi; cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure",
+          "files": [
+            "bounded_priority_queue.h",
+            "kd_tree.h",
+            "point.h"
+          ]
+        }
+      }
     }
   }
 }

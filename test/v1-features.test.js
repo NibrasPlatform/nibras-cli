@@ -22,6 +22,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const JSZip = require('jszip');
 
 const { buildApp } = require('../apps/api/dist/app');
 const { FileStore } = require('../apps/api/dist/store');
@@ -136,6 +137,146 @@ test('forbidden resource returns { code: "FORBIDDEN" }', async () => {
   } finally {
     await app.close();
   }
+});
+
+test('FileStore seeds CS106L with bundle-backed hosted projects', () => {
+  const store = new FileStore(makeStorePath());
+  const data = store.read('http://127.0.0.1');
+  assert.ok(data.courses.some((course) => course.slug === 'cs106l'));
+  const cs106lProjects = data.projects.filter((project) => project.projectKey.startsWith('cs106l/'));
+  assert.deepEqual(
+    cs106lProjects.map((project) => project.projectKey).sort(),
+    ['cs106l/gapbuffer', 'cs106l/hashmap', 'cs106l/kdtree']
+  );
+  for (const project of cs106lProjects) {
+    assert.equal(project.starter.kind, 'bundle');
+    assert.equal(project.manifest.test.mode, 'command');
+  }
+});
+
+test('setup response includes a bundle starter descriptor for cs106l/gapbuffer', async () => {
+  const storePath = makeStorePath();
+  const app = buildTestApp(storePath);
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/cs106l%2Fgapbuffer/setup',
+      headers: { authorization: 'Bearer student-token' },
+    });
+    assert.equal(res.statusCode, 200);
+    const body = res.json();
+    assert.equal(body.projectKey, 'cs106l/gapbuffer');
+    assert.equal(body.starter.kind, 'bundle');
+    assert.match(body.starter.downloadUrl, /\/v1\/projects\/cs106l%2Fgapbuffer\/starter-bundle$/);
+    assert.equal(body.starter.archiveFormat, 'zip');
+    assert.equal(body.manifest.test.mode, 'command');
+  } finally {
+    await app.close();
+  }
+});
+
+test('starter bundle route serves the seeded CS106L archive', async () => {
+  const storePath = makeStorePath();
+  const app = buildTestApp(storePath);
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/projects/cs106l%2Fgapbuffer/starter-bundle',
+      headers: { authorization: 'Bearer student-token' },
+    });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.headers['content-type'], 'application/zip');
+    const zip = await JSZip.loadAsync(res.rawPayload);
+    assert.ok(zip.file('gap_buffer.h'));
+    assert.ok(zip.file('README.md'));
+    assert.ok(Object.keys(zip.files).every((name) => !name.includes('solutions/')));
+  } finally {
+    await app.close();
+  }
+});
+
+test('starter bundle route returns 403 when the user lacks project access', async () => {
+  const storePath = makeStorePath();
+  const store = new FileStore(storePath);
+  const data = store.read('http://127.0.0.1');
+  const cs106lCourse = data.courses.find((course) => course.slug === 'cs106l');
+  assert.ok(cs106lCourse);
+  data.courseMemberships = data.courseMemberships.filter(
+    (membership) => !(membership.userId === 'user_demo' && membership.courseId === cs106lCourse.id)
+  );
+  store.write(data);
+  const app = buildTestApp(storePath);
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/projects/cs106l%2Fgapbuffer/starter-bundle',
+      headers: { authorization: 'Bearer student-token' },
+    });
+    assert.equal(res.statusCode, 403);
+  } finally {
+    await app.close();
+  }
+});
+
+test('PrismaStore auto-enrollment covers both seeded demo courses', async () => {
+  const { PrismaStore } = require('../apps/api/dist/prisma-store');
+  const courseMembershipUpserts = [];
+  const fakePrisma = {
+    user: {
+      upsert: async () => ({ id: 'user-1' }),
+      findUniqueOrThrow: async () => ({
+        id: 'user-1',
+        username: 'student',
+        email: 'student@example.com',
+        githubLinked: true,
+        githubAppInstalled: true,
+        systemRole: 'user',
+        githubAccount: { login: 'student-gh' },
+      }),
+    },
+    githubAccount: {
+      upsert: async () => ({}),
+    },
+    cliSession: {
+      create: async () => ({
+        userId: 'user-1',
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        createdAt: new Date(),
+      }),
+    },
+    auditLog: {
+      create: async () => ({}),
+    },
+    course: {
+      findUnique: async ({ where }) => {
+        if (where.slug === 'cs161') return { id: 'course-cs161' };
+        if (where.slug === 'cs106l') return { id: 'course-cs106l' };
+        return null;
+      },
+    },
+    courseMembership: {
+      upsert: async (args) => {
+        courseMembershipUpserts.push(args);
+        return args.create;
+      },
+    },
+  };
+  const store = new PrismaStore(fakePrisma);
+
+  await store.upsertGitHubUserSession({
+    githubUserId: 'gh-1',
+    login: 'student-gh',
+    email: 'student@example.com',
+    accessToken: 'user-token',
+  });
+
+  assert.deepEqual(
+    courseMembershipUpserts
+      .map((entry) => entry.create.courseId)
+      .sort(),
+    ['course-cs106l', 'course-cs161']
+  );
 });
 
 // ── Metrics endpoint protection ────────────────────────────────────────────────

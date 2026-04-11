@@ -15,6 +15,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const { buildApp } = require('../apps/api/dist/app');
 const { FileStore } = require('../apps/api/dist/store');
@@ -24,6 +25,49 @@ const { FileStore } = require('../apps/api/dist/store');
 function makeStorePath() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nibras-wp-'));
   return path.join(dir, 'store.json');
+}
+
+function createBareRepoWithBranch(files) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nibras-worker-repo-'));
+  const worktree = path.join(dir, 'worktree');
+  const remote = path.join(dir, 'remote.git');
+  fs.mkdirSync(worktree, { recursive: true });
+  assert.equal(
+    spawnSync('git', ['init', '-b', 'main'], { cwd: worktree, encoding: 'utf8' }).status,
+    0
+  );
+  assert.equal(
+    spawnSync('git', ['config', 'user.name', 'tester'], { cwd: worktree, encoding: 'utf8' }).status,
+    0
+  );
+  assert.equal(
+    spawnSync('git', ['config', 'user.email', 'tester@example.com'], {
+      cwd: worktree,
+      encoding: 'utf8',
+    }).status,
+    0
+  );
+  for (const [relativePath, contents] of Object.entries(files)) {
+    const targetPath = path.join(worktree, relativePath);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, contents);
+  }
+  assert.equal(spawnSync('git', ['add', '.'], { cwd: worktree, encoding: 'utf8' }).status, 0);
+  assert.equal(
+    spawnSync('git', ['commit', '-m', 'init'], { cwd: worktree, encoding: 'utf8' }).status,
+    0
+  );
+  assert.equal(spawnSync('git', ['init', '--bare', remote], { encoding: 'utf8' }).status, 0);
+  assert.equal(
+    spawnSync('git', ['remote', 'add', 'origin', remote], { cwd: worktree, encoding: 'utf8' })
+      .status,
+    0
+  );
+  assert.equal(
+    spawnSync('git', ['push', '-u', 'origin', 'main'], { cwd: worktree, encoding: 'utf8' }).status,
+    0
+  );
+  return { dir, remote };
 }
 
 /**
@@ -126,6 +170,35 @@ test('runSandboxed cleans up temp directory after a failed clone', async () => {
 
   const newDirs = nibrasVerifyDirsAfter.filter((d) => !nibrasVerifyDirsBefore.includes(d));
   assert.deepEqual(newDirs, [], 'no nibras-verify-* temp dirs should remain after run');
+});
+
+test('runSandboxed accepts non-Node command strings', async () => {
+  const { runSandboxed } = require('../apps/worker/dist/sandbox');
+  const { remote } = createBareRepoWithBranch({ 'README.md': 'worker smoke\n' });
+  const result = await runSandboxed(remote, 'main', 'printf "non-node command ok\\n"', {
+    mode: 'none',
+    cloneTimeoutMs: 8000,
+    execTimeoutMs: 5000,
+  });
+  assert.equal(result.exitCode, 0);
+  assert.match(result.log, /non-node command ok/);
+});
+
+test('runSandboxed preserves failing command output in logs', async () => {
+  const { runSandboxed } = require('../apps/worker/dist/sandbox');
+  const { remote } = createBareRepoWithBranch({ 'README.md': 'worker smoke\n' });
+  const result = await runSandboxed(
+    remote,
+    'main',
+    'printf "CMake Error: missing target\\n" >&2; exit 2',
+    {
+      mode: 'none',
+      cloneTimeoutMs: 8000,
+      execTimeoutMs: 5000,
+    }
+  );
+  assert.equal(result.exitCode, 2);
+  assert.match(result.log, /CMake Error: missing target/);
 });
 
 // ── c) Team delivery mode returns 501 ─────────────────────────────────────────

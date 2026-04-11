@@ -2,6 +2,7 @@ const { Command } = require('commander');
 const pkg = require('../package.json');
 const { loadConfig } = require('./config');
 const { runCheck50, parseCheck50Json, summarizeChecks, computePercentage } = require('./check50');
+const { runCommandCheck } = require('./commandCheck');
 const { submit } = require('./submit');
 const { loadTask } = require('./task');
 const { pingRemote } = require('./ping');
@@ -71,12 +72,13 @@ function toNumber(value, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function runTest(argv, subject, project, config) {
+async function runTest(argv, subject, project, config) {
   const cmd = new Command();
   cmd
     .option('--previous', 'Run tests for all previous stages and the current stage')
     .option('--min-score <number>', 'Minimum percentage required', '100')
     .option('--slug <slug>', 'Problem slug (org/repo/branch/path)')
+    .option('--command <command>', 'Override the project test command')
     .option('--local', 'Run checks locally (default true)')
     .option('--earned <number>', 'Earned points for check grading')
     .option('--total <number>', 'Total points for check grading')
@@ -123,8 +125,49 @@ function runTest(argv, subject, project, config) {
     });
   }
 
+  if (projectType === 'command') {
+    const cwd = process.cwd();
+    const command = opts.command || projectConfig.command || projectConfig.testCommand;
+    if (!command) {
+      throw new Error(
+        `Project "${project}" is command-based but has no command configured. Set project.command in .nibras.json.`
+      );
+    }
+
+    const commandCwd = resolveProjectPath(cwd, projectConfig.path || project);
+    const result = await runCommandCheck({
+      cwd: commandCwd,
+      command,
+      previous: opts.previous,
+    });
+    const stdout = result.stdout.trimEnd();
+    const stderr = result.stderr.trimEnd();
+
+    if (stdout) {
+      process.stdout.write(`${stdout}\n`);
+    }
+    if (stderr) {
+      process.stderr.write(`${stderr}\n`);
+    }
+
+    const earnedPoints = result.code === 0 ? 100 : 0;
+    const totalPoints = 100;
+    const score = computeManualPercentage(earnedPoints, totalPoints);
+    const minScore = toNumber(opts.minScore, 100);
+
+    console.log(`Command check: ${result.code === 0 ? 'PASS' : 'FAIL'} (${earnedPoints}/${totalPoints})`);
+    console.log(`Score: ${score}% (min ${minScore}%)`);
+
+    if (result.code !== 0 || score < minScore) {
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   if (projectType !== 'check') {
-    throw new Error(`Unsupported project type "${projectType}". Use "check" or "check50".`);
+    throw new Error(
+      `Unsupported project type "${projectType}". Use "check", "check50", or "command".`
+    );
   }
 
   const cwd = process.cwd();
@@ -302,7 +345,7 @@ function runSetup(argv, subject, project, config) {
     projectConfig: projectCfg,
     subjectConfig,
   }).then((result) => {
-    console.log(`Downloaded and extracted to ${result.destPath}`);
+    console.log(`Prepared project in ${result.destPath}`);
   });
 }
 

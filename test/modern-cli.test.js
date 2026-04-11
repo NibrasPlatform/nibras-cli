@@ -14,6 +14,10 @@ function makeTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'nibras-modern-'));
 }
 
+function commandExists(command) {
+  return spawnSync('sh', ['-lc', `command -v ${command}`], { encoding: 'utf8' }).status === 0;
+}
+
 async function startApi(storePath) {
   const previousStore = process.env.NIBRAS_API_STORE;
   process.env.NIBRAS_API_STORE = storePath;
@@ -144,6 +148,95 @@ test('modern CLI setup bootstraps a local project from the API', async () => {
     assert.match(result.stdout, /Project: cs161\/exam1/);
     assert.ok(fs.existsSync(path.join(projectDir, '.nibras', 'project.json')));
     assert.ok(fs.existsSync(path.join(projectDir, '.nibras', 'task.md')));
+  } finally {
+    await server.close();
+  }
+});
+
+test('modern CLI setup downloads and extracts the CS106L starter bundle', async (t) => {
+  const tmp = makeTempDir();
+  const configRoot = path.join(tmp, 'config');
+  const server = await startApi(path.join(tmp, 'store.json'));
+  try {
+    const session = await createSession(server.apiBaseUrl);
+    writeCliConfig(configRoot, server.apiBaseUrl, session);
+
+    const projectDir = path.join(tmp, 'gapbuffer');
+    const result = await runCli(
+      ['setup', '--project', 'cs106l/gapbuffer', '--dir', projectDir, '--plain'],
+      {
+        env: { XDG_CONFIG_HOME: configRoot },
+      }
+    );
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.ok(fs.existsSync(path.join(projectDir, 'gap_buffer.h')));
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(projectDir, '.nibras', 'project.json'), 'utf8')
+    );
+    assert.equal(manifest.projectKey, 'cs106l/gapbuffer');
+    assert.equal(manifest.test.mode, 'command');
+    assert.equal(
+      manifest.test.command,
+      'cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure'
+    );
+
+    if (!commandExists('cmake')) {
+      t.skip('cmake is required to verify the seeded CS106L command locally');
+      return;
+    }
+
+    const testRun = await runCli(['test', '--plain'], {
+      cwd: projectDir,
+      env: { XDG_CONFIG_HOME: configRoot },
+    });
+    assert.notEqual(testRun.status, 0, testRun.stderr || testRun.stdout);
+  } finally {
+    await server.close();
+  }
+});
+
+test('bundle-backed setup creates an initial git commit and pushes when a remote exists', async () => {
+  const tmp = makeTempDir();
+  const configRoot = path.join(tmp, 'config');
+  const storePath = path.join(tmp, 'store.json');
+  const server = await startApi(storePath);
+  try {
+    const store = new FileStore(storePath);
+    const seeded = store.read(server.apiBaseUrl);
+    const remote = path.join(tmp, 'remote.git');
+    assert.equal(spawnSync('git', ['init', '--bare', remote], { encoding: 'utf8' }).status, 0);
+    const project = seeded.projects.find((entry) => entry.projectKey === 'cs106l/hashmap');
+    project.repoByUserId.user_demo = {
+      owner: 'demo-user',
+      name: 'nibras-cs106l-hashmap',
+      cloneUrl: remote,
+      defaultBranch: 'main',
+      visibility: 'private',
+    };
+    store.write(seeded);
+
+    const session = await createSession(server.apiBaseUrl);
+    writeCliConfig(configRoot, server.apiBaseUrl, session);
+
+    const projectDir = path.join(tmp, 'hashmap');
+    const result = await runCli(
+      ['setup', '--project', 'cs106l/hashmap', '--dir', projectDir, '--plain'],
+      {
+        env: { XDG_CONFIG_HOME: configRoot },
+      }
+    );
+
+    assert.equal(result.status, 0, result.stderr);
+    const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: projectDir, encoding: 'utf8' });
+    assert.equal(head.status, 0, head.stderr);
+    assert.match(head.stdout, /^[0-9a-f]{40}\n$/);
+
+    const remoteHead = spawnSync('git', ['--git-dir', remote, 'rev-parse', 'refs/heads/main'], {
+      encoding: 'utf8',
+    });
+    assert.equal(remoteHead.status, 0, remoteHead.stderr);
+    assert.match(remoteHead.stdout, /^[0-9a-f]{40}\n$/);
   } finally {
     await server.close();
   }

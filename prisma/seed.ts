@@ -1,4 +1,17 @@
-import { PrismaClient, SystemRole, ProjectStatus, DeliveryMode } from '@prisma/client';
+import {
+  AssetVisibility,
+  DeliveryMode,
+  PrismaClient,
+  ProjectStatus,
+  SystemRole,
+} from '@prisma/client';
+import {
+  buildCs106lManifest,
+  buildCs106lStarter,
+  CS106L_COURSE,
+  listCs106lProjectDefinitions,
+  readCs106lTaskText,
+} from '../apps/api/src/lib/cs106l';
 
 const prisma = new PrismaClient();
 
@@ -177,6 +190,115 @@ Good luck! 🚀
   });
   console.log('✅ Milestone: "Submission 1" (due 2026-05-01, final)');
 
+  const cs106lSubject = await prisma.subject.upsert({
+    where: { slug: CS106L_COURSE.slug },
+    update: { name: CS106L_COURSE.courseCode },
+    create: {
+      slug: CS106L_COURSE.slug,
+      name: CS106L_COURSE.courseCode,
+    },
+  });
+  console.log(`✅ Subject: ${CS106L_COURSE.slug} — ${CS106L_COURSE.courseCode}`);
+
+  const cs106lCourse = await prisma.course.upsert({
+    where: { slug: CS106L_COURSE.slug },
+    update: {
+      title: CS106L_COURSE.title,
+      termLabel: CS106L_COURSE.termLabel,
+      courseCode: CS106L_COURSE.courseCode,
+      isActive: true,
+    },
+    create: {
+      slug: CS106L_COURSE.slug,
+      title: CS106L_COURSE.title,
+      termLabel: CS106L_COURSE.termLabel,
+      courseCode: CS106L_COURSE.courseCode,
+      isActive: true,
+    },
+  });
+  console.log(`✅ Course: ${CS106L_COURSE.title} (${CS106L_COURSE.termLabel})`);
+
+  for (const definition of listCs106lProjectDefinitions()) {
+    const cs106lProject = await prisma.project.upsert({
+      where: { slug: definition.projectKey },
+      update: {
+        subjectId: cs106lSubject.id,
+        courseId: cs106lCourse.id,
+        name: definition.title,
+        description: definition.description,
+        status: ProjectStatus.published,
+        deliveryMode: DeliveryMode.individual,
+        defaultBranch: 'main',
+      },
+      create: {
+        subjectId: cs106lSubject.id,
+        courseId: cs106lCourse.id,
+        slug: definition.projectKey,
+        name: definition.title,
+        description: definition.description,
+        status: ProjectStatus.published,
+        deliveryMode: DeliveryMode.individual,
+        defaultBranch: 'main',
+      },
+    });
+
+    const manifest = buildCs106lManifest('https://nibras-api.fly.dev', definition.projectKey);
+    const taskText = readCs106lTaskText(definition.projectKey);
+    const starter = buildCs106lStarter(definition.projectKey);
+    const release = await prisma.projectRelease.upsert({
+      where: {
+        projectId_version: {
+          projectId: cs106lProject.id,
+          version: manifest.releaseVersion,
+        },
+      },
+      update: {
+        taskText,
+        manifestJson: manifest,
+      },
+      create: {
+        projectId: cs106lProject.id,
+        version: manifest.releaseVersion,
+        taskText,
+        manifestJson: manifest,
+        publicAssetRef: 'public://seed',
+        privateAssetRef: 'private://seed',
+      },
+    });
+
+    await prisma.projectAsset.deleteMany({
+      where: { projectReleaseId: release.id, kind: 'starter-bundle' },
+    });
+    await prisma.projectAsset.create({
+      data: {
+        projectReleaseId: release.id,
+        visibility: AssetVisibility.private,
+        kind: 'starter-bundle',
+        storageKey: starter.storageKey,
+      },
+    });
+
+    await prisma.milestone.upsert({
+      where: { projectId_order: { projectId: cs106lProject.id, order: 1 } },
+      update: {
+        title: 'Initial Submission',
+        description: definition.milestoneDescription,
+        dueAt: null,
+        isFinal: true,
+      },
+      create: {
+        projectId: cs106lProject.id,
+        title: 'Initial Submission',
+        description: definition.milestoneDescription,
+        order: 1,
+        dueAt: null,
+        isFinal: true,
+      },
+    });
+
+    console.log(`✅ Project: ${definition.projectKey} — ${definition.title}`);
+  }
+
   console.log('');
   console.log('🎉 Demo seed complete!');
   console.log('');
@@ -185,7 +307,7 @@ Good luck! 🚀
   console.log('  2. Set GITHUB_TEMPLATE_OWNER and GITHUB_TEMPLATE_REPO in .env');
   console.log('  3. Run: npm run build && npm run dev');
   console.log('  4. Open http://localhost:3000 and log in with GitHub');
-  console.log('  5. Student: nibras login → nibras setup --project cs161/exam1');
+  console.log('  5. Student: nibras login → nibras setup --project cs106l/gapbuffer');
 }
 
 main()

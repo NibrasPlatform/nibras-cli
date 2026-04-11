@@ -126,6 +126,26 @@ function writeCheckConfig(dir, { topLevel = {}, subject = {}, project = {} } = {
   );
 }
 
+function writeCommandConfig(dir, { subject = 'cs106l', projectId = 'gapbuffer', project = {} } = {}) {
+  fs.writeFileSync(
+    path.join(dir, '.nibras.json'),
+    JSON.stringify({
+      subjects: {
+        [subject]: {
+          projects: {
+            [projectId]: {
+              type: 'command',
+              path: 'student/project',
+              command: 'node -e "process.exit(0)"',
+              ...project,
+            },
+          },
+        },
+      },
+    })
+  );
+}
+
 function createSemanticQuestion(overrides = {}) {
   return {
     id: 'q2',
@@ -872,6 +892,25 @@ test('repo config no longer advertises a broken exam1 setup URL', () => {
   assert.equal(config.subjects.cs161.projects.exam1.setupZipName, undefined);
 });
 
+test('repo config wires cs106l to vendored assignment directories', () => {
+  const config = JSON.parse(fs.readFileSync(path.join(repoRoot, '.nibras.json'), 'utf8'));
+  const cs106l = config.subjects.cs106l;
+
+  assert.equal(cs106l.taskFile, 'CS106L.md');
+
+  for (const projectId of ['gapbuffer', 'hashmap', 'kdtree']) {
+    const project = cs106l.projects[projectId];
+    assert.equal(project.type, 'command');
+    assert.ok(fs.existsSync(path.join(repoRoot, project.path)), `${projectId} path should exist`);
+    assert.ok(
+      fs.existsSync(path.join(repoRoot, project.taskFile)),
+      `${projectId} task file should exist`
+    );
+    assert.equal(project.setupUrl, project.path);
+    assert.match(project.command, /cmake -S \. -B build/);
+  }
+});
+
 test('run test supports repo-backed exam1 mixed scoring and alternate accepted solutions', async () => {
   const previousExitCode = process.exitCode;
   process.exitCode = undefined;
@@ -1227,4 +1266,45 @@ test('setupProject extracts a local zip archive', async (t) => {
   });
 
   assert.equal(fs.readFileSync(path.join(destDir, 'fixture.txt'), 'utf8'), 'hello');
+});
+
+test('setupProject copies a local directory', async () => {
+  const dir = makeTempDir();
+  const sourceDir = path.join(dir, 'source');
+  const nestedDir = path.join(sourceDir, 'nested');
+  const destDir = path.join(dir, 'dest');
+
+  fs.mkdirSync(nestedDir, { recursive: true });
+  fs.writeFileSync(path.join(sourceDir, 'root.txt'), 'hello');
+  fs.writeFileSync(path.join(nestedDir, 'child.txt'), 'world');
+
+  const result = await setupProject({
+    cwd: dir,
+    subject: 'cs106l',
+    project: 'gapbuffer',
+    projectConfig: {
+      setupUrl: sourceDir,
+      setupDir: destDir,
+    },
+    subjectConfig: {},
+  });
+
+  assert.equal(result.sourceType, 'directory');
+  assert.equal(fs.readFileSync(path.join(destDir, 'root.txt'), 'utf8'), 'hello');
+  assert.equal(fs.readFileSync(path.join(destDir, 'nested', 'child.txt'), 'utf8'), 'world');
+});
+
+test('run test supports command-based project checks', async () => {
+  const dir = makeTempDir();
+  const projectDir = path.join(dir, 'student', 'project');
+  fs.mkdirSync(projectDir, { recursive: true });
+  writeCommandConfig(dir);
+
+  const logs = await withExitCodeReset(() =>
+    captureRunInDirectory(dir, ['node', 'bin/nibras.js', 'cs106l', 'test', 'gapbuffer'])
+  );
+
+  assert.equal(process.exitCode, undefined);
+  assert.match(logs.join('\n'), /Command check: PASS \(100\/100\)/);
+  assert.match(logs.join('\n'), /Score: 100% \(min 100%\)/);
 });
