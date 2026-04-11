@@ -829,6 +829,33 @@ export class PrismaStore implements AppStore {
     });
   }
 
+  private async ensureSeededDemoEnrollments(userId: string): Promise<void> {
+    const courses = await this.prisma.course.findMany({
+      where: {
+        slug: { in: ['cs161', 'cs106l'] },
+      },
+      select: { id: true },
+    });
+    await Promise.all(
+      courses.map((course) =>
+        this.prisma.courseMembership.upsert({
+          where: {
+            courseId_userId: {
+              courseId: course.id,
+              userId,
+            },
+          },
+          update: {},
+          create: {
+            courseId: course.id,
+            userId,
+            role: CourseRole.student,
+          },
+        })
+      )
+    );
+  }
+
   async createSessionForUser(userId: string): Promise<SessionRecord> {
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
     const created = await this.prisma.cliSession.create({
@@ -1776,6 +1803,7 @@ export class PrismaStore implements AppStore {
     userId: string
   ): Promise<CourseMembershipRecord[]> {
     await this.seed(apiBaseUrl);
+    await this.ensureSeededDemoEnrollments(userId);
     const memberships = await this.prisma.courseMembership.findMany({
       where: { userId },
     });
@@ -1788,6 +1816,7 @@ export class PrismaStore implements AppStore {
     opts?: PaginationOpts
   ): Promise<CourseRecord[]> {
     await this.seed(apiBaseUrl);
+    await this.ensureSeededDemoEnrollments(userId);
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const take = opts?.limit;
     const skip = take !== undefined ? (opts?.offset ?? 0) : undefined;

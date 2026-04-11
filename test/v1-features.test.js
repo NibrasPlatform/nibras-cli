@@ -279,6 +279,52 @@ test('PrismaStore auto-enrollment covers both seeded demo courses', async () => 
   );
 });
 
+test('PrismaStore listCourseMemberships backfills seeded demo courses for existing users', async () => {
+  const { PrismaStore } = require('../apps/api/dist/prisma-store');
+  const courseMembershipUpserts = [];
+  const fakePrisma = {
+    course: {
+      findMany: async () => [{ id: 'course-cs161' }, { id: 'course-cs106l' }],
+    },
+    courseMembership: {
+      upsert: async (args) => {
+        courseMembershipUpserts.push(args);
+        return args.create;
+      },
+      findMany: async () => [
+        {
+          id: 'membership-cs161',
+          courseId: 'course-cs161',
+          userId: 'user-1',
+          role: 'student',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'membership-cs106l',
+          courseId: 'course-cs106l',
+          userId: 'user-1',
+          role: 'student',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+    },
+  };
+  const store = new PrismaStore(fakePrisma);
+  store.seeded = true;
+
+  const memberships = await store.listCourseMemberships('https://nibras-api.fly.dev', 'user-1');
+
+  assert.equal(memberships.length, 2);
+  assert.deepEqual(
+    courseMembershipUpserts
+      .map((entry) => entry.create.courseId)
+      .sort(),
+    ['course-cs106l', 'course-cs161']
+  );
+});
+
 // ── Metrics endpoint protection ────────────────────────────────────────────────
 
 test('/metrics is accessible without token when NIBRAS_METRICS_TOKEN unset', async () => {
