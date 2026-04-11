@@ -56,6 +56,16 @@ function gitHasStagedChanges(cwd: string): boolean {
   );
 }
 
+function tryCreateGitHubRepoWithGh(repoFullName: string, projectDir: string): boolean {
+  return (
+    spawnSync(
+      'gh',
+      ['repo', 'create', repoFullName, '--private', '--push', '--source', projectDir],
+      { stdio: 'ignore' }
+    ).status === 0
+  );
+}
+
 async function downloadStarterBundle(downloadUrl: string): Promise<Buffer> {
   const config = readCliConfig();
   const headers = new Headers();
@@ -188,6 +198,20 @@ export async function commandSetup(args: string[], plain: boolean): Promise<void
     if (cloneUrl) {
       spinner.text(`Pushing ${defaultBranch} to ${repoFullName}`);
       git(['push', '-u', 'origin', defaultBranch], projectDir);
+    } else if (isGitHubUrl(remoteOriginUrl)) {
+      spinner.text(`Creating repository ${repoFullName} on GitHub`);
+      const ghCreated = tryCreateGitHubRepoWithGh(repoFullName, projectDir);
+      if (!ghCreated) {
+        const pushed = git(['push', '-u', 'origin', defaultBranch], projectDir);
+        if (!pushed) {
+          spinner.text('');
+          if (!plain) {
+            console.log(
+              `\n  Run: gh repo create ${repoFullName} --private --push --source ${projectDir}\n`
+            );
+          }
+        }
+      }
     }
   } else if (isGitHubUrl(cloneUrl)) {
     // Already cloned from the real repo — nothing to push
@@ -204,13 +228,7 @@ export async function commandSetup(args: string[], plain: boolean): Promise<void
 
     // Try to create the GitHub repo via `gh` CLI (most reliable cross-platform)
     spinner.text(`Creating repository ${repoFullName} on GitHub`);
-    const ghCreate = spawnSync(
-      'gh',
-      ['repo', 'create', repoFullName, '--private', '--push', '--source', projectDir],
-      { stdio: 'ignore' }
-    );
-
-    if (ghCreate.status !== 0) {
+    if (!tryCreateGitHubRepoWithGh(repoFullName, projectDir)) {
       // gh CLI not available or failed — try plain git push (works if repo already exists)
       const pushed = git(['push', '-u', 'origin', defaultBranch], projectDir);
       if (!pushed) {

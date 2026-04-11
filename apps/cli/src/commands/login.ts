@@ -47,10 +47,16 @@ export async function commandLogin(args: string[], plain: boolean): Promise<void
     await apiRequest('/v1/device/start', { method: 'POST' }, apiBaseUrl)
   );
 
-  console.log();
-  console.log(`  Open  ${start.verificationUriComplete}`);
-  console.log(`  Code  ${start.userCode}`);
-  console.log();
+  printBox(
+    'Authorize this device',
+    [
+      `Open in browser: ${start.verificationUriComplete}`,
+      `Code:            ${start.userCode}`,
+      hasFlag(args, '--no-open') ? 'Browser launch: disabled' : 'Browser launch: automatic',
+    ],
+    'info',
+    plain
+  );
 
   if (!hasFlag(args, '--no-open')) {
     tryOpenBrowser(start.verificationUriComplete);

@@ -242,6 +242,70 @@ test('bundle-backed setup creates an initial git commit and pushes when a remote
   }
 });
 
+test('bundle-backed setup auto-creates the GitHub repo via gh when API provisioning falls back', async () => {
+  const tmp = makeTempDir();
+  const configRoot = path.join(tmp, 'config');
+  const storePath = path.join(tmp, 'store.json');
+  const server = await startApi(storePath);
+  try {
+    const session = await createSession(server.apiBaseUrl);
+    writeCliConfig(configRoot, server.apiBaseUrl, session);
+
+    const fakeBin = path.join(tmp, 'bin');
+    const fakeGh = path.join(fakeBin, 'gh');
+    const remote = path.join(tmp, 'remote.git');
+    const ghLog = path.join(tmp, 'gh.log');
+    fs.mkdirSync(fakeBin, { recursive: true });
+    fs.writeFileSync(
+      fakeGh,
+      `#!/bin/sh
+set -eu
+printf '%s\\n' "$@" > "$NIBRAS_TEST_GH_LOG"
+source_dir=
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --source)
+      shift
+      source_dir="$1"
+      ;;
+  esac
+  shift
+done
+git init --bare "$NIBRAS_TEST_GH_REMOTE_DIR" >/dev/null 2>&1
+git -C "$source_dir" remote set-url origin "$NIBRAS_TEST_GH_REMOTE_DIR"
+git -C "$source_dir" push -u origin main >/dev/null 2>&1
+`
+    );
+    fs.chmodSync(fakeGh, 0o755);
+
+    const projectDir = path.join(tmp, 'gapbuffer');
+    const result = await runCli(
+      ['setup', '--project', 'cs106l/gapbuffer', '--dir', projectDir, '--plain'],
+      {
+        env: {
+          XDG_CONFIG_HOME: configRoot,
+          PATH: `${fakeBin}:${process.env.PATH}`,
+          NIBRAS_TEST_GH_REMOTE_DIR: remote,
+          NIBRAS_TEST_GH_LOG: ghLog,
+        },
+      }
+    );
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.ok(fs.existsSync(ghLog));
+    const ghArgs = fs.readFileSync(ghLog, 'utf8');
+    assert.match(ghArgs, /^repo\ncreate\n/);
+
+    const remoteHead = spawnSync('git', ['--git-dir', remote, 'rev-parse', 'refs/heads/main'], {
+      encoding: 'utf8',
+    });
+    assert.equal(remoteHead.status, 0, remoteHead.stderr);
+    assert.match(remoteHead.stdout, /^[0-9a-f]{40}\n$/);
+  } finally {
+    await server.close();
+  }
+});
+
 test('modern CLI whoami and ping use the hosted auth/session flow', async () => {
   const tmp = makeTempDir();
   const configRoot = path.join(tmp, 'config');

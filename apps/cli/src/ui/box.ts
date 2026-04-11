@@ -25,6 +25,39 @@ const BORDER_COLORS: Record<BoxKind, string> = {
   warning: 'yellow',
 };
 
+function formatValue(value: string): string {
+  const leadingSpaces = value.match(/^\s*/)?.[0] ?? '';
+  const content = value.slice(leadingSpaces.length);
+  if (!content) {
+    return value;
+  }
+  return `${leadingSpaces}${picocolors.white(content)}`;
+}
+
+function formatInstruction(line: string): string {
+  const leadingSpaces = line.match(/^\s*/)?.[0] ?? '';
+  const trimmed = line.slice(leadingSpaces.length);
+  if (!trimmed) {
+    return '';
+  }
+  if (trimmed.endsWith(':')) {
+    return picocolors.dim(line);
+  }
+
+  const divider = trimmed.indexOf('—');
+  if (divider !== -1) {
+    const command = trimmed.slice(0, divider).trimEnd();
+    const description = trimmed.slice(divider + 1).trim();
+    return `${leadingSpaces}${picocolors.cyan(command)} ${picocolors.dim('—')} ${picocolors.dim(description)}`;
+  }
+
+  if (/^(cd|nibras|gh|git|npm|node|fly|curl)\b/.test(trimmed)) {
+    return `${leadingSpaces}${picocolors.cyan(trimmed)}`;
+  }
+
+  return picocolors.dim(line);
+}
+
 export function printBox(title: string, lines: string[], kind: BoxKind, plain: boolean): void {
   if (plain) {
     console.log(`[${kind.toUpperCase()}] ${title}`);
@@ -45,9 +78,9 @@ export function printBox(title: string, lines: string[], kind: BoxKind, plain: b
       if (colonIdx > 0 && colonIdx < 22) {
         const label = picocolors.dim(line.slice(0, colonIdx + 1));
         const value = line.slice(colonIdx + 1);
-        return `${label}${value}`;
+        return `${label}${formatValue(value)}`;
       }
-      return picocolors.dim(line);
+      return formatInstruction(line);
     })
     .join('\n');
 

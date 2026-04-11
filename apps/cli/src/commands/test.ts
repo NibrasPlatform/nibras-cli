@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { loadProjectManifest } from '@nibras/core';
 import picocolors from 'picocolors';
+import { printBox } from '../ui/box';
 
 function hasFlag(args: string[], flag: string): boolean {
   return args.includes(flag);
@@ -40,14 +41,22 @@ export async function commandTest(args: string[], plain: boolean): Promise<void>
   if (!plain && process.stdout.isTTY) {
     console.log();
     if (exitCode === 0) {
-      console.log(picocolors.green(`  ✓  Tests passed`));
+      printBox(
+        'Local tests passed',
+        [`Command: ${cmd}`, `Exit code: 0`],
+        'success',
+        plain
+      );
     } else {
-      console.log(picocolors.red(`  ✗  Tests failed (exit code ${exitCode})`));
+      printBox(
+        'Local tests failed',
+        [`Command: ${cmd}`, `Exit code: ${exitCode}`],
+        'error',
+        plain
+      );
+      process.exitCode = exitCode;
     }
-    console.log();
-  }
-
-  if (exitCode !== 0) {
+  } else if (exitCode !== 0) {
     process.exitCode = exitCode;
   }
 }
