@@ -127,6 +127,14 @@ function MilestoneCard({
           <span className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`}>▾</span>
         </button>
 
+        {!open && milestone.description && (
+          <p className={styles.milestonePeek}>
+            {milestone.description.length > 90
+              ? `${milestone.description.slice(0, 90)}…`
+              : milestone.description}
+          </p>
+        )}
+
         {open && (
           <div className={styles.milestoneBody}>
             {milestone.description && (
@@ -560,11 +568,21 @@ export default function ProjectsDashboard({
                       {project.status}
                     </span>
                   </div>
+                  <span className={styles.tabMeta}>
+                    {dashboard!.milestonesByProject[project.id]?.length ?? 0}{' '}
+                    milestone
+                    {(dashboard!.milestonesByProject[project.id]?.length ?? 0) !== 1 ? 's' : ''}
+                  </span>
                   <div className={styles.tabProgress}>
                     <div className={styles.tabProgressTrack}>
                       <div className={styles.tabProgressFill} style={{ width: `${pct}%` }} />
                     </div>
-                    <span className={styles.tabPct}>{pct}%</span>
+                    <span
+                      className={styles.tabPct}
+                      style={pct > 0 ? { color: 'var(--success)' } : undefined}
+                    >
+                      {pct}%
+                    </span>
                   </div>
                 </button>
               );
@@ -634,10 +652,16 @@ export default function ProjectsDashboard({
               <section className={styles.panel}>
                 <div className={styles.panelHead}>
                   <h2 className={styles.panelTitle}>Final Submission</h2>
+                  {finalMilestone && (
+                    <span className={`${styles.statusPill} ${statusColor(finalMilestone.status)}`}>
+                      {finalMilestone.statusLabel}
+                    </span>
+                  )}
                 </div>
                 <div className={styles.finalBox}>
                   <p className={styles.finalDesc}>
-                    Submit the final repository state and write-up for instructor review.
+                    {finalMilestone?.description ??
+                      'Submit the final repository state and write-up for instructor review.'}
                   </p>
                   <button
                     type="button"
@@ -647,7 +671,12 @@ export default function ProjectsDashboard({
                   >
                     {!finalMilestone
                       ? '🔒 No final milestone configured'
-                      : '📤 Submit Final Project'}
+                      : finalMilestone.status === 'approved' || finalMilestone.status === 'graded'
+                        ? '✓ Final Project Approved'
+                        : finalMilestone.status === 'submitted' ||
+                            finalMilestone.status === 'under_review'
+                          ? '↩ Resubmit Final Project'
+                          : '📤 Submit Final Project'}
                   </button>
                 </div>
               </section>

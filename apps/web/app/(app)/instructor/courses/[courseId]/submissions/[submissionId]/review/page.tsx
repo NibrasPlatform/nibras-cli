@@ -296,6 +296,34 @@ export default function SubmissionReviewPage({
             </table>
           </div>
 
+          {/* ── Student Notes Panel ── */}
+          {submission.notes && (
+            <div
+              className={styles.panel}
+              style={{
+                borderColor: 'rgba(251,191,36,0.35)',
+                background: 'rgba(251,191,36,0.04)',
+              }}
+            >
+              <div className={styles.panelHeader}>
+                <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 14, lineHeight: 1 }}>💬</span> Student Notes
+                </h2>
+              </div>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 14,
+                  lineHeight: 1.75,
+                  color: 'var(--text)',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {submission.notes}
+              </p>
+            </div>
+          )}
+
           {/* ── Test Output Panel ── */}
           {submission.summary && (
             <div className={styles.panel}>
