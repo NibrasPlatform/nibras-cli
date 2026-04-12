@@ -427,64 +427,13 @@ export default function ProjectsDashboard({
 
       {/* ── Page header ─────────────────────────────────────────── */}
       <div className={styles.pageHeader}>
+        {/* Left: eyebrow + title + subtitle */}
         <div className={styles.pageHeaderText}>
-          <div className={styles.headerTopRow}>
-            <p className={styles.eyebrow}>
-              {dashboard?.course
-                ? `${dashboard.course.courseCode} · ${dashboard.course.termLabel}`
-                : 'Project Tracking'}
-            </p>
-            {courses.length > 0 && (
-              <label className={styles.courseSwitcher}>
-                <div className={styles.courseSwitcherHeader}>
-                  <span className={styles.courseSelectLabel}>Course</span>
-                  <span className={styles.courseSwitcherHint}>
-                    {courses.length > 1 ? `${courses.length} available` : 'Current workspace'}
-                  </span>
-                </div>
-                <div className={styles.courseSelectShell}>
-                  <div className={styles.courseSelectCurrent} aria-hidden="true">
-                    <span className={styles.courseCodeBadge}>
-                      {selectedCourse?.courseCode ?? 'Course'}
-                    </span>
-                    <span className={styles.courseSelectText}>
-                      <strong className={styles.courseSelectTitle}>
-                        {selectedCourse?.title ?? 'Select a course'}
-                      </strong>
-                      <span className={styles.courseSelectMeta}>
-                        {selectedCourse?.termLabel ?? 'Choose the course you want to work in'}
-                      </span>
-                    </span>
-                  </div>
-                  <select
-                    className={styles.courseSelectNative}
-                    aria-label="Choose course"
-                    title={selectedCourse ? courseLabel(selectedCourse) : 'Choose course'}
-                    value={activeCourseId ?? dashboard?.course?.id ?? ''}
-                    onChange={handleCourseChange}
-                    disabled={loading || courses.length <= 1}
-                  >
-                    {courses.map((course) => (
-                      <option key={course.id} value={course.id}>
-                        {courseLabel(course)}
-                      </option>
-                    ))}
-                  </select>
-                  <span className={styles.courseSelectChevron} aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path
-                        d="M4 6.5 8 10l4-3.5"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </span>
-                </div>
-              </label>
-            )}
-          </div>
+          <p className={styles.eyebrow}>
+            {dashboard?.course
+              ? `${dashboard.course.courseCode} · ${dashboard.course.termLabel}`
+              : 'Project Tracking'}
+          </p>
           <h1 className={styles.pageTitle}>
             {loading ? <Skeleton w="260px" h={32} /> : (dashboard?.course?.title ?? 'Projects')}
           </h1>
@@ -492,22 +441,76 @@ export default function ProjectsDashboard({
             {loading ? null : 'Track milestones, submit work, and monitor your progress.'}
           </p>
         </div>
-        <div className={styles.pageHeaderStats}>
-          <div className={styles.headerStat}>
-            <span>{loading ? '—' : approved}</span>
-            <label>Approved</label>
-          </div>
-          <div className={styles.headerStatDivider} />
-          <div className={styles.headerStat}>
-            <span>{loading ? '—' : underReview}</span>
-            <label>In Review</label>
-          </div>
-          <div className={styles.headerStatDivider} />
-          <div className={styles.headerStat}>
-            <span style={{ color: 'var(--primary-strong)' }}>
-              {loading ? '—' : `${activeStats?.completion ?? 0}%`}
-            </span>
-            <label>Complete</label>
+
+        {/* Right: course switcher stacked above stats */}
+        <div className={styles.pageHeaderRight}>
+          {courses.length > 0 && (
+            <label className={styles.courseSwitcher}>
+              <div className={styles.courseSwitcherHeader}>
+                <span className={styles.courseSelectLabel}>Course</span>
+                <span className={styles.courseSwitcherHint}>
+                  {courses.length > 1 ? `${courses.length} available` : 'Current workspace'}
+                </span>
+              </div>
+              <div className={styles.courseSelectShell}>
+                <div className={styles.courseSelectCurrent} aria-hidden="true">
+                  <span className={styles.courseCodeBadge}>
+                    {selectedCourse?.courseCode ?? 'Course'}
+                  </span>
+                  <span className={styles.courseSelectText}>
+                    <strong className={styles.courseSelectTitle}>
+                      {selectedCourse?.title ?? 'Select a course'}
+                    </strong>
+                    <span className={styles.courseSelectMeta}>
+                      {selectedCourse?.termLabel ?? 'Choose the course you want to work in'}
+                    </span>
+                  </span>
+                </div>
+                <select
+                  className={styles.courseSelectNative}
+                  aria-label="Choose course"
+                  title={selectedCourse ? courseLabel(selectedCourse) : 'Choose course'}
+                  value={activeCourseId ?? dashboard?.course?.id ?? ''}
+                  onChange={handleCourseChange}
+                  disabled={loading || courses.length <= 1}
+                >
+                  {courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {courseLabel(course)}
+                    </option>
+                  ))}
+                </select>
+                <span className={styles.courseSelectChevron} aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M4 6.5 8 10l4-3.5"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              </div>
+            </label>
+          )}
+          <div className={styles.pageHeaderStats}>
+            <div className={styles.headerStat}>
+              <span>{loading ? '—' : approved}</span>
+              <label>Approved</label>
+            </div>
+            <div className={styles.headerStatDivider} />
+            <div className={styles.headerStat}>
+              <span>{loading ? '—' : underReview}</span>
+              <label>In Review</label>
+            </div>
+            <div className={styles.headerStatDivider} />
+            <div className={styles.headerStat}>
+              <span style={{ color: 'var(--primary-strong)' }}>
+                {loading ? '—' : `${activeStats?.completion ?? 0}%`}
+              </span>
+              <label>Complete</label>
+            </div>
           </div>
         </div>
       </div>

@@ -125,29 +125,33 @@
 /* ── Page header ───────────────────────────────────────────────────────────── */
 
 .pageHeader {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 32px 36px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 32px;
+  padding: 36px 40px;
   border-radius: 20px;
   background:
-    radial-gradient(ellipse 60% 80% at 100% 0%, rgba(99, 102, 241, 0.18) 0%, transparent 70%),
-    linear-gradient(160deg, #0e1625 0%, #111827 100%);
+    radial-gradient(ellipse 55% 90% at 100% 10%, rgba(99, 102, 241, 0.22) 0%, transparent 65%),
+    radial-gradient(ellipse 30% 50% at 0% 100%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
+    linear-gradient(160deg, #0c1420 0%, #111827 100%);
   border: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
 }
 
 .pageHeaderText {
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  align-content: end;
 }
 
-.headerTopRow {
+.pageHeaderRight {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  flex-shrink: 0;
+  min-width: min(300px, 100%);
 }
 
 .eyebrow {
@@ -169,8 +173,8 @@
 
 .courseSwitcher {
   display: grid;
-  gap: 8px;
-  min-width: min(360px, 100%);
+  gap: 6px;
+  width: 100%;
 }
 
 .courseSwitcherHeader {
@@ -312,12 +316,13 @@
 .pageHeaderStats {
   display: flex;
   align-items: center;
-  gap: 20px;
-  flex-shrink: 0;
-  padding: 16px 24px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
+  width: 100%;
 }
 
 .headerStat {
@@ -1310,16 +1315,23 @@
   }
 }
 
+@media (max-width: 860px) {
+  .pageHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .pageHeaderRight {
+    min-width: 0;
+  }
+}
+
 @media (max-width: 760px) {
   .pageHeader {
-    flex-direction: column;
-    align-items: flex-start;
     padding: 24px;
     gap: 20px;
   }
 
   .pageHeaderStats {
-    align-self: stretch;
     justify-content: space-around;
   }
 
