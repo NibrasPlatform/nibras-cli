@@ -55,6 +55,13 @@ export type UserRecord = {
   systemRole: SystemRole;
 };
 
+export type GitHubAccountRecord = {
+  userId: string;
+  login: string;
+  installationId: string | null;
+  userAccessToken: string | null;
+};
+
 export type CourseRecord = {
   id: string;
   slug: string;
@@ -254,6 +261,7 @@ export type CourseInviteRecord = {
 
 export type StoreData = {
   users: UserRecord[];
+  githubAccounts: GitHubAccountRecord[];
   courses: CourseRecord[];
   courseMemberships: CourseMembershipRecord[];
   courseInvites: CourseInviteRecord[];
@@ -281,6 +289,21 @@ export interface AppStore {
     deviceCode: string
   ): Promise<{ record: DeviceCodeRecord | null; session: SessionRecord | null }>;
   getUserByToken(apiBaseUrl: string, accessToken: string): Promise<UserRecord | null>;
+  upsertGitHubUserSession(args: {
+    githubUserId: string;
+    login: string;
+    email: string | null;
+    accessToken: string;
+    refreshToken?: string;
+    accessTokenExpiresIn?: number;
+    refreshTokenExpiresIn?: number;
+  }): Promise<{ user: UserRecord; session: SessionRecord }>;
+  getGithubAccountForUser(userId: string): Promise<{
+    login: string;
+    installationId: string | null;
+    userAccessToken: string | null;
+  } | null>;
+  linkGitHubInstallation(userId: string, installationId: string): Promise<UserRecord>;
   refreshCliSession(apiBaseUrl: string, refreshToken: string): Promise<SessionRecord | null>;
   deleteSession(apiBaseUrl: string, accessToken: string): Promise<void>;
   createWebSession(apiBaseUrl: string, userId: string): Promise<WebSessionRecord>;
@@ -708,6 +731,20 @@ function seedData(apiBaseUrl: string): StoreData {
         systemRole: 'admin',
       },
     ],
+    githubAccounts: [
+      {
+        userId: studentId,
+        login: 'demo-user',
+        installationId: '12345',
+        userAccessToken: 'github-demo-token',
+      },
+      {
+        userId: instructorId,
+        login: 'nibras-instructor',
+        installationId: '67890',
+        userAccessToken: 'github-instructor-token',
+      },
+    ],
     courses: [
       {
         id: cs161CourseId,
@@ -890,7 +927,11 @@ export class FileStore implements AppStore {
   private ensureStore(apiBaseUrl: string): StoreData {
     try {
       const raw = fs.readFileSync(this.storePath, 'utf8');
-      return JSON.parse(raw) as StoreData;
+      const parsed = JSON.parse(raw) as StoreData;
+      if (!parsed.githubAccounts) {
+        parsed.githubAccounts = [];
+      }
+      return parsed;
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
         throw err;
@@ -1002,6 +1043,99 @@ export class FileStore implements AppStore {
       return null;
     }
     return data.users.find((entry) => entry.id === session.userId) || null;
+  }
+
+  async upsertGitHubUserSession(args: {
+    githubUserId: string;
+    login: string;
+    email: string | null;
+    accessToken: string;
+    refreshToken?: string;
+    accessTokenExpiresIn?: number;
+    refreshTokenExpiresIn?: number;
+  }): Promise<{ user: UserRecord; session: SessionRecord }> {
+    const data = this.read('http://127.0.0.1');
+    let user = data.users.find((entry) => entry.githubLogin === args.login) || null;
+    if (!user) {
+      user = {
+        id: `user_${args.login}`,
+        username: args.login,
+        email: args.email || `${args.login}@users.noreply.github.com`,
+        githubLogin: args.login,
+        githubLinked: true,
+        githubAppInstalled: false,
+        systemRole: 'user',
+      };
+      data.users.push(user);
+    } else {
+      user.githubLogin = args.login;
+      user.githubLinked = true;
+      if (args.email) {
+        user.email = args.email;
+      }
+    }
+
+    const existingAccount = data.githubAccounts.find((entry) => entry.userId === user.id);
+    if (existingAccount) {
+      existingAccount.login = args.login;
+      existingAccount.userAccessToken = args.accessToken;
+    } else {
+      data.githubAccounts.push({
+        userId: user.id,
+        login: args.login,
+        installationId: null,
+        userAccessToken: args.accessToken,
+      });
+    }
+
+    const session: SessionRecord = {
+      accessToken: args.accessToken,
+      refreshToken: args.refreshToken || `refresh_${randomUUID()}`,
+      userId: user.id,
+      createdAt: nowIso(),
+    };
+    data.sessions.push(session);
+    this.write(data);
+    return { user, session };
+  }
+
+  async getGithubAccountForUser(userId: string): Promise<{
+    login: string;
+    installationId: string | null;
+    userAccessToken: string | null;
+  } | null> {
+    const data = this.read('http://127.0.0.1');
+    const account = data.githubAccounts.find((entry) => entry.userId === userId);
+    if (!account) {
+      return null;
+    }
+    return {
+      login: account.login,
+      installationId: account.installationId,
+      userAccessToken: account.userAccessToken,
+    };
+  }
+
+  async linkGitHubInstallation(userId: string, installationId: string): Promise<UserRecord> {
+    const data = this.read('http://127.0.0.1');
+    const user = data.users.find((entry) => entry.id === userId);
+    if (!user) {
+      throw new Error('User not found.');
+    }
+    const account = data.githubAccounts.find((entry) => entry.userId === userId);
+    if (account) {
+      account.installationId = installationId;
+    } else {
+      data.githubAccounts.push({
+        userId,
+        login: user.githubLogin,
+        installationId,
+        userAccessToken: null,
+      });
+    }
+    user.githubAppInstalled = true;
+    this.write(data);
+    return user;
   }
 
   async listUsers(apiBaseUrl: string): Promise<UserRecord[]> {

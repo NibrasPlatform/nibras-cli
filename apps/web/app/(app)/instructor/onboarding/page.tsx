@@ -10,6 +10,17 @@ import styles from './page.module.css';
 // ── OS type ──────────────────────────────────────────────────────────────────
 type OS = 'mac' | 'linux' | 'windows';
 
+type CommandReferenceItem = {
+  command: string;
+  description: string;
+  note?: string;
+};
+
+type CommandReferenceGroup = {
+  title: string;
+  items: CommandReferenceItem[];
+};
+
 function detectOS(): OS {
   if (typeof navigator === 'undefined') return 'mac';
   const p = navigator.platform?.toLowerCase() ?? '';
@@ -77,6 +88,8 @@ const setupOutput: TerminalLine[] = [
 const submitOutput: TerminalLine[] = [
   { type: 'cmd', text: 'nibras submit' },
   { type: 'blank' },
+  { type: 'muted', text: '  Running tests: npm test' },
+  { type: 'blank' },
   { type: 'success', text: '  ✓ Staged 3 files' },
   { type: 'success', text: '  ✓ Pushed commit a3f7c1d' },
   { type: 'output', text: '  Verifying  ████████████████░░░░  80%' },
@@ -98,6 +111,76 @@ const STEPS = [
   { id: 'step-07', number: '07', label: 'Submit' },
   { id: 'step-08', number: '08', label: 'Check status' },
   { id: 'step-09', number: '09', label: 'Share with students' },
+];
+
+const COMMAND_REFERENCE_GROUPS: CommandReferenceGroup[] = [
+  {
+    title: 'Core workflow',
+    items: [
+      { command: 'nibras login', description: 'Start hosted device login.' },
+      {
+        command: 'nibras setup --project <key>',
+        description: 'Bootstrap or refresh a local project.',
+      },
+      {
+        command: 'nibras task',
+        description: 'Print cached task text or fetch it if missing.',
+      },
+      { command: 'nibras test', description: 'Run the manifest test command.' },
+      {
+        command: 'nibras submit',
+        description: 'Test, stage allowed files, commit, push, and wait for verification.',
+      },
+    ],
+  },
+  {
+    title: 'Session and diagnostics',
+    items: [
+      {
+        command: 'nibras whoami',
+        description: 'Show the signed-in user and linked GitHub account.',
+      },
+      {
+        command: 'nibras ping',
+        description: 'Show API, auth, GitHub, GitHub App, and project status.',
+        note: 'Inside a project, it also reports the project key and origin remote.',
+      },
+      { command: 'nibras logout', description: 'Clear the local session.' },
+    ],
+  },
+  {
+    title: 'Install lifecycle',
+    items: [
+      {
+        command: 'nibras update --version <tag>',
+        description: 'Reinstall a pinned Git-tag release.',
+        note: '--check is not currently reliable; use an explicit --version.',
+      },
+      {
+        command: 'nibras update --force --version <tag>',
+        description: 'Force reinstall the same pinned tag.',
+      },
+      {
+        command: 'nibras uninstall',
+        description: 'Remove the global CLI install and keep local config.',
+      },
+    ],
+  },
+  {
+    title: 'Advanced / compatibility',
+    items: [
+      {
+        command: 'nibras update-buildpack --node <version>',
+        description: 'Edit the Node buildpack version in .nibras/project.json.',
+        note: 'Advanced manifest maintenance only; standard students usually do not need this.',
+      },
+      {
+        command: 'nibras legacy ...',
+        description: 'Run the older CLI entrypoint for compatibility.',
+        note: 'Compatibility-only. It is not part of the hosted default workflow.',
+      },
+    ],
+  },
 ];
 
 // ── Section with collapsible + scroll anchor ──────────────────────────────────
@@ -402,7 +485,8 @@ export default function OnboardingPage() {
             />
             <p className={styles.hint}>
               Verify the install: <code className={styles.inlineCode}>nibras --version</code> should
-              show <code className={styles.inlineCode}>v1.0.2</code>.
+              start with <code className={styles.inlineCode}>v1.0.2</code>, for example{' '}
+              <code className={styles.inlineCode}>v1.0.2-499d7f9</code>.
             </p>
             <p className={styles.bodyText}>
               To reinstall the pinned release later, run{' '}
@@ -448,8 +532,8 @@ npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
           <Section id="step-03" number="03" title="Authenticate with GitHub">
             <p className={styles.bodyText}>
               Run <code className={styles.inlineCode}>nibras login</code> to start the device
-              authorization flow. A URL and short code will be printed — open the URL in your
-              browser, enter the code, and approve access.
+              authorization flow. It prints a URL and short code, then tries to open the browser
+              automatically unless you pass <code className={styles.inlineCode}>--no-open</code>.
             </p>
             <CliCodeBlock code="nibras login" />
             <div className={styles.terminalWrapper}>
@@ -457,7 +541,8 @@ npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
             </div>
             <p className={styles.hint}>
               Credentials are stored in <code className={styles.inlineCode}>{configPath}</code>. Run{' '}
-              <code className={styles.inlineCode}>nibras whoami</code> to confirm.
+              <code className={styles.inlineCode}>nibras whoami</code> after login to confirm the
+              active session and linked GitHub account.
             </p>
           </Section>
 
@@ -490,14 +575,22 @@ npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
           <Section id="step-05" number="05" title="Set up a project locally">
             <p className={styles.bodyText}>
               Run <code className={styles.inlineCode}>nibras setup</code> with the project key to
-              bootstrap the local directory. This creates a{' '}
-              <code className={styles.inlineCode}>.nibras/project.json</code> manifest and
-              initialises a git repository.
+              bootstrap the local directory. It writes{' '}
+              <code className={styles.inlineCode}>.nibras/project.json</code> and{' '}
+              <code className={styles.inlineCode}>.nibras/task.md</code>, initialises git if needed,
+              and adds <code className={styles.inlineCode}>origin</code> for the student repo.
             </p>
             <CliCodeBlock code="nibras setup --project cs101/assignment-1" />
             <div className={styles.terminalWrapper}>
               <TerminalMockup title="nibras setup" lines={setupOutput} />
             </div>
+            <p className={styles.bodyText}>
+              For bundle-backed projects, setup may download starter files and create the initial
+              commit. If the target directory already has{' '}
+              <code className={styles.inlineCode}>.git</code>, setup refreshes the{' '}
+              <code className={styles.inlineCode}>.nibras</code> metadata instead of re-extracting
+              starter files.
+            </p>
             <p className={styles.hint}>
               Specify a target directory: <code className={styles.inlineCode}>{dirExample}</code>
             </p>
@@ -506,26 +599,28 @@ npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
           {/* 06 Tests */}
           <Section id="step-06" number="06" title="Run local tests">
             <p className={styles.bodyText}>
-              Use <code className={styles.inlineCode}>nibras test</code> to run the public test
-              suite from the project manifest. Pass{' '}
-              <code className={styles.inlineCode}>--previous</code> to include earlier milestone
-              tests.
+              Use <code className={styles.inlineCode}>nibras test</code> to run the command in{' '}
+              <code className={styles.inlineCode}>.nibras/project.json → test.command</code>. Pass{' '}
+              <code className={styles.inlineCode}>--previous</code> only when the project manifest
+              supports it.
             </p>
             <CliCodeBlock
               code={`nibras test\nnibras test --previous   # include previous milestone tests`}
             />
             <p className={styles.hint}>
-              Tests run the command in{' '}
-              <code className={styles.inlineCode}>.nibras/project.json → test.command</code>. A
-              non-zero exit means tests failed.
+              A non-zero exit means the configured test command failed. Projects that do not opt in
+              to previous-milestone runs will reject{' '}
+              <code className={styles.inlineCode}>--previous</code>.
             </p>
           </Section>
 
           {/* 07 Submit */}
           <Section id="step-07" number="07" title="Submit your solution">
             <p className={styles.bodyText}>
-              <code className={styles.inlineCode}>nibras submit</code> stages allowed files, creates
-              a commit, pushes to origin, and polls for automated verification.
+              <code className={styles.inlineCode}>nibras submit</code> runs the configured local
+              test command first, stages only allowed files, creates a commit, pushes to{' '}
+              <code className={styles.inlineCode}>origin</code>, registers the submission, and polls
+              for verification.
             </p>
             <CliCodeBlock code="nibras submit" />
             <div className={styles.terminalWrapper}>
@@ -539,17 +634,22 @@ npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
                 are included — students can&apos;t accidentally submit test or grading files.
               </p>
             </div>
+            <p className={styles.hint}>
+              A failing local test run does not automatically abort submission. The CLI still sends
+              the local result with the submission so verification can continue.
+            </p>
           </Section>
 
           {/* 08 Status */}
           <Section id="step-08" number="08" title="Check status">
             <p className={styles.bodyText}>Two diagnostic commands are available at any time:</p>
             <CliCodeBlock
-              code={`nibras ping    # check API, auth, GitHub, and repo state\nnibras whoami  # show signed-in user and linked GitHub account`}
+              code={`nibras ping    # check API, auth, GitHub, GitHub App, and project status\nnibras whoami  # show signed-in user and linked GitHub account`}
             />
             <p className={styles.hint}>
-              <code className={styles.inlineCode}>nibras ping</code> shows a colour-coded status
-              table — green means all systems go.
+              <code className={styles.inlineCode}>nibras ping</code> checks API, auth, GitHub, and
+              GitHub App status. When you run it inside a project, it also shows the project key and{' '}
+              <code className={styles.inlineCode}>origin</code> remote.
             </p>
           </Section>
 
@@ -583,6 +683,39 @@ npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
               <code className={styles.inlineCode}>nibras task</code>.
             </p>
           </Section>
+
+          <section className={styles.referenceSection} aria-labelledby="cli-command-reference">
+            <div className={styles.referenceIntro}>
+              <h2 id="cli-command-reference" className={styles.referenceTitle}>
+                CLI Command Reference
+              </h2>
+              <p className={styles.bodyText}>
+                Use this appendix for commands outside the main onboarding path or when you need the
+                rest of the current CLI surface at a glance.
+              </p>
+            </div>
+
+            <div className={styles.referenceGroups}>
+              {COMMAND_REFERENCE_GROUPS.map((group) => (
+                <section key={group.title} className={styles.referenceGroup}>
+                  <h3 className={styles.referenceGroupTitle}>{group.title}</h3>
+                  <div className={styles.referenceList}>
+                    {group.items.map((item) => (
+                      <div key={item.command} className={styles.referenceRow}>
+                        <div className={styles.referenceCommand}>
+                          <code className={styles.inlineCode}>{item.command}</code>
+                        </div>
+                        <div className={styles.referenceCopy}>
+                          <p className={styles.referenceDescription}>{item.description}</p>
+                          {item.note ? <p className={styles.referenceNote}>{item.note}</p> : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </section>
 
           {/* Footer CTA */}
           <div className={styles.footerCta}>

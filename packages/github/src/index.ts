@@ -44,6 +44,63 @@ export type SignedStateOptions = {
   ttlSeconds?: number;
 };
 
+export class GitHubRequestError extends Error {
+  statusCode: number;
+  bodyText: string;
+
+  constructor(message: string, statusCode: number, bodyText: string) {
+    super(message);
+    this.name = 'GitHubRequestError';
+    this.statusCode = statusCode;
+    this.bodyText = bodyText;
+  }
+}
+
+export type GitHubRepositoryPermission = 'admin' | 'write' | 'read';
+
+export type GitHubRepository = {
+  repoUrl: string;
+  owner: string;
+  name: string;
+  fullName: string;
+  defaultBranch: string;
+  visibility: 'public' | 'private';
+  permission: GitHubRepositoryPermission;
+};
+
+export function parseGitHubRepositoryUrl(
+  value: string
+): { owner: string; name: string; repoUrl: string } | null {
+  const raw = value.trim();
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    const hostname = url.hostname.toLowerCase();
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null;
+    }
+    if (hostname !== 'github.com' && hostname !== 'www.github.com') {
+      return null;
+    }
+    const parts = url.pathname.split('/').filter(Boolean);
+    if (parts.length !== 2) {
+      return null;
+    }
+    const [owner, rawRepo] = parts;
+    const name = rawRepo.replace(/\.git$/i, '');
+    if (!owner || !name) {
+      return null;
+    }
+    return {
+      owner,
+      name,
+      repoUrl: `https://github.com/${owner}/${name}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function loadGitHubAppConfig(): GitHubAppConfig | null {
   const appId = process.env.GITHUB_APP_ID;
   const clientId = process.env.GITHUB_APP_CLIENT_ID;
@@ -110,9 +167,32 @@ async function githubRequest<T>(
   const response = await fetch(url, { ...init, headers });
   const text = await response.text();
   if (!response.ok) {
-    throw new Error(text || `GitHub request failed (${response.status}).`);
+    throw new GitHubRequestError(
+      text || `GitHub request failed (${response.status}).`,
+      response.status,
+      text
+    );
   }
   return text ? (JSON.parse(text) as T) : ({} as T);
+}
+
+function normalizeRepositoryPermission(payload: Record<string, unknown>): GitHubRepositoryPermission {
+  const permissions =
+    payload.permissions && typeof payload.permissions === 'object'
+      ? (payload.permissions as Record<string, unknown>)
+      : null;
+  const roleName = typeof payload.role_name === 'string' ? payload.role_name.toLowerCase() : '';
+
+  if (permissions?.admin === true || roleName === 'admin') {
+    return 'admin';
+  }
+  if (permissions?.push === true || permissions?.maintain === true) {
+    return 'write';
+  }
+  if (roleName === 'write' || roleName === 'maintain') {
+    return 'write';
+  }
+  return 'read';
 }
 
 export async function startGitHubDeviceFlow(config: GitHubAppConfig): Promise<GitHubDeviceStart> {
@@ -302,6 +382,40 @@ export async function createInstallationAccessToken(
     config.apiVersion
   );
   return String(payload.token);
+}
+
+export async function getGitHubRepository(
+  config: GitHubAppConfig,
+  userToken: string,
+  owner: string,
+  repo: string
+): Promise<GitHubRepository> {
+  const payload = await githubRequest<Record<string, unknown>>(
+    `https://api.github.com/repos/${owner}/${repo}`,
+    {},
+    userToken,
+    config.apiVersion
+  );
+
+  const normalized = parseGitHubRepositoryUrl(
+    typeof payload.html_url === 'string' ? payload.html_url : `https://github.com/${owner}/${repo}`
+  );
+
+  return {
+    repoUrl: normalized?.repoUrl || `https://github.com/${owner}/${repo}`,
+    owner: normalized?.owner || owner,
+    name: normalized?.name || repo,
+    fullName:
+      typeof payload.full_name === 'string'
+        ? payload.full_name
+        : `${normalized?.owner || owner}/${normalized?.name || repo}`,
+    defaultBranch:
+      typeof payload.default_branch === 'string' && payload.default_branch
+        ? payload.default_branch
+        : 'main',
+    visibility: payload.private === true ? 'private' : 'public',
+    permission: normalizeRepositoryPermission(payload),
+  };
 }
 
 export async function generateRepositoryFromTemplate(

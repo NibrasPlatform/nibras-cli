@@ -2,15 +2,30 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type {
+  CreateTrackingSubmissionRequest,
   StudentProjectsDashboardResponse,
   TrackingMilestone,
   TrackingProjectSummary,
 } from '@nibras/contracts';
-import { apiFetch, discoverApiBaseUrl } from '../../../lib/session';
+import { apiFetch } from '../../../lib/session';
 import { daysUntil } from '../../../lib/utils';
+import SubmissionModal from './submission-modal';
 import styles from './projects.module.css';
 
-type SubmissionType = 'github' | 'link' | 'text';
+type SessionUser = {
+  githubLinked?: boolean;
+  githubAppInstalled?: boolean;
+  githubLogin?: string | null;
+};
+
+type GitHubStatus = {
+  available: boolean;
+  githubLinked: boolean;
+  githubAppInstalled: boolean;
+  githubLogin: string;
+  installUrl: string;
+  statusMessage: string;
+};
 
 /* ── helpers ──────────────────────────────────────────────────────────────── */
 
@@ -145,23 +160,113 @@ export default function ProjectsDashboard({
   const [toast, setToast] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [activeMilestone, setActiveMilestone] = useState<TrackingMilestone | null>(null);
-  const [submissionType, setSubmissionType] = useState<SubmissionType>('github');
-  const [submissionValue, setSubmissionValue] = useState('');
-  const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [apiBaseUrl, setApiBaseUrl] = useState('');
+  const [githubStatus, setGitHubStatus] = useState<GitHubStatus>({
+    available: false,
+    githubLinked: false,
+    githubAppInstalled: false,
+    githubLogin: '',
+    installUrl: '',
+    statusMessage: 'GitHub status is temporarily unavailable.',
+  });
+
+  async function loadGitHubStatus(): Promise<GitHubStatus> {
+    try {
+      const sessionResponse = await apiFetch('/v1/web/session', { auth: true });
+      if (!sessionResponse.ok) {
+        const body = (await sessionResponse.json().catch(() => ({}))) as { error?: string };
+        return {
+          available: false,
+          githubLinked: false,
+          githubAppInstalled: false,
+          githubLogin: '',
+          installUrl: '',
+          statusMessage: body.error || 'GitHub status is temporarily unavailable.',
+        };
+      }
+
+      const payload = (await sessionResponse.json()) as { user?: SessionUser };
+      const user = payload.user || {};
+      const githubLinked = Boolean(user.githubLinked);
+      const githubAppInstalled = Boolean(user.githubAppInstalled);
+      const githubLogin = user.githubLogin || '';
+
+      if (!githubLinked || githubAppInstalled) {
+        return {
+          available: true,
+          githubLinked,
+          githubAppInstalled,
+          githubLogin,
+          installUrl: '',
+          statusMessage: '',
+        };
+      }
+
+      try {
+        const installResponse = await apiFetch('/v1/github/install-url', { auth: true });
+        if (!installResponse.ok) {
+          const body = (await installResponse.json().catch(() => ({}))) as { error?: string };
+          return {
+            available: true,
+            githubLinked,
+            githubAppInstalled,
+            githubLogin,
+            installUrl: '',
+            statusMessage: body.error || 'GitHub App install link is temporarily unavailable.',
+          };
+        }
+        const installPayload = (await installResponse.json()) as { installUrl?: string };
+        return {
+          available: true,
+          githubLinked,
+          githubAppInstalled,
+          githubLogin,
+          installUrl: installPayload.installUrl || '',
+          statusMessage: '',
+        };
+      } catch (error) {
+        return {
+          available: true,
+          githubLinked,
+          githubAppInstalled,
+          githubLogin,
+          installUrl: '',
+          statusMessage:
+            error instanceof Error
+              ? error.message
+              : 'GitHub App install link is temporarily unavailable.',
+        };
+      }
+    } catch (error) {
+      return {
+        available: false,
+        githubLinked: false,
+        githubAppInstalled: false,
+        githubLogin: '',
+        installUrl: '',
+        statusMessage:
+          error instanceof Error ? error.message : 'GitHub status is temporarily unavailable.',
+      };
+    }
+  }
 
   async function loadDashboard(courseId?: string | null) {
     setLoading(true);
     setError('');
     try {
-      const baseUrl = await discoverApiBaseUrl();
-      setApiBaseUrl(baseUrl);
       const query = courseId ? `?courseId=${encodeURIComponent(courseId)}` : '';
-      const response = await apiFetch(`/v1/tracking/dashboard/student${query}`, { auth: true });
+      const [response, nextGitHubStatus] = await Promise.all([
+        apiFetch(`/v1/tracking/dashboard/student${query}`, { auth: true }),
+        loadGitHubStatus(),
+      ]);
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error || `Failed to load dashboard (${response.status}).`);
+      }
       const payload = (await response.json()) as StudentProjectsDashboardResponse;
       setDashboard(payload);
+      setGitHubStatus(nextGitHubStatus);
       setSelectedProjectId((current) =>
         payload.projects.some((p) => p.id === current)
           ? current
@@ -200,33 +305,26 @@ export default function ProjectsDashboard({
 
   function openSubmit(milestone: TrackingMilestone) {
     setActiveMilestone(milestone);
-    setSubmissionType('github');
-    setSubmissionValue('');
-    setNotes('');
     setSubmitError('');
   }
 
-  async function submitMilestone() {
-    if (!activeMilestone || !submissionValue.trim()) {
-      setSubmitError('Please fill in the submission field.');
+  async function submitMilestone(payload: CreateTrackingSubmissionRequest) {
+    if (!activeMilestone) {
       return;
     }
     setSubmitting(true);
     setSubmitError('');
     try {
-      await apiFetch(`/v1/tracking/milestones/${activeMilestone.id}/submissions`, {
+      const response = await apiFetch(`/v1/tracking/milestones/${activeMilestone.id}/submissions`, {
         auth: true,
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          submissionType,
-          submissionValue,
-          notes,
-          repoUrl: submissionType === 'github' ? submissionValue : '',
-          branch: 'main',
-          commitSha: '',
-        }),
+        body: JSON.stringify(payload),
       });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error || `Submission failed (${response.status}).`);
+      }
       setActiveMilestone(null);
       setToast('✅ Milestone submitted successfully!');
       setTimeout(() => setToast(''), 4000);
@@ -567,121 +665,14 @@ export default function ProjectsDashboard({
 
       {/* ── Submission modal ────────────────────────────────────── */}
       {activeMilestone && (
-        <div
-          className={styles.backdrop}
-          onClick={(e) => e.target === e.currentTarget && setActiveMilestone(null)}
-        >
-          <div className={styles.modal}>
-            {/* Header */}
-            <div className={styles.modalHeader}>
-              <div>
-                <h2 className={styles.modalTitle}>Submit Milestone</h2>
-                <p className={styles.modalSub}>{activeMilestone.title}</p>
-              </div>
-              <button
-                type="button"
-                className={styles.closeBtn}
-                onClick={() => setActiveMilestone(null)}
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Type selector */}
-            <div className={styles.typeTabs}>
-              {(['github', 'link', 'text'] as SubmissionType[]).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className={`${styles.typeTab} ${submissionType === t ? styles.typeTabActive : ''}`}
-                  onClick={() => setSubmissionType(t)}
-                >
-                  {t === 'github' ? '🐙 GitHub' : t === 'link' ? '🔗 Link' : '✏️ Text'}
-                </button>
-              ))}
-            </div>
-
-            {/* GitHub webhook hint */}
-            {submissionType === 'github' && (
-              <div className={styles.githubHint}>
-                <strong>Webhook tip</strong>
-                <p>After submitting, add a webhook in your GitHub repo pointing to:</p>
-                <code className={styles.webhookUrl}>
-                  {apiBaseUrl ? `${apiBaseUrl}/v1/github/webhooks` : '/v1/github/webhooks'}
-                </code>
-              </div>
-            )}
-
-            {/* Submission field */}
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>
-                {submissionType === 'github'
-                  ? 'Repository URL'
-                  : submissionType === 'link'
-                    ? 'Submission URL'
-                    : 'Write-up'}
-              </span>
-              {submissionType === 'text' ? (
-                <textarea
-                  className={styles.textarea}
-                  rows={5}
-                  value={submissionValue}
-                  onChange={(e) => setSubmissionValue(e.target.value)}
-                  placeholder="Describe what you built, your approach, and key decisions…"
-                />
-              ) : (
-                <input
-                  className={styles.input}
-                  type="url"
-                  value={submissionValue}
-                  onChange={(e) => setSubmissionValue(e.target.value)}
-                  placeholder={
-                    submissionType === 'github'
-                      ? 'https://github.com/you/repo'
-                      : 'https://example.com/submission'
-                  }
-                />
-              )}
-            </label>
-
-            {/* Notes */}
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>
-                Notes to Reviewer <em className={styles.optional}>(optional)</em>
-              </span>
-              <textarea
-                className={styles.textarea}
-                rows={3}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Anything the reviewer should know?"
-              />
-            </label>
-
-            {/* Submit error */}
-            {submitError && <p className={styles.submitError}>{submitError}</p>}
-
-            {/* Actions */}
-            <div className={styles.modalActions}>
-              <button
-                type="button"
-                className={styles.cancelBtn}
-                onClick={() => setActiveMilestone(null)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className={styles.confirmBtn}
-                disabled={submitting}
-                onClick={() => void submitMilestone()}
-              >
-                {submitting ? 'Submitting…' : '📤 Submit Milestone'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <SubmissionModal
+          milestone={activeMilestone}
+          githubStatus={githubStatus}
+          submitting={submitting}
+          submitError={submitError}
+          onClose={() => setActiveMilestone(null)}
+          onSubmit={submitMilestone}
+        />
       )}
     </main>
   );

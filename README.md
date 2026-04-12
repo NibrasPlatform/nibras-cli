@@ -67,7 +67,7 @@ nibras-cli/
 │   │       ├── store.ts           # In-memory dev store (no DB)
 │   │       └── prisma-store.ts    # Prisma/Postgres store
 │   │
-│   ├── cli/                       # Published @nibras/cli npm package
+│   ├── cli/                       # Hosted CLI workspace / npm package source
 │   │   └── src/
 │   │       ├── commands/          # login, logout, whoami, setup, test,
 │   │       │                      #   submit, task, ping, update-buildpack
@@ -195,27 +195,66 @@ npm run dev
 
 ## CLI Usage
 
-Install the published package:
+### Install
+
+Install the current CLI release from the Git tag:
 
 ```bash
-npm install -g @nibras/cli
+npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2
 ```
 
-Or use from source after `npm run build`.
+`nibras --version` should start with `v1.0.2` (for example `v1.0.2-499d7f9`).
+
+The npm package is not published yet, so `npm install -g @nibras/cli` and `npx @nibras/cli` currently fail with a 404.
+
+Or use the CLI from source after `npm run build`.
+
+### Core workflow
 
 ```bash
-nibras login                   # Device-flow GitHub OAuth
-nibras whoami                  # Show current user
-nibras logout                  # Clear stored tokens
-
-nibras setup                   # Bootstrap a project from a template
-nibras task                    # Display the current task instructions
-nibras test                    # Run local test suite
-nibras submit                  # Stage, commit, push, and track submission
-
-nibras update-buildpack        # Change the Node.js buildpack version
-nibras ping                    # Check API reachability
+nibras login                             # Start hosted device login
+nibras setup --project cs101/assignment-1  # Bootstrap or refresh a local project
+nibras task                              # Print cached task text or fetch it if missing
+nibras test                              # Run .nibras/project.json -> test.command
+nibras submit                            # Run local tests, stage allowed files, commit, push, and wait for verification
 ```
+
+`nibras setup` writes `.nibras/project.json` and `.nibras/task.md`, initializes git if needed, and adds `origin`. For bundle-backed projects it may download starter files and create an initial commit. If the target directory already has `.git`, it refreshes `.nibras` metadata instead of re-extracting starter files.
+
+`nibras test --previous` only works when the project manifest supports it. A non-zero exit code means the configured test command failed.
+
+`nibras submit` does not stop automatically on local test failure. It still records the local result with the submission, then registers and polls server-side verification.
+
+### Diagnostics / session
+
+```bash
+nibras whoami   # Show the signed-in user and linked GitHub account
+nibras ping     # Show API, auth, GitHub, GitHub App, and project status
+nibras logout   # Clear the local session
+```
+
+When `nibras ping` runs inside a project, it also shows the project key and `origin` remote.
+
+### Install lifecycle
+
+```bash
+nibras update --version v1.0.2         # Reinstall the pinned Git-tag release
+nibras update --force --version v1.0.2 # Force reinstall the same tag
+nibras uninstall                       # Remove the global CLI install and keep local config
+```
+
+### Advanced / compatibility
+
+```bash
+nibras update-buildpack --node 20  # Edit .nibras/project.json buildpack version
+nibras legacy ...                  # Run the older CLI entrypoint for compatibility
+```
+
+These commands are not part of the standard hosted onboarding flow.
+
+### Current limitation note
+
+Avoid `nibras update --check` for now. The latest-release lookup is not currently reliable, so the supported update path today is an explicit `--version`.
 
 ---
 

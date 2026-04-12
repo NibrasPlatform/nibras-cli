@@ -445,6 +445,99 @@
   border: none;
 }
 
+/* ── Command reference ─────────────────────────────────────────────────────── */
+
+.referenceSection {
+  display: grid;
+  gap: 24px;
+  padding: 40px 0 0;
+}
+
+.referenceIntro {
+  display: grid;
+  gap: 12px;
+}
+
+.referenceTitle {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.referenceGroups {
+  display: grid;
+  gap: 16px;
+}
+
+.referenceGroup {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.referenceGroupTitle {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.referenceList {
+  display: grid;
+  gap: 12px;
+}
+
+.referenceRow {
+  display: grid;
+  grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.referenceRow:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.referenceCommand {
+  min-width: 0;
+}
+
+.referenceCommand .inlineCode {
+  display: inline-flex;
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.referenceCopy {
+  display: grid;
+  gap: 4px;
+}
+
+.referenceDescription,
+.referenceNote {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+.referenceDescription {
+  color: var(--text-muted);
+}
+
+.referenceNote {
+  color: var(--text-soft);
+}
+
 /* ── Footer CTA ────────────────────────────────────────────────────────────── */
 
 .footerCta {
@@ -497,6 +590,10 @@
   }
   .hero {
     padding: 28px 24px;
+  }
+  .referenceRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
   .footerCta {
     padding: 36px 24px;

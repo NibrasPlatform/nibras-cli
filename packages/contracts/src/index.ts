@@ -203,6 +203,20 @@ export const GitHubInstallationCompleteResponseSchema = z.object({
   redirectTo: z.string().url().optional(),
 });
 
+export const GitHubRepositoryValidateRequestSchema = z.object({
+  repoUrl: z.string().min(1),
+});
+
+export const GitHubRepositoryValidateResponseSchema = z.object({
+  repoUrl: z.string().url(),
+  owner: z.string().min(1),
+  name: z.string().min(1),
+  fullName: z.string().min(1),
+  defaultBranch: z.string().min(1),
+  visibility: z.enum(['public', 'private']),
+  permission: z.enum(['admin', 'write']),
+});
+
 export type ProjectManifest = z.infer<typeof ProjectManifestSchema>;
 export type CliConfig = z.infer<typeof CliConfigSchema>;
 export type DeviceStartResponse = z.infer<typeof DeviceStartResponseSchema>;
@@ -223,4 +237,10 @@ export type GitHubInstallationCompleteRequest = z.infer<
 >;
 export type GitHubInstallationCompleteResponse = z.infer<
   typeof GitHubInstallationCompleteResponseSchema
+>;
+export type GitHubRepositoryValidateRequest = z.infer<
+  typeof GitHubRepositoryValidateRequestSchema
+>;
+export type GitHubRepositoryValidateResponse = z.infer<
+  typeof GitHubRepositoryValidateResponseSchema
 >;

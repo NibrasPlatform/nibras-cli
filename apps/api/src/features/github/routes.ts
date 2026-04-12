@@ -6,15 +6,20 @@ import {
   GitHubInstallationCompleteRequestSchema,
   GitHubInstallationCompleteResponseSchema,
   GitHubInstallUrlResponseSchema,
+  GitHubRepositoryValidateRequestSchema,
+  GitHubRepositoryValidateResponseSchema,
 } from '@nibras/contracts';
 import {
   buildGitHubInstallUrl,
   buildGitHubOAuthUrl,
   createSignedState,
   exchangeGitHubOAuthCode,
+  getGitHubRepository,
+  GitHubRequestError,
   getGitHubUser,
   getGitHubUserInstallations,
   GitHubAppConfig,
+  parseGitHubRepositoryUrl,
   pollGitHubDeviceFlow,
   startGitHubDeviceFlow,
   verifySignedState,
@@ -355,6 +360,78 @@ export function registerGitHubRoutes(
       return GitHubInstallUrlResponseSchema.parse({
         installUrl: buildGitHubInstallUrl(githubConfig, signedState),
       });
+    }
+  );
+
+  app.post(
+    '/v1/github/repositories/validate',
+    { schema: { tags: ['github'], summary: 'Validate a GitHub repository for submission' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      if (!githubConfig) {
+        reply.code(503).send(Errors.unavailable('GitHub App is not configured.'));
+        return;
+      }
+
+      const payload = GitHubRepositoryValidateRequestSchema.parse(request.body);
+      const parsed = parseGitHubRepositoryUrl(payload.repoUrl);
+      if (!parsed) {
+        reply
+          .code(422)
+          .send(Errors.validation('Enter a valid GitHub repository URL like https://github.com/owner/repo.'));
+        return;
+      }
+
+      const account = await store.getGithubAccountForUser(auth.user.id);
+      if (!account?.userAccessToken) {
+        reply
+          .code(422)
+          .send(Errors.validation('Connect your GitHub account before verifying a repository.'));
+        return;
+      }
+
+      try {
+        const repository = await getGitHubRepository(
+          githubConfig,
+          account.userAccessToken,
+          parsed.owner,
+          parsed.name
+        );
+
+        if (repository.permission === 'read') {
+          reply
+            .code(422)
+            .send(Errors.validation('You need write access to this repository before submitting it.'));
+          return;
+        }
+
+        return GitHubRepositoryValidateResponseSchema.parse({
+          repoUrl: repository.repoUrl,
+          owner: repository.owner,
+          name: repository.name,
+          fullName: repository.fullName,
+          defaultBranch: repository.defaultBranch,
+          visibility: repository.visibility,
+          permission: repository.permission,
+        });
+      } catch (error) {
+        if (error instanceof GitHubRequestError) {
+          if (error.statusCode === 404) {
+            reply.code(404).send(Errors.notFound('Repository'));
+            return;
+          }
+          if (error.statusCode === 401 || error.statusCode === 403) {
+            reply
+              .code(404)
+              .send(Errors.notFound('Repository'));
+            return;
+          }
+        }
+        reply
+          .code(503)
+          .send(Errors.unavailable('GitHub repository validation is temporarily unavailable.'));
+      }
     }
   );
 

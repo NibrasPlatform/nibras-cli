@@ -266,6 +266,7 @@ export type TrackingMembership = z.infer<typeof TrackingMembershipSchema>;
 export type TrackingProjectSummary = z.infer<typeof TrackingProjectSummarySchema>;
 export type TrackingProjectDetail = z.infer<typeof TrackingProjectDetailSchema>;
 export type TrackingMilestone = z.infer<typeof TrackingMilestoneSchema>;
+export type TrackingSubmissionType = z.infer<typeof TrackingSubmissionTypeSchema>;
 export type TrackingSubmission = z.infer<typeof TrackingSubmissionSchema>;
 export type AiCriterionScore = z.infer<typeof AiCriterionScoreSchema>;
 export type TrackingReview = z.infer<typeof TrackingReviewSchema>;
