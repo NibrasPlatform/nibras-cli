@@ -21,7 +21,10 @@ Nibras is a course-operations platform: a CLI that students use to set up projec
   - [AI Grading](#ai-grading)
   - [Email Notifications](#email-notifications)
   - [Commit Status Checks](#commit-status-checks)
+  - [GitHub Repository Validation](#github-repository-validation)
   - [Grade Export](#grade-export)
+  - [Course Switching](#course-switching)
+  - [Admin Features](#admin-features)
   - [Metrics (Prometheus + Grafana)](#metrics-prometheus--grafana)
 - [Production Deployment](#production-deployment)
 - [Testing](#testing)
@@ -43,7 +46,12 @@ Nibras is a course-operations platform: a CLI that students use to set up projec
 - Submission pipeline: stage allowed files → commit → push → verify → grade
 - Private test grading, semantic AI grading, manual score fallback, optional check50
 - Instructor dashboard: course management, review queue, CSV grade export
+- Multi-course switching with URL-persisted course selection
 - GitHub commit status badges (✅ / ❌ / 🔄) posted on student commits
+- GitHub repository validation before submission (checks ownership and write access)
+- Submission modal with live GitHub status checks replacing static submit form
+- Student notes surfaced in instructor review; milestone previews and counts in project tabs
+- Super-admin badge and accessible-course count in the settings page
 - Transactional email notifications via Resend (optional)
 - Prometheus metrics + Grafana dashboard (optional)
 
@@ -77,9 +85,14 @@ nibras-cli/
 │   ├── web/                       # Next.js 15 instructor dashboard
 │   │   └── app/
 │   │       ├── (app)/             # Authenticated routes
-│   │       │   ├── dashboard/     # Overview
+│   │       │   ├── dashboard/     # Overview with multi-course switcher
 │   │       │   ├── instructor/    # Course/project/milestone management,
-│   │       │   │                  #   submission review, grade export
+│   │       │   │                  #   submission review, grade export,
+│   │       │   │                  #   onboarding wizard (OS-aware)
+│   │       │   ├── projects/      # Student project dashboard with
+│   │       │   │                  #   status-aware submission modal
+│   │       │   ├── settings/      # Profile, GitHub App install,
+│   │       │   │                  #   super-admin badge & course count
 │   │       │   └── submissions/   # Student submission detail
 │   │       ├── auth/              # GitHub OAuth callback
 │   │       ├── join/              # Course invite flow
@@ -277,10 +290,21 @@ Student CLI
 ```
 
 ```
+Student Dashboard (Next.js)
+  └─ reads/writes via API /v1/* and /v1/tracking/*
+       ├─ multi-course switcher (URL-persisted)
+       ├─ project list with milestone previews and counts
+       ├─ status-aware submission modal
+       │     ├─ POST /v1/github/repositories/validate  (repo ownership check)
+       │     └─ POST /v1/submissions
+       └─ live GitHub App install status
+```
+
+```
 Instructor Dashboard (Next.js)
   └─ reads/writes via API /v1/tracking/*
        ├─ courses, projects, milestones
-       ├─ submission review queue
+       ├─ submission review queue (with student notes + AI evidence)
        └─ grade CSV export
 ```
 
@@ -291,12 +315,12 @@ contracts → core → github
                  → grading
 ```
 
-| Package             | Description                                                    |
-| ------------------- | -------------------------------------------------------------- |
-| `@nibras/contracts` | Zod schemas and TypeScript types shared by all layers          |
-| `@nibras/core`      | API client (with token refresh), config, manifest, git helpers |
-| `@nibras/github`    | GitHub App JWT signing and webhook HMAC validation             |
-| `@nibras/grading`   | AI semantic grading runner (OpenAI-compatible)                 |
+| Package             | Description                                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------------------- |
+| `@nibras/contracts` | Zod schemas and TypeScript types shared by all layers (incl. `systemRole`, repo-validate types) |
+| `@nibras/core`      | API client (with token refresh), config, manifest, git helpers                                  |
+| `@nibras/github`    | GitHub App JWT signing and webhook HMAC validation                                              |
+| `@nibras/grading`   | AI semantic grading runner (OpenAI-compatible)                                                  |
 
 ### Legacy CLI (`src/`)
 
@@ -416,6 +440,23 @@ After every verified submission, the worker posts a GitHub commit status to the 
 
 Requires the GitHub App to have **Commit statuses: Read and write** and the student to have completed the app install flow. Skipped silently if either is missing.
 
+### GitHub Repository Validation
+
+Before a submission can be created from the web dashboard, the submission modal calls:
+
+```
+POST /v1/github/repositories/validate
+{ "repoUrl": "https://github.com/owner/repo" }
+```
+
+This checks that:
+
+1. The URL is a valid GitHub repository URL
+2. The authenticated user has a linked GitHub account
+3. The user has **admin or write** permission on the repository
+
+The response includes `owner`, `name`, `defaultBranch`, `visibility`, and `permission`. The modal blocks submission if any check fails and prompts the student to install the GitHub App or fix their repo URL.
+
 ### Grade Export
 
 Download a CSV of all grades for a course:
@@ -425,6 +466,25 @@ GET /v1/tracking/courses/:courseId/grades.csv
 ```
 
 One row per student, one column per milestone across all projects. Cell values are the review score when one exists, or the submission status otherwise.
+
+### Course Switching
+
+The student dashboard and project views support switching between multiple enrolled courses without leaving the page. The selected course is persisted in:
+
+- The URL search parameter (`?courseId=...`) — shareable and browser-history friendly
+- `localStorage` via `prefs` — restored on next visit
+
+### Admin Features
+
+Users with `systemRole: "admin"` (super-admins) get additional capabilities:
+
+| Surface           | Feature                                                           |
+| ----------------- | ----------------------------------------------------------------- |
+| Settings page     | Super-admin badge and total accessible-course count displayed     |
+| API               | Access to all courses regardless of enrollment                    |
+| Auto-enrollment   | New users are auto-enrolled in CS161; admins see all active courses |
+
+The `systemRole` field is returned by `/v1/web/session` and included in the `UserSchema` contracts type.
 
 ### Metrics (Prometheus + Grafana)
 
@@ -478,7 +538,7 @@ For the full manual validation sequence, see `TEST.md`.
 
 **`.github/workflows/release.yml`** — triggers on `v*` tags:
 
-1. Verify the tag matches the root and CLI package versions
+1. Verify the tag matches the root and CLI package versions (hardened check — exits on mismatch)
 2. Verify `NPM_TOKEN` is configured and can authenticate to npm
 3. Build all packages
 4. Dry-run the CLI publish tarball
@@ -486,6 +546,21 @@ For the full manual validation sequence, see `TEST.md`.
 6. Create a GitHub Release with auto-generated notes
 
 Requires an `NPM_TOKEN` Actions secret that can publish `@nibras/cli`. If your npm account enforces 2FA for writes, this should be a granular token that can bypass 2FA for publishing.
+
+**`.github/workflows/deploy.yml`** — triggers on every push to `main`:
+
+Deploys the Next.js web app to Fly.io automatically:
+
+```yaml
+flyctl deploy \
+  --config fly.web.toml \
+  --app nibras-web \
+  --build-arg NEXT_PUBLIC_NIBRAS_API_BASE_URL=https://nibras-api.fly.dev \
+  --build-arg NEXT_PUBLIC_NIBRAS_WEB_BASE_URL=https://nibras-web.fly.dev \
+  --remote-only
+```
+
+Requires a `FLY_API_TOKEN` Actions secret. Only one deploy runs at a time; newer pushes cancel in-progress deploys automatically.
 
 ---
 
