@@ -156,11 +156,7 @@ export default function JoinPage({ params }: { params: Promise<{ code: string }>
                 <span className={styles.infoKey}>Role</span>
                 <span className={styles.infoValueGreen}>{formatRole(invite.role)}</span>
               </div>
-              {invite.role === 'ta' && (
-                <div className={styles.muted}>
-                  # TAs have elevated access — grade submissions &amp; support students.
-                </div>
-              )}
+
               <div className={styles.infoRow}>
                 <span className={styles.infoKey}>Expires</span>
                 <span className={styles.infoValue}>{expiryLabel}</span>
