@@ -1,80 +1,27 @@
-import Image from 'next/image';
-import styles from './nibras-logo.module.css';
+'use client';
+
+import dynamic from 'next/dynamic';
 
 type LogoVariant = 'surface' | 'inverse' | 'theme';
+
+// Load the Three.js logo only on the client — keeps Three.js out of the
+// server bundle and avoids any WebGL/canvas initialisation during SSR.
+const NibrasLogoThree = dynamic(() => import('./nibras-logo-three'), {
+  ssr: false,
+  loading: () => <span style={{ display: 'inline-block', minWidth: 90, height: 38 }} />,
+});
 
 export default function NibrasLogo({
   variant = 'theme',
   width,
   className = '',
-  priority = false,
+  // `priority` was used by next/image; kept for API compatibility but unused here
+  priority: _priority = false,
 }: {
   variant?: LogoVariant;
   width: number;
   className?: string;
   priority?: boolean;
 }) {
-  const imageStyle = {
-    width: `${width}px`,
-    height: 'auto',
-  } as const;
-
-  if (variant === 'surface') {
-    return (
-      <span className={`${styles.logoWrap} ${className}`}>
-        <Image
-          src="/branding/logo-light.png"
-          alt="Nibras"
-          width={143}
-          height={43}
-          priority={priority}
-          suppressHydrationWarning
-          className={`${styles.image} ${styles.variantSurface}`}
-          style={imageStyle}
-        />
-      </span>
-    );
-  }
-
-  if (variant === 'inverse') {
-    return (
-      <span className={`${styles.logoWrap} ${className}`}>
-        <Image
-          src="/branding/logo-dark.png"
-          alt="Nibras"
-          width={160}
-          height={48}
-          priority={priority}
-          suppressHydrationWarning
-          className={`${styles.image} ${styles.variantInverse}`}
-          style={imageStyle}
-        />
-      </span>
-    );
-  }
-
-  return (
-    <span className={`${styles.logoWrap} ${className}`}>
-      <Image
-        src="/branding/logo-light.png"
-        alt="Nibras"
-        width={143}
-        height={43}
-        priority={priority}
-        suppressHydrationWarning
-        className={`${styles.image} ${styles.themeLight}`}
-        style={imageStyle}
-      />
-      <Image
-        src="/branding/logo-dark.png"
-        alt="Nibras"
-        width={160}
-        height={48}
-        priority={priority}
-        suppressHydrationWarning
-        className={`${styles.image} ${styles.themeDark}`}
-        style={imageStyle}
-      />
-    </span>
-  );
+  return <NibrasLogoThree variant={variant} width={width} className={className} />;
 }

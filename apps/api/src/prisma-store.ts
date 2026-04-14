@@ -885,19 +885,24 @@ export class PrismaStore implements AppStore {
   }): Promise<{ user: UserRecord; session: SessionRecord }> {
     const email = args.email || `${args.login}@users.noreply.github.com`;
     const username = args.login;
-    const user = await this.prisma.user.upsert({
-      where: { email },
-      update: {
-        username,
-        githubLinked: true,
-      },
-      create: {
-        username,
-        email,
-        githubLinked: true,
-        githubAppInstalled: false,
-      },
+
+    // Check if a user was pre-created with this GitHub login as their username.
+    // This ensures pre-seeded admin/instructor accounts are matched correctly
+    // regardless of what email GitHub returns during OAuth.
+    const existingByUsername = await this.prisma.user.findUnique({
+      where: { username },
     });
+
+    const user = existingByUsername
+      ? await this.prisma.user.update({
+          where: { id: existingByUsername.id },
+          data: { email, githubLinked: true },
+        })
+      : await this.prisma.user.upsert({
+          where: { email },
+          update: { username, githubLinked: true },
+          create: { username, email, githubLinked: true, githubAppInstalled: false },
+        });
 
     // Encrypt tokens at rest when NIBRAS_ENCRYPTION_KEY is set.
     // Falls back to plaintext in dev so local flow works without the key.
