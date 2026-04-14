@@ -43,10 +43,7 @@ function SkeletonCard() {
       </div>
       <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '4px 0' }} />
       <span className={styles.skeleton} style={{ width: '45%', height: 12 }} />
-      <span
-        className={styles.skeleton}
-        style={{ width: '100%', height: 4, borderRadius: 999 }}
-      />
+      <span className={styles.skeleton} style={{ width: '100%', height: 4, borderRadius: 999 }} />
       <span className={styles.skeleton} style={{ width: '30%', height: 11 }} />
     </div>
   );
@@ -86,9 +83,7 @@ export default function DashboardPage() {
         <div className={styles.pageTitleGroup}>
           <h1 className={styles.pageTitle}>Your Courses</h1>
           <p className={styles.pageSubtitle}>
-            {loading
-              ? 'Loading…'
-              : `${courses.length} course${courses.length === 1 ? '' : 's'}`}
+            {loading ? 'Loading…' : `${courses.length} course${courses.length === 1 ? '' : 's'}`}
           </p>
         </div>
         <Link href="/instructor/courses/new" className={styles.newCourseBtn}>
@@ -241,14 +236,11 @@ export default function DashboardPage() {
                 {/* Bottom: meta + progress */}
                 <div className={styles.courseCardBottom}>
                   <span className={styles.courseMeta}>
-                    {projects} project{projects !== 1 ? 's' : ''} &bull;{' '}
-                    {students} student{students !== 1 ? 's' : ''}
+                    {projects} project{projects !== 1 ? 's' : ''} &bull; {students} student
+                    {students !== 1 ? 's' : ''}
                   </span>
                   <div className={styles.courseProgressBar}>
-                    <div
-                      className={styles.courseProgressFill}
-                      style={{ width: `${pct}%` }}
-                    />
+                    <div className={styles.courseProgressFill} style={{ width: `${pct}%` }} />
                   </div>
                   <span className={styles.courseProgressText}>
                     {approved}/{total} approved

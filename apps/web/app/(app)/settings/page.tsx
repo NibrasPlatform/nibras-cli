@@ -211,7 +211,10 @@ export default function SettingsPage() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.settingsTitle}>Settings</h1>
+      <div className={styles.pageHeader}>
+        <h1 className={styles.settingsTitle}>Settings</h1>
+        <p className={styles.settingsSubtitle}>Manage your account and preferences.</p>
+      </div>
 
       <div className={styles.settingsWrap}>
         {/* ── Left nav ── */}
