@@ -1,29 +1,8 @@
-import { spawn } from 'node:child_process';
 import { DevicePollResponseSchema, DeviceStartResponseSchema } from '@nibras/contracts';
 import { apiRequest, readCliConfig, writeCliConfig } from '@nibras/core';
 import { createSpinner } from '../ui/spinner';
 import { printBox } from '../ui/box';
-
-function tryOpenBrowser(url: string): void {
-  const candidates: Array<{ command: string; args: string[]; options?: { shell?: boolean } }> = [
-    { command: 'xdg-open', args: [url] },
-    { command: 'open', args: [url] },
-    { command: 'cmd', args: ['/c', 'start', url], options: { shell: true } },
-  ];
-  for (const candidate of candidates) {
-    try {
-      const child = spawn(candidate.command, candidate.args, {
-        detached: true,
-        stdio: 'ignore',
-        shell: candidate.options?.shell || false,
-      });
-      child.unref();
-      return;
-    } catch {
-      continue;
-    }
-  }
-}
+import { tryOpenBrowser } from './login-browser';
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -59,7 +38,7 @@ export async function commandLogin(args: string[], plain: boolean): Promise<void
   );
 
   if (!hasFlag(args, '--no-open')) {
-    tryOpenBrowser(start.verificationUriComplete);
+    void tryOpenBrowser(start.verificationUriComplete);
   }
 
   const spinner = createSpinner('Waiting for browser authorization', plain);

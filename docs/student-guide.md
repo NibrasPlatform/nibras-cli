@@ -1,13 +1,16 @@
 # Student Guide
 
-This guide explains how to set up the Nibras CLI, submit work, and track your progress.
+This guide explains how to install the Nibras CLI, authenticate against your school's hosted API,
+set up a project, and submit work from macOS, Linux, Windows PowerShell, or Windows Git Bash.
 
 ---
 
-## 1. Installing the CLI
+## 1. Install the CLI
+
+Install the pinned CLI release directly from GitHub:
 
 ```bash
-npm install -g @nibras/cli
+npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2
 ```
 
 Verify:
@@ -16,51 +19,100 @@ Verify:
 nibras --version
 ```
 
+The npm package is not published yet, so `npm install -g @nibras/cli` and `npx @nibras/cli`
+currently fail with a 404.
+
+If you already have an older global `nibras` link and see `EEXIST` or `ENOTDIR`, remove the old
+global install and then rerun the Git-tag install.
+
 ---
 
-## 2. Logging In
+## 2. Log In
+
+Use the hosted API URL your instructor or admin provides:
 
 ```bash
-nibras login
+nibras login --api-base-url https://nibras.yourschool.edu
 ```
 
-You will see a one-time code. Open the URL shown, paste the code, and authorise with your GitHub account. Once authorised, the CLI saves your tokens in `~/.nibras/cli.json` and you are ready to go.
+The CLI prints a one-time browser URL and short code, then tries to open the browser automatically
+unless you pass `--no-open`.
 
----
+Saved CLI config lives here:
 
-## 3. Joining a Course
+| OS      | Path                                               |
+| ------- | -------------------------------------------------- |
+| macOS   | `~/Library/Application Support/nibras/config.json` |
+| Linux   | `~/.config/nibras/config.json`                     |
+| Windows | `%APPDATA%\\nibras\\config.json`                   |
 
-Your instructor will share an invite link. Open it in your browser while logged into GitHub — you will be enrolled automatically.
-
----
-
-## 4. Setting Up a Project
+After login, run:
 
 ```bash
-cd ~/projects
-nibras setup cs161/lab1
+nibras whoami
 ```
 
-This creates a local directory `nibras-cs161-lab1/` cloned from the starter repo and links it to your account.
+This confirms the active session, linked GitHub account, and API base URL.
 
 ---
 
-## 5. Working on a Submission
+## 3. Join a Course
 
-1. Read the task file:
-   ```bash
-   nibras task
-   ```
-2. Implement your solution inside the project directory.
-3. Run the test suite locally (optional but recommended):
-   ```bash
-   nibras test
-   ```
-   This runs the same tests the server will run and reports a local pass/fail.
+Your instructor will share an invite link. Open it in your browser while signed in with GitHub.
+Once you accept the invite, your account is enrolled for the course.
 
 ---
 
-## 6. Submitting
+## 4. Set Up a Project
+
+Use the project key your instructor shares:
+
+```bash
+nibras setup --project cs161/lab1
+```
+
+`nibras setup` writes `.nibras/project.json` and `.nibras/task.md`, initializes git when needed,
+and connects the directory to your student repository.
+
+To set up the project in a specific directory:
+
+```bash
+nibras setup --project cs161/lab1 --dir ~/projects/lab1
+```
+
+On Windows:
+
+- PowerShell example: `nibras setup --project cs161/lab1 --dir C:\projects\lab1`
+- Git Bash example: `nibras setup --project cs161/lab1 --dir /c/projects/lab1`
+
+---
+
+## 5. Work on the Task
+
+Read the assignment text at any time:
+
+```bash
+nibras task
+```
+
+Then edit your project files and run the local test command:
+
+```bash
+nibras test
+```
+
+`nibras test` runs the manifest-configured test command for your OS. A non-zero exit code means the
+local test command failed.
+
+If your project supports previous-milestone testing, you can also run:
+
+```bash
+nibras test --previous
+```
+
+---
+
+## 6. Submit
 
 ```bash
 nibras submit
@@ -68,70 +120,65 @@ nibras submit
 
 The CLI will:
 
-1. Stage only the **allowed files** (configured in `.nibras/project.json`).
-2. Commit and push to your remote branch.
-3. Poll the API for verification results.
-4. Print the final status: `passed`, `failed`, or `needs_review`.
+1. Run the local test command.
+2. Stage only files allowed by `.nibras/project.json`.
+3. Create a commit and push it to `origin`.
+4. Register the submission with the API.
+5. Poll for verification until the run finishes or times out.
 
-> **Deadline enforcement:** Submissions after the milestone due date will be rejected with a 422 error. Contact your instructor if you need an extension.
+If local tests fail, submission still continues. The CLI records the local test result with the
+submission and waits for server-side verification.
+
+> **Deadline enforcement:** submissions after the milestone due date are rejected with a 422
+> `VALIDATION_ERROR`. Contact your instructor if you need an extension.
 
 ---
 
-## 7. Checking Status
+## 7. Check Session and Project Status
+
+Use these commands any time:
 
 ```bash
-nibras status
+nibras whoami
+nibras ping
 ```
 
-Shows the most recent submission and its verification status.
-
-You can also watch live status updates from the web dashboard — the submission detail page streams real-time updates via Server-Sent Events.
+`nibras ping` checks API reachability, auth, GitHub linkage, GitHub App installation, and, when
+run inside a project, the project key and `origin` remote.
 
 ---
 
 ## 8. Token Refresh
 
-Access tokens expire after 8 hours. The CLI refreshes them automatically when you run any command. If you get an `INVALID_SESSION` error, re-run `nibras login`.
+The CLI refreshes saved session tokens automatically when possible. If you get an
+`INVALID_SESSION` error, run `nibras login --api-base-url <your-api-url>` again.
 
 ---
 
-## 9. Logging Out
+## 9. Log Out
 
 ```bash
 nibras logout
 ```
 
-Revokes your CLI session. Use `nibras login` again when needed.
+This clears the local CLI session. Run `nibras login --api-base-url <your-api-url>` again when you
+need a new session.
 
 ---
 
-## 10. Account Deletion (GDPR)
+## 10. Common Errors
 
-To permanently delete your account and all personal data:
-
-```bash
-curl -X DELETE https://nibras.yourschool.edu/v1/me/account \
-  -H "Authorization: Bearer <your-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"confirm": "DELETE MY ACCOUNT"}'
-```
-
-This anonymises your profile, revokes all sessions, and removes your course memberships. Submission records are retained in anonymised form for academic integrity purposes.
+| Error              | Cause                                         | Fix                                                          |
+| ------------------ | --------------------------------------------- | ------------------------------------------------------------ |
+| `AUTH_REQUIRED`    | You are not logged in for the current API URL | Run `nibras login --api-base-url <your-api-url>`             |
+| `INVALID_SESSION`  | The saved session expired or was revoked      | Run `nibras login --api-base-url <your-api-url>`             |
+| `NOT_FOUND`        | Wrong project key or missing resource         | Recheck the project key from your instructor                 |
+| `VALIDATION_ERROR` | Invalid input or a missed deadline            | Read the error message and contact your instructor if needed |
+| `RATE_LIMITED`     | Too many requests in a short period           | Wait, then retry                                             |
 
 ---
 
-## 11. Common Errors
+## 11. Getting Help
 
-| Error                         | Cause                    | Fix                                     |
-| ----------------------------- | ------------------------ | --------------------------------------- |
-| `AUTH_REQUIRED`               | No token or cookie       | Run `nibras login`                      |
-| `INVALID_SESSION`             | Token expired or revoked | Run `nibras login`                      |
-| `NOT_FOUND`                   | Wrong project key or ID  | Check `nibras task` for the correct key |
-| `VALIDATION_ERROR` (deadline) | Past the due date        | Contact your instructor                 |
-| `RATE_LIMITED`                | Too many requests        | Wait the indicated number of seconds    |
-
----
-
-## 12. Getting Help
-
-Ask your instructor or open an issue on your course platform. For CLI bugs, open an issue in the `nibras-cli` repository.
+Ask your instructor for the correct hosted API URL and project key first. For CLI bugs, open an
+issue in the `nibras-cli` repository.

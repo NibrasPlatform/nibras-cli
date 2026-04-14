@@ -222,13 +222,22 @@ The npm package is not published yet, so `npm install -g @nibras/cli` and `npx @
 
 Or use the CLI from source after `npm run build`.
 
+### Hosted onboarding
+
+For a hosted Nibras deployment, pass the API URL explicitly during login. A clean CLI install still
+defaults to the local dev API at `http://127.0.0.1:4848`.
+
+```bash
+nibras login --api-base-url https://nibras.yourschool.edu
+```
+
 ### Core workflow
 
 ```bash
-nibras login                             # Start hosted device login
+nibras login --api-base-url https://nibras.yourschool.edu  # Start hosted device login
 nibras setup --project cs101/assignment-1  # Bootstrap or refresh a local project
 nibras task                              # Print cached task text or fetch it if missing
-nibras test                              # Run .nibras/project.json -> test.command
+nibras test                              # Run the manifest-configured local test command
 nibras submit                            # Run local tests, stage allowed files, commit, push, and wait for verification
 ```
 
@@ -251,6 +260,7 @@ When `nibras ping` runs inside a project, it also shows the project key and `ori
 ### Install lifecycle
 
 ```bash
+nibras update --check                   # Compare the installed CLI against the latest GitHub release
 nibras update --version v1.0.2         # Reinstall the pinned Git-tag release
 nibras update --force --version v1.0.2 # Force reinstall the same tag
 nibras uninstall                       # Remove the global CLI install and keep local config
@@ -264,10 +274,6 @@ nibras legacy ...                  # Run the older CLI entrypoint for compatibil
 ```
 
 These commands are not part of the standard hosted onboarding flow.
-
-### Current limitation note
-
-Avoid `nibras update --check` for now. The latest-release lookup is not currently reliable, so the supported update path today is an explicit `--version`.
 
 ---
 
@@ -478,11 +484,11 @@ The student dashboard and project views support switching between multiple enrol
 
 Users with `systemRole: "admin"` (super-admins) get additional capabilities:
 
-| Surface           | Feature                                                           |
-| ----------------- | ----------------------------------------------------------------- |
-| Settings page     | Super-admin badge and total accessible-course count displayed     |
-| API               | Access to all courses regardless of enrollment                    |
-| Auto-enrollment   | New users are auto-enrolled in CS161; admins see all active courses |
+| Surface         | Feature                                                             |
+| --------------- | ------------------------------------------------------------------- |
+| Settings page   | Super-admin badge and total accessible-course count displayed       |
+| API             | Access to all courses regardless of enrollment                      |
+| Auto-enrollment | New users are auto-enrolled in CS161; admins see all active courses |
 
 The `systemRole` field is returned by `/v1/web/session` and included in the `UserSchema` contracts type.
 
@@ -553,11 +559,11 @@ Deploys the Next.js web app to Fly.io automatically:
 
 ```yaml
 flyctl deploy \
-  --config fly.web.toml \
-  --app nibras-web \
-  --build-arg NEXT_PUBLIC_NIBRAS_API_BASE_URL=https://nibras-api.fly.dev \
-  --build-arg NEXT_PUBLIC_NIBRAS_WEB_BASE_URL=https://nibras-web.fly.dev \
-  --remote-only
+--config fly.web.toml \
+--app nibras-web \
+--build-arg NEXT_PUBLIC_NIBRAS_API_BASE_URL=https://nibras-api.fly.dev \
+--build-arg NEXT_PUBLIC_NIBRAS_WEB_BASE_URL=https://nibras-web.fly.dev \
+--remote-only
 ```
 
 Requires a `FLY_API_TOKEN` Actions secret. Only one deploy runs at a time; newer pushes cancel in-progress deploys automatically.

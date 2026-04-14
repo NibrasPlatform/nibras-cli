@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { loadProjectManifest } from '@nibras/core';
+import { buildProjectTestCommand, loadProjectManifest } from '@nibras/core';
 import picocolors from 'picocolors';
 import { printBox } from '../ui/box';
 
@@ -24,7 +24,11 @@ export async function commandTest(args: string[], plain: boolean): Promise<void>
     throw new Error('This project does not support --previous.');
   }
 
-  const cmd = manifest.test.command + (wantsPrevious ? ' --previous' : '');
+  const cmd = buildProjectTestCommand(
+    manifest.test,
+    process.platform,
+    wantsPrevious ? ['--previous'] : []
+  );
 
   if (!plain && process.stdout.isTTY) {
     console.log();
@@ -32,28 +36,14 @@ export async function commandTest(args: string[], plain: boolean): Promise<void>
     console.log();
   }
 
-  const exitCode = await runShellCommand(
-    manifest.test.command,
-    projectRoot,
-    wantsPrevious ? ['--previous'] : []
-  );
+  const exitCode = await runShellCommand(cmd, projectRoot, []);
 
   if (!plain && process.stdout.isTTY) {
     console.log();
     if (exitCode === 0) {
-      printBox(
-        'Local tests passed',
-        [`Command: ${cmd}`, `Exit code: 0`],
-        'success',
-        plain
-      );
+      printBox('Local tests passed', [`Command: ${cmd}`, `Exit code: 0`], 'success', plain);
     } else {
-      printBox(
-        'Local tests failed',
-        [`Command: ${cmd}`, `Exit code: ${exitCode}`],
-        'error',
-        plain
-      );
+      printBox('Local tests failed', [`Command: ${cmd}`, `Exit code: ${exitCode}`], 'error', plain);
       process.exitCode = exitCode;
     }
   } else if (exitCode !== 0) {

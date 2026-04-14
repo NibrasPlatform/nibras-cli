@@ -6,6 +6,7 @@ import {
 } from '@nibras/contracts';
 import {
   apiRequest,
+  buildProjectTestCommand,
   createCommit,
   ensureGitIdentity,
   ensureGitRepo,
@@ -44,12 +45,13 @@ export async function commandSubmit(plain: boolean): Promise<void> {
   await ensureGitRepo(projectRoot);
   const repoUrl = await getOriginUrl(projectRoot);
   const branch = await getCurrentBranch(projectRoot);
+  const testCommand = buildProjectTestCommand(manifest.test, process.platform);
 
   // ── Step 2: Run local tests ───────────────────────────────────────────────
   if (!plain && process.stdout.isTTY) {
-    console.log(`\n  Running tests: ${manifest.test.command}\n`);
+    console.log(`\n  Running tests: ${testCommand}\n`);
   }
-  const testExitCode = await runTests(manifest.test.command, projectRoot);
+  const testExitCode = await runTests(testCommand, projectRoot);
   if (!plain && process.stdout.isTTY) {
     console.log();
   }

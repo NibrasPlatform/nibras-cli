@@ -5,10 +5,21 @@ import { useEffect, useState } from 'react';
 import CliCodeBlock from '../../_components/cli-code-block';
 import TerminalMockup, { type TerminalLine } from '../../_components/terminal-mockup';
 import { prefs } from '../../../lib/prefs';
+import {
+  buildHostedLoginCommand,
+  buildStudentQuickStart,
+  discoverOnboardingApiBaseUrl,
+  GIT_INSTALL_COMMAND,
+  getInstallTroubleshootingCommand,
+  getOnboardingConfigPath,
+  getOnboardingDirExample,
+  PINNED_RELEASE_TAG,
+} from './onboarding-content.js';
 import styles from './page.module.css';
 
 // ── OS type ──────────────────────────────────────────────────────────────────
 type OS = 'mac' | 'linux' | 'windows';
+type WindowsShell = 'powershell' | 'gitbash';
 
 type CommandReferenceItem = {
   command: string;
@@ -47,26 +58,6 @@ function OsCode({
 }
 
 // ── Terminal outputs ──────────────────────────────────────────────────────────
-const loginOutput: TerminalLine[] = [
-  { type: 'cmd', text: 'nibras login' },
-  { type: 'blank' },
-  { type: 'success', text: '╭──────────────────────────────────────────────────────────────╮' },
-  { type: 'success', text: '│  ℹ  Authorize this device                                   │' },
-  { type: 'muted', text: '│  Open in browser: https://nibras-web.fly.dev/dev/approve?...│' },
-  { type: 'muted', text: '│  Code:            ABCD-1234                                 │' },
-  { type: 'muted', text: '│  Browser launch: automatic                                  │' },
-  { type: 'success', text: '╰──────────────────────────────────────────────────────────────╯' },
-  { type: 'blank' },
-  { type: 'muted', text: '  ⠋ Waiting for browser authorization…' },
-  { type: 'blank' },
-  { type: 'success', text: '╭─────────────────────────────────────────╮' },
-  { type: 'success', text: '│  ✓  Authenticated as Zied               │' },
-  { type: 'muted', text: '│  User:    Zied                          │' },
-  { type: 'muted', text: '│  GitHub:  Zied                          │' },
-  { type: 'muted', text: '│  API:     https://nibras-api.fly.dev    │' },
-  { type: 'success', text: '╰─────────────────────────────────────────╯' },
-];
-
 const setupOutput: TerminalLine[] = [
   { type: 'cmd', text: 'nibras setup --project cs101/assignment-1' },
   { type: 'blank' },
@@ -117,7 +108,11 @@ const COMMAND_REFERENCE_GROUPS: CommandReferenceGroup[] = [
   {
     title: 'Core workflow',
     items: [
-      { command: 'nibras login', description: 'Start hosted device login.' },
+      {
+        command: 'nibras login --api-base-url <api-url>',
+        description: 'Start hosted device login against a specific Nibras deployment.',
+        note: 'Use the explicit API URL for hosted onboarding. The CLI default remains the local dev API.',
+      },
       {
         command: 'nibras setup --project <key>',
         description: 'Bootstrap or refresh a local project.',
@@ -154,7 +149,7 @@ const COMMAND_REFERENCE_GROUPS: CommandReferenceGroup[] = [
       {
         command: 'nibras update --version <tag>',
         description: 'Reinstall a pinned Git-tag release.',
-        note: '--check is not currently reliable; use an explicit --version.',
+        note: 'Use `nibras update --check` to compare the installed CLI against the latest GitHub release.',
       },
       {
         command: 'nibras update --force --version <tag>',
@@ -260,15 +255,80 @@ function OsTabs({ os, setOs }: { os: OS; setOs: (v: OS) => void }) {
   );
 }
 
+function WindowsShellTabs({
+  shell,
+  setShell,
+}: {
+  shell: WindowsShell;
+  setShell: (value: WindowsShell) => void;
+}) {
+  const tabs: { value: WindowsShell; label: string }[] = [
+    { value: 'powershell', label: 'PowerShell' },
+    { value: 'gitbash', label: 'Git Bash' },
+  ];
+
+  return (
+    <div className={styles.osTabs}>
+      {tabs.map((tab) => (
+        <button
+          key={tab.value}
+          className={`${styles.osTab} ${shell === tab.value ? styles.osTabActive : ''}`}
+          onClick={() => setShell(tab.value)}
+          type="button"
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function OnboardingPage() {
   const [os, setOs] = useState<OS>('mac');
+  const [windowsShell, setWindowsShell] = useState<WindowsShell>('powershell');
   const [activeStep, setActiveStep] = useState('step-01');
+  const [hostedApiBaseUrl, setHostedApiBaseUrl] = useState<string | null>(null);
+  const [apiDiscoveryState, setApiDiscoveryState] = useState<'loading' | 'ready' | 'error'>(
+    'loading'
+  );
+  const [apiDiscoveryError, setApiDiscoveryError] = useState<string | null>(null);
 
   // Detect OS on mount
   useEffect(() => {
     const saved = prefs.getOnboardingOs() as OS | null;
     setOs(saved ?? detectOS());
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setApiDiscoveryState('loading');
+    setApiDiscoveryError(null);
+
+    void discoverOnboardingApiBaseUrl({
+      configuredApiBaseUrl: process.env.NEXT_PUBLIC_NIBRAS_API_BASE_URL ?? null,
+      pageOrigin: typeof window === 'undefined' ? null : window.location.origin,
+      probe: async (candidate) => {
+        const response = await fetch(`${candidate}/v1/health`);
+        return response.ok;
+      },
+    })
+      .then((apiBaseUrl) => {
+        if (cancelled) return;
+        setHostedApiBaseUrl(apiBaseUrl);
+        setApiDiscoveryState('ready');
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setHostedApiBaseUrl(null);
+        setApiDiscoveryState('error');
+        setApiDiscoveryError(error instanceof Error ? error.message : String(error));
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Persist OS selection
@@ -299,13 +359,30 @@ export default function OnboardingPage() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  const configPath =
-    os === 'windows' ? '%APPDATA%\\nibras\\config.json' : '~/.config/nibras/config.json';
-
-  const dirExample =
-    os === 'windows'
-      ? 'nibras setup --project cs101/a1 --dir C:\\projects\\a1'
-      : 'nibras setup --project cs101/a1 --dir ~/projects/a1';
+  const configPath = getOnboardingConfigPath(os);
+  const dirExample = getOnboardingDirExample(os, windowsShell);
+  const loginCommand = hostedApiBaseUrl ? buildHostedLoginCommand(hostedApiBaseUrl) : null;
+  const studentQuickStart = hostedApiBaseUrl ? buildStudentQuickStart(hostedApiBaseUrl) : null;
+  const installTroubleshootingCommand = getInstallTroubleshootingCommand(os, windowsShell);
+  const loginOutput: TerminalLine[] = [
+    { type: 'cmd', text: loginCommand ?? 'nibras login --api-base-url https://api.example.com' },
+    { type: 'blank' },
+    { type: 'success', text: '╭──────────────────────────────────────────────────────────────╮' },
+    { type: 'success', text: '│  ℹ  Authorize this device                                   │' },
+    { type: 'muted', text: '│  Open in browser: https://nibras-web.fly.dev/dev/approve?...│' },
+    { type: 'muted', text: '│  Code:            ABCD-1234                                 │' },
+    { type: 'muted', text: '│  Browser launch: automatic                                  │' },
+    { type: 'success', text: '╰──────────────────────────────────────────────────────────────╯' },
+    { type: 'blank' },
+    { type: 'muted', text: '  ⠋ Waiting for browser authorization…' },
+    { type: 'blank' },
+    { type: 'success', text: '╭─────────────────────────────────────────╮' },
+    { type: 'success', text: '│  ✓  Authenticated as Zied               │' },
+    { type: 'muted', text: '│  User:    Zied                          │' },
+    { type: 'muted', text: '│  GitHub:  Zied                          │' },
+    { type: 'muted', text: `│  API:     ${hostedApiBaseUrl ?? 'https://api.example.com'} │` },
+    { type: 'success', text: '╰─────────────────────────────────────────╯' },
+  ];
 
   return (
     <div className={styles.pageWrapper}>
@@ -360,8 +437,9 @@ export default function OnboardingPage() {
               <div className={`${styles.callout} ${styles.calloutInfo}`}>
                 <span className={styles.calloutIcon}>⊞</span>
                 <p>
-                  We recommend using <strong>Git Bash</strong> or <strong>WSL</strong> for the best
-                  experience. PowerShell works but some commands and paths may differ.
+                  <strong>PowerShell</strong> and <strong>Git Bash</strong> are both supported. Pick
+                  one shell for install, login, setup, test, and submit so your paths stay
+                  consistent.
                 </p>
               </div>
             )}
@@ -431,7 +509,7 @@ export default function OnboardingPage() {
                     {os === 'windows' && (
                       <span style={{ color: 'var(--text-soft)', fontSize: 13 }}>
                         {' '}
-                        (run in Git Bash or WSL)
+                        (run it in the shell you plan to use with Nibras)
                       </span>
                     )}
                   </>
@@ -452,7 +530,7 @@ export default function OnboardingPage() {
           <Section id="step-02" number="02" title="Install the CLI">
             <p className={styles.bodyText}>
               Install the current CLI release directly from GitHub. This pins the onboarding flow to{' '}
-              <code className={styles.inlineCode}>v1.0.2</code> and makes the{' '}
+              <code className={styles.inlineCode}>{PINNED_RELEASE_TAG}</code> and makes the{' '}
               <code className={styles.inlineCode}>nibras</code> command available anywhere.
             </p>
 
@@ -466,39 +544,31 @@ export default function OnboardingPage() {
               </p>
             </div>
 
-            {os === 'windows' && (
-              <div className={`${styles.callout} ${styles.calloutInfo}`}>
-                <span className={styles.calloutIcon}>💡</span>
-                <p>
-                  On Windows, run your terminal (<strong>PowerShell</strong> or{' '}
-                  <strong>Git Bash</strong>) as <strong>Administrator</strong> when installing
-                  global npm packages.
-                </p>
-              </div>
-            )}
-
             <OsCode
               os={os}
-              mac="npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2"
-              linux="npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2"
-              windows="npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2"
+              mac={GIT_INSTALL_COMMAND}
+              linux={GIT_INSTALL_COMMAND}
+              windows={GIT_INSTALL_COMMAND}
             />
             <p className={styles.hint}>
               Verify the install: <code className={styles.inlineCode}>nibras --version</code> should
-              start with <code className={styles.inlineCode}>v1.0.2</code>, for example{' '}
-              <code className={styles.inlineCode}>v1.0.2-499d7f9</code>.
+              start with <code className={styles.inlineCode}>{PINNED_RELEASE_TAG}</code>, for
+              example <code className={styles.inlineCode}>{PINNED_RELEASE_TAG}-499d7f9</code>.
             </p>
             <p className={styles.bodyText}>
               To reinstall the pinned release later, run{' '}
-              <code className={styles.inlineCode}>nibras update --version v1.0.2</code>.
+              <code className={styles.inlineCode}>
+                nibras update --version {PINNED_RELEASE_TAG}
+              </code>
+              .
             </p>
             <p className={styles.bodyText}>
               To remove the CLI from this machine later, run{' '}
               <code className={styles.inlineCode}>nibras uninstall</code>.
             </p>
             <p className={styles.hint}>
-              Avoid <code className={styles.inlineCode}>nibras update --check</code> for now. The
-              latest-release lookup is not configured yet.
+              Use <code className={styles.inlineCode}>nibras update --check</code> to compare the
+              installed CLI with the latest GitHub release before updating.
             </p>
             <div className={`${styles.callout} ${styles.calloutInfo}`}>
               <span className={styles.calloutIcon}>⚠</span>
@@ -509,21 +579,15 @@ export default function OnboardingPage() {
                   global <code className={styles.inlineCode}>nibras</code> link. Remove it and
                   reinstall:
                 </p>
-                <OsCode
-                  os={os}
-                  mac={`npm uninstall -g nibras @nibras/cli || true
-rm -f "$(npm config get prefix)/bin/nibras"
-rm -rf "$(npm root -g)/nibras"
-npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
-                  linux={`npm uninstall -g nibras @nibras/cli || true
-rm -f "$(npm config get prefix)/bin/nibras"
-rm -rf "$(npm root -g)/nibras"
-npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
-                  windows={`npm uninstall -g nibras @nibras/cli
-Remove-Item "$env:APPDATA\\npm\\nibras.cmd" -Force -ErrorAction SilentlyContinue
-Remove-Item "$env:APPDATA\\npm\\node_modules\\nibras" -Recurse -Force -ErrorAction SilentlyContinue
-npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
-                />
+                {os === 'windows' ? (
+                  <>
+                    <p className={styles.hint}>Windows shell:</p>
+                    <WindowsShellTabs shell={windowsShell} setShell={setWindowsShell} />
+                    <CliCodeBlock code={installTroubleshootingCommand} />
+                  </>
+                ) : (
+                  <CliCodeBlock code={installTroubleshootingCommand} />
+                )}
               </div>
             </div>
           </Section>
@@ -531,14 +595,30 @@ npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
           {/* 03 Authenticate */}
           <Section id="step-03" number="03" title="Authenticate with GitHub">
             <p className={styles.bodyText}>
-              Run <code className={styles.inlineCode}>nibras login</code> to start the device
-              authorization flow. It prints a URL and short code, then tries to open the browser
-              automatically unless you pass <code className={styles.inlineCode}>--no-open</code>.
+              Use an explicit <code className={styles.inlineCode}>--api-base-url</code> for hosted
+              onboarding so the CLI targets this deployment instead of the local dev default at{' '}
+              <code className={styles.inlineCode}>http://127.0.0.1:4848</code>. The login flow
+              prints a URL and short code, then tries to open the browser automatically unless you
+              pass <code className={styles.inlineCode}>--no-open</code>.
             </p>
-            <CliCodeBlock code="nibras login" />
-            <div className={styles.terminalWrapper}>
-              <TerminalMockup title="nibras login" lines={loginOutput} />
-            </div>
+            {apiDiscoveryState === 'ready' && loginCommand ? (
+              <>
+                <CliCodeBlock code={loginCommand} />
+                <div className={styles.terminalWrapper}>
+                  <TerminalMockup title="nibras login" lines={loginOutput} />
+                </div>
+              </>
+            ) : (
+              <div className={`${styles.callout} ${styles.calloutInfo}`}>
+                <span className={styles.calloutIcon}>ℹ</span>
+                <p>
+                  {apiDiscoveryState === 'loading'
+                    ? 'Checking which API this deployment uses before rendering the hosted login command.'
+                    : apiDiscoveryError ||
+                      'Unable to verify a reachable API for this deployment. Ask your admin for the hosted API URL and use `nibras login --api-base-url <url>`.'}
+                </p>
+              </div>
+            )}
             <p className={styles.hint}>
               Credentials are stored in <code className={styles.inlineCode}>{configPath}</code>. Run{' '}
               <code className={styles.inlineCode}>nibras whoami</code> after login to confirm the
@@ -591,6 +671,12 @@ npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
               <code className={styles.inlineCode}>.nibras</code> metadata instead of re-extracting
               starter files.
             </p>
+            {os === 'windows' ? (
+              <>
+                <p className={styles.hint}>Windows shell:</p>
+                <WindowsShellTabs shell={windowsShell} setShell={setWindowsShell} />
+              </>
+            ) : null}
             <p className={styles.hint}>
               Specify a target directory: <code className={styles.inlineCode}>{dirExample}</code>
             </p>
@@ -599,8 +685,8 @@ npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
           {/* 06 Tests */}
           <Section id="step-06" number="06" title="Run local tests">
             <p className={styles.bodyText}>
-              Use <code className={styles.inlineCode}>nibras test</code> to run the command in{' '}
-              <code className={styles.inlineCode}>.nibras/project.json → test.command</code>. Pass{' '}
+              Use <code className={styles.inlineCode}>nibras test</code> to run the
+              manifest-configured test command for your OS. Pass{' '}
               <code className={styles.inlineCode}>--previous</code> only when the project manifest
               supports it.
             </p>
@@ -657,26 +743,34 @@ npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2`}
           <Section id="step-09" number="09" title="Share with students">
             <p className={styles.bodyText}>
               Students follow the same flow: install the CLI, run{' '}
-              <code className={styles.inlineCode}>nibras login</code>, and{' '}
-              <code className={styles.inlineCode}>nibras setup --project &lt;key&gt;</code>. Share
-              the project key with your class.
+              <code className={styles.inlineCode}>nibras login --api-base-url &lt;api-url&gt;</code>
+              , and <code className={styles.inlineCode}>nibras setup --project &lt;key&gt;</code>.
+              Share the project key with your class.
             </p>
 
             {os === 'windows' && (
               <div className={`${styles.callout} ${styles.calloutInfo}`}>
                 <span className={styles.calloutIcon}>⊞</span>
                 <p>
-                  Remind Windows students to run the commands in <strong>Git Bash</strong>,{' '}
-                  <strong>WSL</strong>, or <strong>PowerShell (Admin)</strong>.
+                  Windows students can use either <strong>PowerShell</strong> or{' '}
+                  <strong>Git Bash</strong>. Match the troubleshooting snippet to the shell they
+                  actually use.
                 </p>
               </div>
             )}
 
             <div className={styles.shareCard}>
               <div className={styles.shareCardTitle}>Student quick-start</div>
-              <CliCodeBlock
-                code={`npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2\nnibras --version\nnibras login\nnibras setup --project cs101/assignment-1\nnibras test\nnibras submit`}
-              />
+              {studentQuickStart ? (
+                <CliCodeBlock code={studentQuickStart} />
+              ) : (
+                <p className={styles.bodyText}>
+                  {apiDiscoveryState === 'loading'
+                    ? 'Waiting for a reachable hosted API before rendering the student login command.'
+                    : apiDiscoveryError ||
+                      'Ask your admin for the hosted API URL before sharing the login command with students.'}
+                </p>
+              )}
             </div>
             <p className={styles.hint}>
               Students can view task instructions at any time with{' '}

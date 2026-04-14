@@ -15,6 +15,7 @@ import {
   TrackingReviewSchema,
   TrackingSubmissionSchema,
   UpdateMilestoneRequestSchema,
+  UpdateStudentLevelRequestSchema,
   UpdateTrackingProjectRequestSchema,
   UpdateTrackingSubmissionRequestSchema,
 } from '@nibras/contracts';
@@ -144,6 +145,34 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       }
       await store.removeCourseMember(requestBaseUrl(request), params.courseId, params.userId);
       return { ok: true };
+    }
+  );
+
+  app.patch(
+    '/v1/tracking/courses/:courseId/members/:userId/level',
+    { schema: { tags: ['tracking'], summary: 'Set student level (instructor/TA only)' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { courseId: string; userId: string };
+      if (!validateId(params.courseId, reply, 'courseId')) return;
+      if (!validateId(params.userId, reply, 'userId')) return;
+      if (!canManageCourse(auth, params.courseId)) {
+        reply.code(403).send(Errors.forbidden());
+        return;
+      }
+      const payload = UpdateStudentLevelRequestSchema.parse(request.body);
+      const membership = await store.updateStudentLevel(
+        requestBaseUrl(request),
+        params.courseId,
+        params.userId,
+        payload.level
+      );
+      if (!membership) {
+        reply.code(404).send(Errors.notFound('Student membership'));
+        return;
+      }
+      return { ok: true, level: membership.level };
     }
   );
 

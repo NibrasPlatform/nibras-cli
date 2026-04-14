@@ -16,6 +16,17 @@ const onboardingPath = path.join(
   'onboarding',
   'page.tsx'
 );
+const onboardingHelperPath = path.join(
+  repoRoot,
+  'apps',
+  'web',
+  'app',
+  '(app)',
+  'instructor',
+  'onboarding',
+  'onboarding-content.js'
+);
+const studentGuidePath = path.join(repoRoot, 'docs', 'student-guide.md');
 const packageJsonPath = path.join(repoRoot, 'package.json');
 
 function runCli(args) {
@@ -50,7 +61,8 @@ function commandDocSnippet(command) {
 test('README and onboarding docs cover every public CLI command', () => {
   const commands = getPublicCommands();
   const readme = fs.readFileSync(readmePath, 'utf8');
-  const onboarding = fs.readFileSync(onboardingPath, 'utf8');
+  const onboarding =
+    fs.readFileSync(onboardingPath, 'utf8') + fs.readFileSync(onboardingHelperPath, 'utf8');
 
   for (const command of commands) {
     const snippet = commandDocSnippet(command);
@@ -59,12 +71,14 @@ test('README and onboarding docs cover every public CLI command', () => {
   }
 });
 
-test('CLI install docs stay pinned to the current package tag and limitations', () => {
+test('CLI install docs stay pinned to the current package tag and hosted login flow', () => {
   const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const documentedTag = `v${pkg.version}`;
   const runtimeVersion = runCli(['--version']).trim();
   const readme = fs.readFileSync(readmePath, 'utf8');
-  const onboarding = fs.readFileSync(onboardingPath, 'utf8');
+  const onboarding =
+    fs.readFileSync(onboardingPath, 'utf8') + fs.readFileSync(onboardingHelperPath, 'utf8');
+  const studentGuide = fs.readFileSync(studentGuidePath, 'utf8');
 
   assert.equal(pkg.version, '1.0.2');
   assert.ok(
@@ -74,11 +88,29 @@ test('CLI install docs stay pinned to the current package tag and limitations', 
 
   assert.match(readme, /git\+https:\/\/github\.com\/NibrasPlatform\/nibras-cli\.git#v1\.0\.2/);
   assert.match(onboarding, /git\+https:\/\/github\.com\/NibrasPlatform\/nibras-cli\.git#v1\.0\.2/);
-  assert.match(readme, /Avoid `nibras update --check` for now\./);
-  assert.match(onboarding, /CLI Command Reference/);
   assert.match(
-    onboarding,
-    /Avoid <code className=\{styles\.inlineCode\}>nibras update --check<\/code> for now\./
+    studentGuide,
+    /git\+https:\/\/github\.com\/NibrasPlatform\/nibras-cli\.git#v1\.0\.2/
   );
+  assert.match(readme, /nibras login --api-base-url https:\/\/nibras\.yourschool\.edu/);
+  assert.match(studentGuide, /nibras login --api-base-url https:\/\/nibras\.yourschool\.edu/);
+  assert.match(readme, /nibras update --check/);
+  assert.match(onboarding, /CLI Command Reference/);
   assert.doesNotMatch(readme, /Install the published package:/);
+});
+
+test('student guide removes stale CLI instructions', () => {
+  const studentGuide = fs.readFileSync(studentGuidePath, 'utf8');
+
+  assert.doesNotMatch(studentGuide, /~\/\.nibras\/cli\.json/);
+  assert.doesNotMatch(studentGuide, /nibras setup cs161\/lab1/);
+  assert.doesNotMatch(studentGuide, /nibras status/);
+  assert.doesNotMatch(studentGuide, /same tests the server will run/);
+  assert.doesNotMatch(studentGuide, /Access tokens expire after 8 hours/);
+
+  assert.match(studentGuide, /%APPDATA%\\\\nibras\\\\config\.json/);
+  assert.match(studentGuide, /nibras setup --project cs161\/lab1/);
+  assert.match(studentGuide, /nibras ping/);
+  assert.match(studentGuide, /manifest-configured/);
+  assert.match(studentGuide, /submission still continues/i);
 });

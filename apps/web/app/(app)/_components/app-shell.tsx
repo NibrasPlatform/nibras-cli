@@ -16,6 +16,7 @@ type ShellSessionPayload = {
     githubAppInstalled: boolean;
     systemRole?: string;
   };
+  memberships?: Array<{ courseId: string; role: string; level: number }>;
 };
 
 export type ShellUser = ShellSessionPayload['user'];
@@ -56,7 +57,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         }
         const payload = (await response.json()) as ShellSessionPayload;
         if (alive) {
-          setSession(payload.user);
+          setSession({ ...payload.user, memberships: payload.memberships ?? [] });
         }
       } catch {
         if (alive) {

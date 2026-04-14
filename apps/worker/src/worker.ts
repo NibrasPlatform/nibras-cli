@@ -312,7 +312,6 @@ async function runAiGrading(
             anyNeedsReview = true;
           }
           gradedAny = true;
-
         } else if (q.mode === 'mcq') {
           // ── MCQ path ──────────────────────────────────────────────
           const result = await gradeMCQ(
@@ -345,7 +344,6 @@ async function runAiGrading(
             }
             gradedAny = true;
           }
-
         } else if (q.mode === 'exam') {
           // ── Exam path ─────────────────────────────────────────────
           const result = await gradeExam(
@@ -376,7 +374,6 @@ async function runAiGrading(
             if (r.needsHumanReview) anyNeedsReview = true;
             gradedAny = true;
           }
-
         } else if (q.mode === 'file') {
           // ── File path ─────────────────────────────────────────────
           const modelAnswerQuestions = (q.modelAnswerQuestions ?? []).map((mq) => ({
@@ -422,7 +419,6 @@ async function runAiGrading(
           allReasoningSummaries.push(summaryText);
           if (result.needsHumanReview) anyNeedsReview = true;
           gradedAny = true;
-
         } else {
           log('warn', 'AI grading: unknown question mode, skipping', {
             questionId: q.id,
@@ -544,6 +540,48 @@ async function finalizeJob(
   });
 }
 
+async function checkAndAutoUpgradeStudentLevel(
+  submissionAttemptId: string,
+  prisma: PrismaClient
+): Promise<void> {
+  const submission = await prisma.submissionAttempt.findUnique({
+    where: { id: submissionAttemptId },
+    include: { project: true },
+  });
+  if (!submission?.project.courseId) return;
+
+  const { userId, project } = submission;
+  const courseId = project.courseId!;
+
+  // Only run for students currently at level 1
+  const membership = await prisma.courseMembership.findFirst({
+    where: { courseId, userId, role: 'student', level: 1 },
+  });
+  if (!membership) return;
+
+  // Get all published level-1 projects in the course
+  const level1Projects = await prisma.project.findMany({
+    where: { courseId, level: 1, status: 'published' },
+    include: { milestones: true },
+  });
+
+  // Check every milestone of every level-1 project
+  for (const proj of level1Projects) {
+    for (const milestone of proj.milestones) {
+      const passedSub = await prisma.submissionAttempt.findFirst({
+        where: { userId, projectId: proj.id, milestoneId: milestone.id, status: 'passed' },
+      });
+      if (!passedSub) return; // milestone not yet passed
+    }
+  }
+
+  // All level-1 milestones cleared — upgrade
+  await prisma.courseMembership.update({
+    where: { id: membership.id },
+    data: { level: 2 },
+  });
+}
+
 async function failJob(
   jobId: string,
   submissionAttemptId: string,
@@ -637,6 +675,16 @@ async function tick(prisma: PrismaClient): Promise<void> {
       aiResult,
       prisma
     );
+    if (exitCode === 0) {
+      try {
+        await checkAndAutoUpgradeStudentLevel(job.submissionAttemptId, prisma);
+      } catch (err) {
+        log('warn', 'Auto-upgrade check error (non-fatal)', {
+          jobId: job.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
     log('info', 'Job completed', { jobId: job.id, exitCode, aiRan: aiResult !== null });
     transaction?.setStatus({ code: 1, message: 'ok' });
   } catch (err) {
@@ -685,6 +733,16 @@ async function processBullJob(
       aiResult,
       prisma
     );
+    if (exitCode === 0) {
+      try {
+        await checkAndAutoUpgradeStudentLevel(submissionAttemptId, prisma);
+      } catch (err) {
+        log('warn', 'Auto-upgrade check error (non-fatal)', {
+          jobId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
     log('info', 'BullMQ job completed', { jobId, exitCode, aiRan: aiResult !== null });
     transaction?.setStatus({ code: 1, message: 'ok' });
   } catch (err) {

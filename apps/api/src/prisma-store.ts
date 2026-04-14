@@ -56,13 +56,13 @@ import {
   WebSessionRecord,
 } from './store';
 
-function defaultTask(): string {
+function defaultTask(apiBaseUrl: string): string {
   return [
     '# CS161 / exam1',
     '',
     'This is the first hosted-style Nibras task.',
     '',
-    '1. Run `nibras login` against the hosted API.',
+    `1. Run \`nibras login --api-base-url ${apiBaseUrl}\` against the hosted API.`,
     '2. Run `nibras test` inside a provisioned project repo.',
     '3. Run `nibras submit` to push and wait for verification.',
   ].join('\n');
@@ -185,6 +185,7 @@ function toMembershipRecord(membership: {
   courseId: string;
   userId: string;
   role: CourseRole;
+  level: number;
   createdAt: Date;
   updatedAt: Date;
 }): CourseMembershipRecord {
@@ -193,6 +194,7 @@ function toMembershipRecord(membership: {
     courseId: membership.courseId,
     userId: membership.userId,
     role: membership.role as MembershipRole,
+    level: membership.level,
     createdAt: membership.createdAt.toISOString(),
     updatedAt: membership.updatedAt.toISOString(),
   };
@@ -390,6 +392,7 @@ function toProjectRecord(project: {
   name: string;
   description: string;
   status: PrismaProjectStatus;
+  level: number;
   deliveryMode: DeliveryMode;
   rubricJson: unknown;
   resourcesJson: unknown;
@@ -411,6 +414,7 @@ function toProjectRecord(project: {
     title: project.name,
     description: project.description,
     status: project.status as ProjectStatus,
+    level: project.level,
     deliveryMode: project.deliveryMode === DeliveryMode.team ? 'team' : 'individual',
     rubric: Array.isArray(project.rubricJson)
       ? (project.rubricJson as TrackingRubricItemRecord[])
@@ -421,7 +425,7 @@ function toProjectRecord(project: {
     instructorUserId: null,
     manifest:
       (release?.manifestJson as ProjectRecord['manifest']) || defaultManifest('http://127.0.0.1'),
-    task: release?.taskText || defaultTask(),
+    task: release?.taskText || defaultTask('http://127.0.0.1'),
     starter: toProjectStarterRecord({ projectKey: project.slug, release }),
     repoByUserId: {},
     createdAt: project.createdAt.toISOString(),
@@ -637,13 +641,13 @@ export class PrismaStore implements AppStore {
         },
       },
       update: {
-        taskText: defaultTask(),
+        taskText: defaultTask(apiBaseUrl),
         manifestJson: manifest,
       },
       create: {
         projectId: project.id,
         version: manifest.releaseVersion,
-        taskText: defaultTask(),
+        taskText: defaultTask(apiBaseUrl),
         manifestJson: manifest,
         publicAssetRef: 'public://seed',
         privateAssetRef: 'private://seed',
@@ -1563,9 +1567,7 @@ export class PrismaStore implements AppStore {
     }
     // Auto-assign the latest (highest order) milestone for this project
     const latestMilestone =
-      project.milestones.length > 0
-        ? project.milestones[project.milestones.length - 1]
-        : null;
+      project.milestones.length > 0 ? project.milestones[project.milestones.length - 1] : null;
     const repo = await this.prisma.userProjectRepo.findUnique({
       where: {
         userId_projectId: {
@@ -1914,6 +1916,7 @@ export class PrismaStore implements AppStore {
       courseId: m.courseId,
       userId: m.userId,
       role: m.role as CourseMembershipRecord['role'],
+      level: m.level,
       createdAt: m.createdAt.toISOString(),
       updatedAt: m.updatedAt.toISOString(),
       username: m.user.username,
@@ -1963,6 +1966,7 @@ export class PrismaStore implements AppStore {
       courseId: membership.courseId,
       userId: membership.userId,
       role: membership.role as CourseMembershipRecord['role'],
+      level: membership.level,
       createdAt: membership.createdAt.toISOString(),
       updatedAt: membership.updatedAt.toISOString(),
       username: account.user.username,
@@ -1983,6 +1987,34 @@ export class PrismaStore implements AppStore {
         payload: { removedUserId: userId } as Prisma.InputJsonValue,
       },
     });
+  }
+
+  async updateStudentLevel(
+    apiBaseUrl: string,
+    courseId: string,
+    userId: string,
+    level: number
+  ): Promise<CourseMembershipRecord | null> {
+    await this.seed(apiBaseUrl);
+    const existing = await this.prisma.courseMembership.findFirst({
+      where: { courseId, userId, role: 'student' },
+    });
+    if (!existing) return null;
+    const updated = await this.prisma.courseMembership.update({
+      where: { id: existing.id },
+      data: { level },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        courseId,
+        action: 'member.level_updated',
+        targetType: 'courseMembership',
+        targetId: updated.id,
+        payload: { level } as Prisma.InputJsonValue,
+      },
+    });
+    return toMembershipRecord(updated);
   }
 
   async createCourseInvite(
@@ -2075,6 +2107,7 @@ export class PrismaStore implements AppStore {
         courseId: existing.courseId,
         userId: existing.userId,
         role: existing.role as CourseMembershipRecord['role'],
+        level: existing.level,
         createdAt: existing.createdAt.toISOString(),
         updatedAt: existing.updatedAt.toISOString(),
       };
@@ -2093,6 +2126,7 @@ export class PrismaStore implements AppStore {
       courseId: membership.courseId,
       userId: membership.userId,
       role: membership.role as CourseMembershipRecord['role'],
+      level: membership.level,
       createdAt: membership.createdAt.toISOString(),
       updatedAt: membership.updatedAt.toISOString(),
     };

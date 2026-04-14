@@ -1377,3 +1377,21 @@
     padding: 7px 9px;
   }
 }
+
+/* ── Level badges ───────────────────────────────────────────────────────────── */
+
+.levelBadge {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--surface-strong);
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.projectTabLocked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

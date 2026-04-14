@@ -39,8 +39,15 @@ const CS106L_PROJECTS: readonly Cs106lProjectDefinition[] = [
     description: 'Implement a hash map and iterator that pass the provided CMake/CTest suite.',
     assignmentDir: 'courses/cs106l/assignments/HashMap',
     starterFileName: 'hashmap-starter.zip',
-    allowedPaths: ['.nibras/**', 'hashmap.cpp', 'hashmap.h', 'hashmap_iterator.h', 'test_settings.h'],
-    milestoneDescription: 'Implement the custom hash map and iterator behavior required by the tests.',
+    allowedPaths: [
+      '.nibras/**',
+      'hashmap.cpp',
+      'hashmap.h',
+      'hashmap_iterator.h',
+      'test_settings.h',
+    ],
+    milestoneDescription:
+      'Implement the custom hash map and iterator behavior required by the tests.',
   },
   {
     projectKey: 'cs106l/kdtree',
@@ -79,6 +86,10 @@ export function buildCs106lManifest(apiBaseUrl: string, projectKey: string): Pro
     test: {
       mode: 'command',
       command: CS106L_TEST_COMMAND,
+      commands: {
+        default: CS106L_TEST_COMMAND,
+        windows: CS106L_TEST_COMMAND,
+      },
       supportsPrevious: false,
     },
     submission: {

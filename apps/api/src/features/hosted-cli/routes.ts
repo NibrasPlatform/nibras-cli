@@ -16,7 +16,12 @@ import { PrismaStore } from '../../prisma-store';
 import { AppStore, ProjectRecord } from '../../store';
 import { Errors } from '../../lib/errors';
 import { validateId } from '../../lib/validate';
-import { getWebSessionToken, hasCourseAccess, requireUser, type AuthenticatedRequest } from '../../lib/auth';
+import {
+  getWebSessionToken,
+  hasCourseAccess,
+  requireUser,
+  type AuthenticatedRequest,
+} from '../../lib/auth';
 import { requestBaseUrl } from '../../lib/request-base-url';
 import { clearWebSessionCookie } from '../../lib/web-session';
 import { buildStarterBundleFromStorageKey } from '../../lib/starter-bundles';
@@ -152,6 +157,11 @@ export function registerHostedCliRoutes(
       return MeResponseSchema.parse({
         user: auth.user,
         apiBaseUrl: requestBaseUrl(request),
+        memberships: auth.memberships.map((m) => ({
+          courseId: m.courseId,
+          role: m.role,
+          level: m.level,
+        })),
       });
     }
   );

@@ -12,6 +12,7 @@ type Member = {
   username: string;
   githubLogin: string;
   role: 'student' | 'instructor' | 'ta';
+  level: number;
   createdAt: string;
 };
 
@@ -25,6 +26,7 @@ export default function CourseMembersPage({ params }: { params: Promise<{ course
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [promotingId, setPromotingId] = useState<string | null>(null);
   const [inviteRole, setInviteRole] = useState<'student' | 'ta'>('student');
   const [inviteExpiry, setInviteExpiry] = useState('');
   const [generatingInvite, setGeneratingInvite] = useState(false);
@@ -125,6 +127,23 @@ export default function CourseMembersPage({ params }: { params: Promise<{ course
       void loadMembers();
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  async function handlePromote(userId: string) {
+    setPromotingId(userId);
+    try {
+      await apiFetch(`/v1/tracking/courses/${courseId}/members/${userId}/level`, {
+        method: 'PATCH',
+        auth: true,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ level: 2 }),
+      });
+      setMembers((prev) => prev.map((m) => (m.userId === userId ? { ...m, level: 2 } : m)));
+    } catch {
+      // Silently ignore promote errors
+    } finally {
+      setPromotingId(null);
     }
   }
 
@@ -294,6 +313,7 @@ export default function CourseMembersPage({ params }: { params: Promise<{ course
                   <th>GitHub Login</th>
                   <th>Username</th>
                   <th>Role</th>
+                  <th>Level</th>
                   <th>Joined</th>
                   <th></th>
                 </tr>
@@ -308,6 +328,13 @@ export default function CourseMembersPage({ params }: { params: Promise<{ course
                         {member.role}
                       </span>
                     </td>
+                    <td>
+                      <span
+                        className={`${styles.levelBadge} ${(member.level ?? 1) >= 2 ? styles.levelBadge2 : styles.levelBadge1}`}
+                      >
+                        Level {member.level ?? 1}
+                      </span>
+                    </td>
                     <td className={styles.mono}>
                       {new Date(member.createdAt).toLocaleDateString('en-US', {
                         month: 'short',
@@ -315,7 +342,17 @@ export default function CourseMembersPage({ params }: { params: Promise<{ course
                         year: 'numeric',
                       })}
                     </td>
-                    <td>
+                    <td style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      {member.role === 'student' && (member.level ?? 1) < 2 && (
+                        <button
+                          className={styles.btnPromote}
+                          onClick={() => void handlePromote(member.userId)}
+                          disabled={promotingId === member.userId}
+                          title="Promote to Level 2"
+                        >
+                          {promotingId === member.userId ? '…' : 'Promote →'}
+                        </button>
+                      )}
                       {member.role !== 'instructor' && (
                         <button
                           className={styles.btnRemoveRow}

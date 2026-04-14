@@ -411,6 +411,10 @@ export default function ProjectsDashboard({
     }
   }
 
+  /* student level for the active course */
+  const studentLevel =
+    dashboard?.memberships.find((m) => m.courseId === dashboard.course?.id)?.level ?? 1;
+
   /* progress values */
   const approved = activeStats?.approved ?? 0;
   const underReview = activeStats?.underReview ?? 0;
@@ -558,18 +562,34 @@ export default function ProjectsDashboard({
               const stats = dashboard!.statsByProject[project.id];
               const pct = stats?.completion ?? 0;
               const isActive = project.id === activeProject?.id;
+              const projectLevel = (project as { level?: number }).level ?? 1;
+              const isLocked = projectLevel === 2 && studentLevel < 2;
               return (
                 <button
                   key={project.id}
                   type="button"
-                  className={`${styles.projectTab} ${isActive ? styles.projectTabActive : ''}`}
-                  onClick={() => setSelectedProjectId(project.id)}
+                  className={`${styles.projectTab} ${isActive ? styles.projectTabActive : ''} ${isLocked ? styles.projectTabLocked : ''}`}
+                  onClick={() => {
+                    if (!isLocked) setSelectedProjectId(project.id);
+                  }}
+                  disabled={isLocked}
+                  title={isLocked ? 'Complete all Level 1 milestones to unlock' : undefined}
                 >
                   <div className={styles.tabTop}>
-                    <strong className={styles.tabTitle}>{project.title}</strong>
-                    <span className={`${styles.tabStatus} ${statusColor(project.status)}`}>
-                      {project.status}
-                    </span>
+                    <strong className={styles.tabTitle}>
+                      {isLocked && (
+                        <span aria-hidden="true" style={{ marginRight: 4 }}>
+                          🔒
+                        </span>
+                      )}
+                      {project.title}
+                    </strong>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <span className={styles.levelBadge}>Level {projectLevel}</span>
+                      <span className={`${styles.tabStatus} ${statusColor(project.status)}`}>
+                        {project.status}
+                      </span>
+                    </div>
                   </div>
                   <span className={styles.tabMeta}>
                     {(dashboard!.milestonesByProject[project.id]?.length ?? 0) + ' milestone'}

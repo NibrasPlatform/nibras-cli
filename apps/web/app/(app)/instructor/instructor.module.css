@@ -620,3 +620,43 @@
   font-size: 12px;
   color: var(--text-muted);
 }
+
+.levelBadge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.levelBadge1 {
+  background: color-mix(in srgb, var(--text-muted) 15%, transparent);
+  color: var(--text-muted);
+}
+
+.levelBadge2 {
+  background: color-mix(in srgb, var(--success, #22c55e) 15%, transparent);
+  color: var(--success, #16a34a);
+}
+
+.btnPromote {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btnPromote:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.btnPromote:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

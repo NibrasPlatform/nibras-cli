@@ -32,6 +32,16 @@ const GradingQuestionSchema = z.object({
   gradingCriteria: z.string().optional(),
 });
 
+const ProjectTestCommandsSchema = z
+  .object({
+    default: z.string().min(1).optional(),
+    windows: z.string().min(1).optional(),
+    macos: z.string().min(1).optional(),
+    linux: z.string().min(1).optional(),
+    unix: z.string().min(1).optional(),
+  })
+  .optional();
+
 export const ProjectManifestSchema = z.object({
   projectKey: z.string().min(1),
   releaseVersion: z.string().min(1),
@@ -41,6 +51,7 @@ export const ProjectManifestSchema = z.object({
   test: z.object({
     mode: z.enum(['public-grading', 'command']),
     command: z.string().min(1),
+    commands: ProjectTestCommandsSchema,
     supportsPrevious: z.boolean().default(false),
   }),
   submission: z.object({
@@ -97,9 +108,17 @@ export const DevicePollSuccessSchema = z.object({
 
 export const DevicePollResponseSchema = z.union([DevicePollPendingSchema, DevicePollSuccessSchema]);
 
+export const SessionMembershipSchema = z.object({
+  courseId: z.string().min(1),
+  role: z.enum(['student', 'instructor', 'ta']),
+  level: z.number().int().min(1).max(2).default(1),
+});
+export type SessionMembership = z.infer<typeof SessionMembershipSchema>;
+
 export const MeResponseSchema = z.object({
   user: UserSchema,
   apiBaseUrl: z.string().url(),
+  memberships: z.array(SessionMembershipSchema).default([]),
 });
 
 export const ProjectTaskResponseSchema = z.object({
