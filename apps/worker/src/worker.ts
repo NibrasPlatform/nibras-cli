@@ -552,46 +552,59 @@ async function checkAndAutoUpgradeStudentLevel(
   });
   if (!submission?.project.courseId) return;
 
-  const { userId, project } = submission;
-  const courseId = project.courseId!;
+  const { userId } = submission;
 
-  // Find the student's membership at any level below the maximum
-  const membership = await prisma.courseMembership.findFirst({
-    where: { courseId, userId, role: 'student' },
+  // Find the student's membership for the course this submission belongs to
+  const triggerMembership = await prisma.courseMembership.findFirst({
+    where: { courseId: submission.project.courseId, userId, role: 'student' },
   });
-  if (!membership || membership.level >= MAX_LEVEL) return;
+  if (!triggerMembership || triggerMembership.level >= MAX_LEVEL) return;
 
-  const currentLevel = membership.level;
+  const currentLevel = triggerMembership.level;
 
-  // Get all published projects at the student's current level
-  const currentLevelProjects = await prisma.project.findMany({
-    where: { courseId, level: currentLevel, status: 'published' },
-    include: { milestones: true },
+  // Find ALL courses this student is enrolled in at the current level.
+  // A student must complete every published project (all milestones) across
+  // ALL their enrolled courses at their current level before advancing.
+  const allMemberships = await prisma.courseMembership.findMany({
+    where: { userId, role: 'student', level: currentLevel },
   });
 
-  // Every milestone of every current-level project must be passed
-  for (const proj of currentLevelProjects) {
-    for (const milestone of proj.milestones) {
-      const passedSub = await prisma.submissionAttempt.findFirst({
-        where: { userId, projectId: proj.id, milestoneId: milestone.id, status: 'passed' },
-      });
-      if (!passedSub) return; // still work to do
+  for (const mem of allMemberships) {
+    const levelProjects = await prisma.project.findMany({
+      where: { courseId: mem.courseId, level: currentLevel, status: 'published' },
+      include: { milestones: true },
+    });
+    // A course with no projects at this level does not block advancement
+    if (levelProjects.length === 0) continue;
+
+    for (const proj of levelProjects) {
+      for (const milestone of proj.milestones) {
+        const passedSub = await prisma.submissionAttempt.findFirst({
+          where: { userId, projectId: proj.id, milestoneId: milestone.id, status: 'passed' },
+        });
+        if (!passedSub) return; // still work to do in this course
+      }
     }
   }
 
-  // All current-level milestones cleared — promote to next level
+  // All courses at currentLevel are cleared — promote across every enrollment
   const nextLevel = currentLevel + 1;
-  await prisma.courseMembership.update({
-    where: { id: membership.id },
+  const membershipIds = allMemberships.map((m) => m.id);
+  await prisma.courseMembership.updateMany({
+    where: { id: { in: membershipIds } },
     data: { level: nextLevel },
   });
 
-  log('info', `Student auto-promoted: level ${currentLevel} → ${nextLevel}`, {
-    userId,
-    courseId,
-    fromLevel: currentLevel,
-    toLevel: nextLevel,
-  });
+  log(
+    'info',
+    `Student auto-promoted across ${membershipIds.length} course(s): level ${currentLevel} → ${nextLevel}`,
+    {
+      userId,
+      fromLevel: currentLevel,
+      toLevel: nextLevel,
+      courseIds: allMemberships.map((m) => m.courseId),
+    }
+  );
 }
 
 async function failJob(
