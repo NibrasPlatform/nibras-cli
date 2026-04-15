@@ -53,6 +53,7 @@ export type UserRecord = {
   githubLinked: boolean;
   githubAppInstalled: boolean;
   systemRole: SystemRole;
+  yearLevel: number;
 };
 
 export type GitHubAccountRecord = {
@@ -78,6 +79,7 @@ export type CourseMembershipRecord = {
   courseId: string;
   userId: string;
   role: MembershipRole;
+  level: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -114,6 +116,7 @@ export type ProjectRecord = {
   title: string;
   description: string;
   status: ProjectStatus;
+  level: number;
   deliveryMode: DeliveryMode;
   rubric: TrackingRubricItemRecord[];
   resources: TrackingResourceRecord[];
@@ -368,6 +371,16 @@ export interface AppStore {
     role: MembershipRole
   ): Promise<CourseMembershipRecord & { username: string; githubLogin: string }>;
   removeCourseMember(apiBaseUrl: string, courseId: string, userId: string): Promise<void>;
+  updateStudentLevel(
+    apiBaseUrl: string,
+    courseId: string,
+    userId: string,
+    level: number
+  ): Promise<CourseMembershipRecord | null>;
+  syncStudentYearGlobal(apiBaseUrl: string, userId: string, yearLevel: number): Promise<void>;
+  listStudentsWithYearLevel(
+    apiBaseUrl: string
+  ): Promise<Array<{ userId: string; username: string; githubLogin: string; yearLevel: number }>>;
   createCourseInvite(
     apiBaseUrl: string,
     courseId: string,
@@ -571,13 +584,13 @@ export interface AppStore {
   close?(): Promise<void>;
 }
 
-function defaultTask(): string {
+function defaultTask(apiBaseUrl: string): string {
   return [
     '# CS161 / exam1',
     '',
     'This is the first hosted-style Nibras task.',
     '',
-    '1. Run `nibras login` against the hosted API.',
+    `1. Run \`nibras login --api-base-url ${apiBaseUrl}\` against the hosted API.`,
     '2. Run `nibras test` inside a provisioned project repo.',
     '3. Run `nibras submit` to push and wait for verification.',
   ].join('\n');
@@ -593,6 +606,10 @@ export function defaultManifest(apiBaseUrl: string): ProjectManifest {
     test: {
       mode: 'public-grading',
       command: 'npm test',
+      commands: {
+        default: 'npm test',
+        windows: 'npm test',
+      },
       supportsPrevious: true,
     },
     submission: {
@@ -720,6 +737,7 @@ function seedData(apiBaseUrl: string): StoreData {
         githubLinked: true,
         githubAppInstalled: true,
         systemRole: 'user',
+        yearLevel: 1,
       },
       {
         id: instructorId,
@@ -729,6 +747,7 @@ function seedData(apiBaseUrl: string): StoreData {
         githubLinked: true,
         githubAppInstalled: true,
         systemRole: 'admin',
+        yearLevel: 1,
       },
     ],
     githubAccounts: [
@@ -773,6 +792,7 @@ function seedData(apiBaseUrl: string): StoreData {
         courseId: cs161CourseId,
         userId: studentId,
         role: 'student',
+        level: 1,
         createdAt,
         updatedAt: createdAt,
       },
@@ -781,6 +801,7 @@ function seedData(apiBaseUrl: string): StoreData {
         courseId: cs161CourseId,
         userId: instructorId,
         role: 'instructor',
+        level: 1,
         createdAt,
         updatedAt: createdAt,
       },
@@ -789,6 +810,7 @@ function seedData(apiBaseUrl: string): StoreData {
         courseId: cs106lCourseId,
         userId: studentId,
         role: 'student',
+        level: 1,
         createdAt,
         updatedAt: createdAt,
       },
@@ -797,6 +819,7 @@ function seedData(apiBaseUrl: string): StoreData {
         courseId: cs106lCourseId,
         userId: instructorId,
         role: 'instructor',
+        level: 1,
         createdAt,
         updatedAt: createdAt,
       },
@@ -816,6 +839,7 @@ function seedData(apiBaseUrl: string): StoreData {
         description:
           'Design, implement, and defend your solution for the first project milestone sequence.',
         status: 'published',
+        level: 1,
         deliveryMode: 'individual',
         rubric: [
           { criterion: 'Correctness', maxScore: 50 },
@@ -828,7 +852,7 @@ function seedData(apiBaseUrl: string): StoreData {
         ],
         instructorUserId: instructorId,
         manifest: defaultManifest(apiBaseUrl),
-        task: defaultTask(),
+        task: defaultTask(apiBaseUrl),
         starter: { kind: 'none' },
         repoByUserId: {},
         createdAt,
@@ -842,6 +866,7 @@ function seedData(apiBaseUrl: string): StoreData {
         title: project.title,
         description: project.description,
         status: 'published' as const,
+        level: 1,
         deliveryMode: 'individual' as const,
         rubric: [],
         resources: [],
@@ -1065,6 +1090,7 @@ export class FileStore implements AppStore {
         githubLinked: true,
         githubAppInstalled: false,
         systemRole: 'user',
+        yearLevel: 1,
       };
       data.users.push(user);
     } else {
@@ -1543,6 +1569,7 @@ export class FileStore implements AppStore {
       courseId,
       userId: user.id,
       role,
+      level: 1,
       createdAt: nowIso(),
       updatedAt: nowIso(),
     };
@@ -1557,6 +1584,56 @@ export class FileStore implements AppStore {
       (m) => !(m.courseId === courseId && m.userId === userId)
     );
     this.write(data);
+  }
+
+  async updateStudentLevel(
+    apiBaseUrl: string,
+    courseId: string,
+    userId: string,
+    level: number
+  ): Promise<CourseMembershipRecord | null> {
+    await this.syncStudentYearGlobal(apiBaseUrl, userId, level);
+    const data = this.read(apiBaseUrl);
+    const membership = data.courseMemberships.find(
+      (m) => m.courseId === courseId && m.userId === userId && m.role === 'student'
+    );
+    return membership ? { ...membership } : null;
+  }
+
+  async syncStudentYearGlobal(
+    apiBaseUrl: string,
+    userId: string,
+    yearLevel: number
+  ): Promise<void> {
+    const data = this.read(apiBaseUrl);
+    const user = data.users.find((u) => u.id === userId);
+    if (!user) return;
+    user.yearLevel = yearLevel;
+    // Sync all student memberships to the new year level
+    for (const m of data.courseMemberships) {
+      if (m.userId === userId && m.role === 'student') {
+        m.level = yearLevel;
+        m.updatedAt = nowIso();
+      }
+    }
+    this.write(data);
+  }
+
+  async listStudentsWithYearLevel(
+    apiBaseUrl: string
+  ): Promise<Array<{ userId: string; username: string; githubLogin: string; yearLevel: number }>> {
+    const data = this.read(apiBaseUrl);
+    const studentUserIds = new Set(
+      data.courseMemberships.filter((m) => m.role === 'student').map((m) => m.userId)
+    );
+    return data.users
+      .filter((u) => studentUserIds.has(u.id))
+      .map((u) => ({
+        userId: u.id,
+        username: u.username,
+        githubLogin: u.githubLogin,
+        yearLevel: u.yearLevel ?? 1,
+      }));
   }
 
   async createCourseInvite(
@@ -1627,6 +1704,7 @@ export class FileStore implements AppStore {
       courseId: invite.courseId,
       userId,
       role: invite.role,
+      level: 1,
       createdAt: nowIso(),
       updatedAt: nowIso(),
     };
@@ -1658,6 +1736,7 @@ export class FileStore implements AppStore {
       courseId: course.id,
       userId,
       role: 'instructor',
+      level: 1,
       createdAt: nowIso(),
       updatedAt: nowIso(),
     };
@@ -1716,6 +1795,7 @@ export class FileStore implements AppStore {
       title: payload.title,
       description: payload.description,
       status: payload.status,
+      level: 1,
       deliveryMode: payload.deliveryMode,
       rubric: payload.rubric,
       resources: payload.resources,

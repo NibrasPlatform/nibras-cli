@@ -210,64 +210,74 @@ npm run dev
 
 ### Install
 
-Install the current CLI release from the Git tag:
+Install the current release from the Git tag (works on macOS, Linux, and Windows):
 
 ```bash
 npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2
 ```
 
-`nibras --version` should start with `v1.0.2` (for example `v1.0.2-499d7f9`).
+Verify:
 
-The npm package is not published yet, so `npm install -g @nibras/cli` and `npx @nibras/cli` currently fail with a 404.
+```bash
+nibras --version   # → v1.0.2-<commit>
+```
 
-Or use the CLI from source after `npm run build`.
+> The npm package is not yet published, so `npm install -g @nibras/cli` and `npx @nibras/cli` currently return a 404.
+> To run from source, use `npm run build` then `node bin/nibras.js`.
+
+For platform-specific prerequisites (Node.js, git, permission fixes) and a full step-by-step walkthrough, see **[docs/student-guide.md](docs/student-guide.md)**.
+
+### Hosted onboarding
+
+Pass the API URL your admin provides during login. A fresh install defaults to the local dev API at `http://127.0.0.1:4848`.
+
+```bash
+nibras login --api-base-url https://nibras.yourschool.edu
+```
 
 ### Core workflow
 
 ```bash
-nibras login                             # Start hosted device login
-nibras setup --project cs101/assignment-1  # Bootstrap or refresh a local project
-nibras task                              # Print cached task text or fetch it if missing
-nibras test                              # Run .nibras/project.json -> test.command
-nibras submit                            # Run local tests, stage allowed files, commit, push, and wait for verification
+nibras login  --api-base-url https://nibras.yourschool.edu  # Device-flow GitHub OAuth
+nibras setup  --project cs101/assignment-1                  # Bootstrap or refresh a project
+nibras task                                                  # Print assignment instructions
+nibras test                                                  # Run manifest-configured tests locally
+nibras submit                                                # Stage → commit → push → verify
 ```
 
-`nibras setup` writes `.nibras/project.json` and `.nibras/task.md`, initializes git if needed, and adds `origin`. For bundle-backed projects it may download starter files and create an initial commit. If the target directory already has `.git`, it refreshes `.nibras` metadata instead of re-extracting starter files.
+| Command        | What it does                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------- |
+| `nibras setup` | Writes `.nibras/project.json` + `.nibras/task.md`, inits git, adds `origin`, optionally extracts starter files |
+| `nibras test`  | Runs the OS-aware test command from the manifest; non-zero exit = failure                                     |
+| `nibras submit`| Runs tests, stages only allowed files, commits, pushes, registers with API, polls verification                |
 
-`nibras test --previous` only works when the project manifest supports it. A non-zero exit code means the configured test command failed.
-
-`nibras submit` does not stop automatically on local test failure. It still records the local result with the submission, then registers and polls server-side verification.
+`nibras submit` never stops on local test failure — the result is recorded and server-side verification always runs.
 
 ### Diagnostics / session
 
 ```bash
-nibras whoami   # Show the signed-in user and linked GitHub account
-nibras ping     # Show API, auth, GitHub, GitHub App, and project status
+nibras whoami   # Signed-in user, linked GitHub account, active API URL
+nibras ping     # Full connectivity check: API · auth · GitHub · App install · project
 nibras logout   # Clear the local session
 ```
 
-When `nibras ping` runs inside a project, it also shows the project key and `origin` remote.
+`nibras ping` is the fastest way to diagnose any problem — run it first.
 
-### Install lifecycle
+### Update & uninstall
 
 ```bash
-nibras update --version v1.0.2         # Reinstall the pinned Git-tag release
-nibras update --force --version v1.0.2 # Force reinstall the same tag
-nibras uninstall                       # Remove the global CLI install and keep local config
+nibras update --check                    # Compare installed version against latest release
+nibras update --version v1.0.2          # Reinstall a specific Git-tag release
+nibras update --force --version v1.0.2  # Force reinstall the same tag
+nibras uninstall                         # Remove binary; config is preserved
 ```
 
 ### Advanced / compatibility
 
 ```bash
-nibras update-buildpack --node 20  # Edit .nibras/project.json buildpack version
-nibras legacy ...                  # Run the older CLI entrypoint for compatibility
+nibras update-buildpack --node 20   # Edit .nibras/project.json buildpack version
+nibras legacy ...                   # Run the legacy src/ entrypoint (CS161 backwards compat)
 ```
-
-These commands are not part of the standard hosted onboarding flow.
-
-### Current limitation note
-
-Avoid `nibras update --check` for now. The latest-release lookup is not currently reliable, so the supported update path today is an explicit `--version`.
 
 ---
 
@@ -478,11 +488,11 @@ The student dashboard and project views support switching between multiple enrol
 
 Users with `systemRole: "admin"` (super-admins) get additional capabilities:
 
-| Surface           | Feature                                                           |
-| ----------------- | ----------------------------------------------------------------- |
-| Settings page     | Super-admin badge and total accessible-course count displayed     |
-| API               | Access to all courses regardless of enrollment                    |
-| Auto-enrollment   | New users are auto-enrolled in CS161; admins see all active courses |
+| Surface         | Feature                                                             |
+| --------------- | ------------------------------------------------------------------- |
+| Settings page   | Super-admin badge and total accessible-course count displayed       |
+| API             | Access to all courses regardless of enrollment                      |
+| Auto-enrollment | New users are auto-enrolled in CS161; admins see all active courses |
 
 The `systemRole` field is returned by `/v1/web/session` and included in the `UserSchema` contracts type.
 
@@ -553,11 +563,11 @@ Deploys the Next.js web app to Fly.io automatically:
 
 ```yaml
 flyctl deploy \
-  --config fly.web.toml \
-  --app nibras-web \
-  --build-arg NEXT_PUBLIC_NIBRAS_API_BASE_URL=https://nibras-api.fly.dev \
-  --build-arg NEXT_PUBLIC_NIBRAS_WEB_BASE_URL=https://nibras-web.fly.dev \
-  --remote-only
+--config fly.web.toml \
+--app nibras-web \
+--build-arg NEXT_PUBLIC_NIBRAS_API_BASE_URL=https://nibras-api.fly.dev \
+--build-arg NEXT_PUBLIC_NIBRAS_WEB_BASE_URL=https://nibras-web.fly.dev \
+--remote-only
 ```
 
 Requires a `FLY_API_TOKEN` Actions secret. Only one deploy runs at a time; newer pushes cancel in-progress deploys automatically.

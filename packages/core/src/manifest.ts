@@ -2,6 +2,35 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ProjectManifest, ProjectManifestSchema } from '@nibras/contracts';
 
+type TestConfig = ProjectManifest['test'];
+
+export function resolveProjectTestCommand(
+  test: TestConfig,
+  platform: NodeJS.Platform = process.platform
+): string {
+  const commands = test.commands;
+
+  if (platform === 'win32') {
+    return commands?.windows || commands?.default || test.command;
+  }
+  if (platform === 'darwin') {
+    return commands?.macos || commands?.unix || commands?.default || test.command;
+  }
+  if (platform === 'linux') {
+    return commands?.linux || commands?.unix || commands?.default || test.command;
+  }
+  return commands?.unix || commands?.default || test.command;
+}
+
+export function buildProjectTestCommand(
+  test: TestConfig,
+  platform: NodeJS.Platform = process.platform,
+  extraArgs: string[] = []
+): string {
+  const command = resolveProjectTestCommand(test, platform);
+  return extraArgs.length > 0 ? `${command} ${extraArgs.join(' ')}` : command;
+}
+
 export function findProjectRoot(startCwd: string): string | null {
   let current = path.resolve(startCwd);
   while (true) {

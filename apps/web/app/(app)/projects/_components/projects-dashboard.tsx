@@ -12,6 +12,13 @@ import type {
 import { prefs } from '../../../lib/prefs';
 import { apiFetch } from '../../../lib/session';
 import { daysUntil } from '../../../lib/utils';
+import {
+  getLevelLabel,
+  getLevelName,
+  getLevelBadgeSuffix,
+  LEVEL_NAMES,
+  MAX_LEVEL,
+} from '../../../lib/levels';
 import SubmissionModal from './submission-modal';
 import styles from './projects.module.css';
 
@@ -411,6 +418,10 @@ export default function ProjectsDashboard({
     }
   }
 
+  /* student level for the active course */
+  const studentLevel =
+    dashboard?.memberships.find((m) => m.courseId === dashboard.course?.id)?.level ?? 1;
+
   /* progress values */
   const approved = activeStats?.approved ?? 0;
   const underReview = activeStats?.underReview ?? 0;
@@ -558,23 +569,53 @@ export default function ProjectsDashboard({
               const stats = dashboard!.statsByProject[project.id];
               const pct = stats?.completion ?? 0;
               const isActive = project.id === activeProject?.id;
+              const projectLevel = (project as { level?: number }).level ?? 1;
+              const isLocked = projectLevel > studentLevel;
+              const badgeSuffix = getLevelBadgeSuffix(projectLevel);
               return (
                 <button
                   key={project.id}
                   type="button"
-                  className={`${styles.projectTab} ${isActive ? styles.projectTabActive : ''}`}
-                  onClick={() => setSelectedProjectId(project.id)}
+                  className={`${styles.projectTab} ${isActive ? styles.projectTabActive : ''} ${isLocked ? styles.projectTabLocked : ''}`}
+                  onClick={() => {
+                    if (!isLocked) setSelectedProjectId(project.id);
+                  }}
+                  disabled={isLocked}
+                  title={
+                    isLocked
+                      ? `Complete all ${getLevelLabel(projectLevel - 1)} projects to unlock`
+                      : undefined
+                  }
                 >
                   <div className={styles.tabTop}>
-                    <strong className={styles.tabTitle}>{project.title}</strong>
-                    <span className={`${styles.tabStatus} ${statusColor(project.status)}`}>
-                      {project.status}
-                    </span>
+                    <strong className={styles.tabTitle}>
+                      {isLocked && (
+                        <span aria-hidden="true" style={{ marginRight: 4 }}>
+                          🔒
+                        </span>
+                      )}
+                      {project.title}
+                    </strong>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <span
+                        className={`${styles.levelBadge} ${styles[`levelBadge${badgeSuffix}`] ?? ''}`}
+                      >
+                        {getLevelName(projectLevel)}
+                      </span>
+                      <span className={`${styles.tabStatus} ${statusColor(project.status)}`}>
+                        {project.status}
+                      </span>
+                    </div>
                   </div>
                   <span className={styles.tabMeta}>
                     {(dashboard!.milestonesByProject[project.id]?.length ?? 0) + ' milestone'}
                     {(dashboard!.milestonesByProject[project.id]?.length ?? 0) !== 1 ? 's' : ''}
                   </span>
+                  {isLocked && (
+                    <span className={styles.lockedHint}>
+                      Unlock after completing {getLevelLabel(projectLevel - 1)}
+                    </span>
+                  )}
                   <div className={styles.tabProgress}>
                     <div className={styles.tabProgressTrack}>
                       <div className={styles.tabProgressFill} style={{ width: `${pct}%` }} />
@@ -686,6 +727,45 @@ export default function ProjectsDashboard({
 
             {/* RIGHT: progress + breakdown + resources */}
             <div className={styles.rightCol}>
+              {/* Academic Standing panel */}
+              <div className={styles.standingPanel}>
+                <div className={styles.standingHead}>
+                  <h2 className={styles.standingTitle}>Academic Standing</h2>
+                  <span
+                    className={`${styles.standingBadge} ${styles[`levelBadge${getLevelBadgeSuffix(studentLevel)}`] ?? ''}`}
+                  >
+                    {getLevelLabel(studentLevel)}
+                  </span>
+                </div>
+
+                <div className={styles.levelJourney}>
+                  {[1, 2, 3, 4].map((lvl) => {
+                    const isDone = lvl < studentLevel;
+                    const isActive = lvl === studentLevel;
+                    const stepClass = isDone
+                      ? styles.journeyDone
+                      : isActive
+                        ? styles.journeyActive
+                        : styles.journeyLocked;
+                    return (
+                      <div key={lvl} className={`${styles.journeyStep} ${stepClass}`}>
+                        <div className={styles.journeyDot}>{isDone ? '✓' : lvl}</div>
+                        <div className={styles.journeyLabel}>
+                          <span className={styles.journeyLabelYear}>Yr {lvl}</span>
+                          {LEVEL_NAMES[lvl]}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p className={styles.standingHint}>
+                  {studentLevel < MAX_LEVEL
+                    ? `Complete all ${getLevelLabel(studentLevel)} projects to advance to ${getLevelLabel(studentLevel + 1)}.`
+                    : 'You have reached Senior standing. Congratulations!'}
+                </p>
+              </div>
+
               {/* Progress panel */}
               <section className={styles.panel}>
                 <div className={styles.panelHead}>

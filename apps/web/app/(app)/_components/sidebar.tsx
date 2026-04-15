@@ -16,6 +16,7 @@ type ShellSessionUser = {
   githubLinked: boolean;
   githubAppInstalled: boolean;
   systemRole?: string;
+  memberships?: Array<{ courseId: string; role: string; level: number }>;
 };
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
@@ -154,7 +155,17 @@ export default function Sidebar({
       {/* Primary nav */}
       <nav className="sidebarNav" aria-label="Primary">
         {appNavItems
-          .filter((item) => item.label !== 'Admin' || user?.systemRole === 'admin')
+          .filter((item) => {
+            if (item.label === 'Admin') return user?.systemRole === 'admin';
+            if (item.label === 'Instructor') {
+              return (
+                user?.systemRole === 'admin' ||
+                (user?.memberships?.some((m) => m.role === 'instructor' || m.role === 'ta') ??
+                  false)
+              );
+            }
+            return true;
+          })
           .map((item) => {
             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
             return (

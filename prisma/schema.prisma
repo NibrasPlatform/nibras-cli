@@ -68,6 +68,7 @@ model User {
   githubLinked      Boolean            @default(false)
   githubAppInstalled Boolean           @default(false)
   systemRole        SystemRole         @default(user)
+  yearLevel         Int                @default(1)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   githubAccount     GithubAccount?
@@ -81,6 +82,7 @@ model User {
   reviews           Review[]
 
   @@index([systemRole])
+  @@index([yearLevel])
 }
 
 model Course {
@@ -116,6 +118,7 @@ model CourseMembership {
   courseId   String
   userId     String
   role       CourseRole
+  level      Int        @default(1)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -198,6 +201,7 @@ model Project {
   defaultBranch    String            @default("main")
   description      String            @default("")
   status           ProjectStatus     @default(draft)
+  level            Int               @default(1)
   deliveryMode     DeliveryMode      @default(individual)
   rubricJson       Json?
   resourcesJson    Json?

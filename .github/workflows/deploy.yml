@@ -10,10 +10,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  deploy-api:
+    name: Deploy api → Fly.io
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy nibras-api
+        run: |
+          flyctl deploy \
+            --config fly.api.toml \
+            --app nibras-api \
+            --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy-worker:
+    name: Deploy worker → Fly.io
+    runs-on: ubuntu-latest
+    needs: [deploy-api]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy nibras-worker
+        run: |
+          flyctl deploy \
+            --config fly.worker.toml \
+            --app nibras-worker \
+            --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
   deploy-web:
     name: Deploy web → Fly.io
     runs-on: ubuntu-latest
-    needs: [] # runs independently; add `needs: [test]` if you want CI to gate deploys
 
     steps:
       - uses: actions/checkout@v4

@@ -159,7 +159,7 @@ function UserDropdown({
     {
       label: 'Send Feedback',
       icon: <IconFeedback />,
-      href: 'mailto:support@nibras.app?subject=Feedback',
+      href: 'mailto:epitomezied@gmail.com?subject=Feedback',
     },
   ];
 

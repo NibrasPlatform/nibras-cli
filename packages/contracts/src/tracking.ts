@@ -42,6 +42,7 @@ export const TrackingMembershipSchema = z.object({
   courseId: z.string().min(1),
   userId: z.string().min(1),
   role: TrackingMembershipRoleSchema,
+  level: z.number().int().min(1).max(4).default(1),
 });
 
 export const TrackingProjectSummarySchema = z.object({
@@ -51,6 +52,7 @@ export const TrackingProjectSummarySchema = z.object({
   title: z.string().min(1),
   description: z.string().default(''),
   status: TrackingProjectStatusSchema,
+  level: z.number().int().min(1).max(4).default(1),
   deliveryMode: TrackingDeliveryModeSchema,
   gradeWeight: z.string().nullable(),
   startDate: z.string().nullable(),
@@ -182,6 +184,7 @@ export const CourseMemberSchema = z.object({
   username: z.string().min(1),
   githubLogin: z.string().min(1),
   role: TrackingMembershipRoleSchema,
+  level: z.number().int().min(1).max(4).default(1),
   createdAt: z.string().datetime(),
 });
 
@@ -258,6 +261,11 @@ export const CreateCourseInviteResponseSchema = z.object({
   code: z.string().min(1),
   inviteUrl: z.string().min(1),
 });
+
+export const UpdateStudentLevelRequestSchema = z.object({
+  level: z.number().int().min(1).max(4),
+});
+export type UpdateStudentLevelRequest = z.infer<typeof UpdateStudentLevelRequestSchema>;
 
 export type CourseInvitePreview = z.infer<typeof CourseInvitePreviewSchema>;
 
