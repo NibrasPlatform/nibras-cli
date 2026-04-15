@@ -1885,6 +1885,12 @@ export class PrismaStore implements AppStore {
     return toCourseRecord(course);
   }
 
+  async deleteTrackingCourse(apiBaseUrl: string, courseId: string): Promise<boolean> {
+    await this.seed(apiBaseUrl);
+    const deleted = await this.prisma.course.delete({ where: { id: courseId } }).catch(() => null);
+    return deleted !== null;
+  }
+
   async listCourseMembersForInstructor(
     apiBaseUrl: string,
     courseId: string

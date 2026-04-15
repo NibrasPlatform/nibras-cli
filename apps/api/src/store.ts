@@ -360,6 +360,7 @@ export interface AppStore {
     userId: string,
     payload: { slug: string; title: string; termLabel: string; courseCode: string }
   ): Promise<CourseRecord>;
+  deleteTrackingCourse(apiBaseUrl: string, courseId: string): Promise<boolean>;
   listCourseMembersForInstructor(
     apiBaseUrl: string,
     courseId: string
@@ -1744,6 +1745,16 @@ export class FileStore implements AppStore {
     data.courseMemberships.push(membership);
     this.write(data);
     return course;
+  }
+
+  async deleteTrackingCourse(apiBaseUrl: string, courseId: string): Promise<boolean> {
+    const data = this.read(apiBaseUrl);
+    const idx = data.courses.findIndex((c) => c.id === courseId);
+    if (idx === -1) return false;
+    data.courses.splice(idx, 1);
+    data.courseMemberships = data.courseMemberships.filter((m) => m.courseId !== courseId);
+    this.write(data);
+    return true;
   }
 
   async listTrackingProjects(
