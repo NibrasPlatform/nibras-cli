@@ -68,6 +68,7 @@ model User {
   githubLinked      Boolean            @default(false)
   githubAppInstalled Boolean           @default(false)
   systemRole        SystemRole         @default(user)
+  yearLevel         Int                @default(1)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   githubAccount     GithubAccount?
@@ -81,6 +82,7 @@ model User {
   reviews           Review[]
 
   @@index([systemRole])
+  @@index([yearLevel])
 }
 
 model Course {

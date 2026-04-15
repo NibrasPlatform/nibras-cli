@@ -105,6 +105,7 @@ function toUserRecord(user: {
   githubLinked: boolean;
   githubAppInstalled: boolean;
   systemRole: SystemRole;
+  yearLevel?: number;
   githubAccount: { login: string } | null;
 }): UserRecord {
   return {
@@ -115,6 +116,7 @@ function toUserRecord(user: {
     githubLinked: user.githubLinked,
     githubAppInstalled: user.githubAppInstalled,
     systemRole: user.systemRole === SystemRole.admin ? 'admin' : 'user',
+    yearLevel: user.yearLevel ?? 1,
   };
 }
 

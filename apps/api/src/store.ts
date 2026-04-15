@@ -53,6 +53,7 @@ export type UserRecord = {
   githubLinked: boolean;
   githubAppInstalled: boolean;
   systemRole: SystemRole;
+  yearLevel: number;
 };
 
 export type GitHubAccountRecord = {
@@ -376,6 +377,10 @@ export interface AppStore {
     userId: string,
     level: number
   ): Promise<CourseMembershipRecord | null>;
+  syncStudentYearGlobal(apiBaseUrl: string, userId: string, yearLevel: number): Promise<void>;
+  listStudentsWithYearLevel(
+    apiBaseUrl: string
+  ): Promise<Array<{ userId: string; username: string; githubLogin: string; yearLevel: number }>>;
   createCourseInvite(
     apiBaseUrl: string,
     courseId: string,
@@ -732,6 +737,7 @@ function seedData(apiBaseUrl: string): StoreData {
         githubLinked: true,
         githubAppInstalled: true,
         systemRole: 'user',
+        yearLevel: 1,
       },
       {
         id: instructorId,
@@ -741,6 +747,7 @@ function seedData(apiBaseUrl: string): StoreData {
         githubLinked: true,
         githubAppInstalled: true,
         systemRole: 'admin',
+        yearLevel: 1,
       },
     ],
     githubAccounts: [
@@ -1083,6 +1090,7 @@ export class FileStore implements AppStore {
         githubLinked: true,
         githubAppInstalled: false,
         systemRole: 'user',
+        yearLevel: 1,
       };
       data.users.push(user);
     } else {
@@ -1584,15 +1592,48 @@ export class FileStore implements AppStore {
     userId: string,
     level: number
   ): Promise<CourseMembershipRecord | null> {
+    await this.syncStudentYearGlobal(apiBaseUrl, userId, level);
     const data = this.read(apiBaseUrl);
     const membership = data.courseMemberships.find(
       (m) => m.courseId === courseId && m.userId === userId && m.role === 'student'
     );
-    if (!membership) return null;
-    membership.level = level;
-    membership.updatedAt = nowIso();
+    return membership ? { ...membership } : null;
+  }
+
+  async syncStudentYearGlobal(
+    apiBaseUrl: string,
+    userId: string,
+    yearLevel: number
+  ): Promise<void> {
+    const data = this.read(apiBaseUrl);
+    const user = data.users.find((u) => u.id === userId);
+    if (!user) return;
+    user.yearLevel = yearLevel;
+    // Sync all student memberships to the new year level
+    for (const m of data.courseMemberships) {
+      if (m.userId === userId && m.role === 'student') {
+        m.level = yearLevel;
+        m.updatedAt = nowIso();
+      }
+    }
     this.write(data);
-    return { ...membership };
+  }
+
+  async listStudentsWithYearLevel(
+    apiBaseUrl: string
+  ): Promise<Array<{ userId: string; username: string; githubLogin: string; yearLevel: number }>> {
+    const data = this.read(apiBaseUrl);
+    const studentUserIds = new Set(
+      data.courseMemberships.filter((m) => m.role === 'student').map((m) => m.userId)
+    );
+    return data.users
+      .filter((u) => studentUserIds.has(u.id))
+      .map((u) => ({
+        userId: u.id,
+        username: u.username,
+        githubLogin: u.githubLogin,
+        yearLevel: u.yearLevel ?? 1,
+      }));
   }
 
   async createCourseInvite(
