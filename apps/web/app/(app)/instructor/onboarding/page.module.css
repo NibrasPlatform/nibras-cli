@@ -16,9 +16,40 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 16px 0;
+  padding: 12px 0 16px;
 }
 
+/* Progress bar */
+.stepNavProgressWrap {
+  padding: 0 12px 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.stepNavProgressBar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.stepNavProgressFill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 999px;
+  transition: width 0.35s ease;
+  min-width: 0;
+}
+
+.stepNavCount {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-soft);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Nav items */
 .stepNavItem {
   display: flex;
   align-items: center;
@@ -49,20 +80,32 @@
   font-weight: 700;
 }
 
+.stepNavItemDone {
+  color: var(--text-muted);
+}
+
 .stepNavNum {
   font-size: 10px;
   font-weight: 800;
-  font-family: var(--font-mono);
+  font-family: var(--font-mono-fallback, monospace);
   color: inherit;
   opacity: 0.7;
   flex-shrink: 0;
   width: 22px;
+  display: grid;
+  place-items: center;
+}
+
+.stepNavNumDone {
+  opacity: 1;
+  color: var(--primary-strong);
 }
 
 .stepNavLabel {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
 }
 
 /* ── Main page ─────────────────────────────────────────────────────────────── */
@@ -127,6 +170,19 @@
   border: 1px solid var(--border);
   border-radius: 20px;
   margin-bottom: 40px;
+  transition: border-color 0.3s ease;
+}
+
+.heroDone {
+  border-color: rgba(34, 197, 94, 0.25);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.04) 0%, var(--surface) 60%);
+}
+
+.heroTopRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .heroBadge {
@@ -139,10 +195,20 @@
   text-transform: uppercase;
   color: var(--primary-strong);
   background: var(--primary-soft);
-  border: 1px solid rgba(59, 130, 246, 0.25);
+  border: 1px solid rgba(34, 197, 94, 0.25);
   border-radius: 999px;
   padding: 4px 12px;
-  align-self: flex-start;
+}
+
+.heroProgressPill {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 999px;
+  padding: 3px 10px;
 }
 
 .heroTitle {
@@ -159,6 +225,30 @@
   line-height: 1.7;
   color: var(--text-muted);
   max-width: 56ch;
+}
+
+/* Hero meta row */
+.heroMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.heroMetaItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: 0.02em;
+}
+
+.heroMetaDot {
+  font-size: 12px;
+  color: var(--text-soft);
+  opacity: 0.35;
 }
 
 .heroActions {
@@ -178,7 +268,7 @@
   padding: 10px 20px;
   border-radius: 10px;
   background: var(--primary);
-  color: #fff;
+  color: #000;
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
@@ -263,11 +353,19 @@
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--primary-soft);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(34, 197, 94, 0.25);
   font-size: 11px;
   font-weight: 800;
   color: var(--primary-strong);
   letter-spacing: 0.05em;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.stepBadgeDone {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.45);
 }
 
 .sectionTitle {
@@ -294,6 +392,52 @@
   display: grid;
   gap: 16px;
   padding-left: 50px;
+}
+
+/* ── Mark as complete bar ──────────────────────────────────────────────────── */
+
+.markCompleteBar {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.markCompleteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.13s ease,
+    color 0.13s ease,
+    border-color 0.13s ease;
+}
+
+.markCompleteBtn:hover {
+  background: var(--surface-strong);
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+}
+
+.markCompleteBtnDone {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: var(--primary-strong);
+}
+
+.markCompleteBtnDone:hover {
+  background: rgba(34, 197, 94, 0.13);
+  border-color: rgba(34, 197, 94, 0.45);
 }
 
 /* ── Text ──────────────────────────────────────────────────────────────────── */
@@ -326,13 +470,45 @@
 }
 
 .inlineCode {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono-fallback, monospace);
   font-size: 0.875em;
   padding: 1px 6px;
   border-radius: 5px;
   background: var(--surface-strong);
   border: 1px solid var(--border);
   color: var(--primary-strong);
+}
+
+/* ── Prerequisites blocks ──────────────────────────────────────────────────── */
+
+.prereqBlock {
+  display: grid;
+  gap: 10px;
+}
+
+.prereqHeading {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.prereqNum {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--surface-strong);
+  border: 1px solid var(--border-strong);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-soft);
+  font-family: var(--font-mono-fallback, monospace);
 }
 
 /* ── Check list ────────────────────────────────────────────────────────────── */
@@ -397,19 +573,20 @@
   gap: 14px;
   padding: 16px 18px;
   border-radius: 12px;
-  background: rgba(251, 191, 36, 0.06);
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 .calloutInfo {
-  background: rgba(59, 130, 246, 0.06);
-  border-color: rgba(59, 130, 246, 0.2);
+  background: rgba(99, 102, 241, 0.06);
+  border-color: rgba(99, 102, 241, 0.2);
 }
 
 .calloutIcon {
   font-size: 18px;
   flex-shrink: 0;
   margin-top: 1px;
+  line-height: 1;
 }
 
 .callout p {
@@ -443,6 +620,80 @@
 .shareCard > :last-child {
   border-radius: 0;
   border: none;
+}
+
+/* ── Troubleshooting accordion ─────────────────────────────────────────────── */
+
+.troubleshootList {
+  display: grid;
+  gap: 4px;
+}
+
+.troubleshootItem {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  transition: border-color 0.13s ease;
+}
+
+.troubleshootItem:hover {
+  border-color: var(--border-strong);
+}
+
+.troubleshootItemOpen {
+  border-color: var(--border-strong);
+}
+
+.troubleshootHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.13s ease;
+}
+
+.troubleshootHeader:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.troubleshootTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-family: var(--font-mono-fallback, monospace);
+}
+
+.troubleshootChevron {
+  color: var(--text-soft);
+  flex-shrink: 0;
+  transition: transform 0.18s ease;
+  transform: rotate(-90deg);
+}
+
+.troubleshootChevronOpen {
+  transform: rotate(0deg);
+}
+
+.troubleshootBody {
+  padding: 0 16px 16px;
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.troubleshootCause {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-soft);
 }
 
 /* ── Command reference ─────────────────────────────────────────────────────── */
@@ -551,6 +802,19 @@
   border: 1px solid var(--border);
   border-radius: 20px;
   background: var(--surface);
+  transition:
+    border-color 0.3s ease,
+    background 0.3s ease;
+}
+
+.footerCtaDone {
+  border-color: rgba(34, 197, 94, 0.25);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, var(--surface) 60%);
+}
+
+.footerCtaBadge {
+  font-size: 2.5rem;
+  line-height: 1;
 }
 
 .footerCta h3 {
@@ -565,6 +829,7 @@
   font-size: 14px;
   line-height: 1.65;
   color: var(--text-muted);
+  max-width: 48ch;
 }
 
 .footerCtaActions {
@@ -582,21 +847,30 @@
   .pageWrapper {
     grid-template-columns: 1fr;
   }
+
   .stepNav {
     display: none;
   }
+
   .sectionBody {
     padding-left: 0;
   }
+
   .hero {
     padding: 28px 24px;
   }
+
   .referenceRow {
     grid-template-columns: 1fr;
     gap: 8px;
   }
+
   .footerCta {
     padding: 36px 24px;
+  }
+
+  .markCompleteBar {
+    justify-content: flex-start;
   }
 }
 
@@ -604,10 +878,19 @@
   .osTabs {
     width: 100%;
   }
+
   .osTab {
     flex: 1;
     justify-content: center;
     padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .heroMeta {
+    gap: 6px;
+  }
+
+  .troubleshootTitle {
     font-size: 12px;
   }
 }
