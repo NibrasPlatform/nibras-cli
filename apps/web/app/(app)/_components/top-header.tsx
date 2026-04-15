@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { getInitials } from '../../lib/utils';
 import NibrasLogo from '@/app/_components/nibras-logo';
+import NotificationsPanel from './notifications-panel';
 
 type ShellSessionUser = {
   username: string;
@@ -17,10 +18,10 @@ type ShellSessionUser = {
 };
 
 const NAV_LINKS = [
-  { label: 'Dashboard', href: '/dashboard' },
-  { label: 'Courses', href: '/instructor' },
-  { label: 'Projects', href: '/projects' },
-  { label: 'Settings', href: '/settings' },
+  { label: 'Dashboard', href: '/dashboard', adminOnly: false },
+  { label: 'Courses', href: '/instructor', adminOnly: true },
+  { label: 'Projects', href: '/projects', adminOnly: false },
+  { label: 'Settings', href: '/settings', adminOnly: false },
 ];
 
 /* ── Dropdown icons ──────────────────────────────────────────────────────── */
@@ -152,8 +153,9 @@ function UserDropdown({
     return () => document.removeEventListener('keydown', handler);
   }, [open]);
 
+  const isAdmin = user?.systemRole === 'admin';
   const menuItems = [
-    { label: 'Builder', icon: <IconBuilder />, href: '/instructor' },
+    ...(isAdmin ? [{ label: 'Builder', icon: <IconBuilder />, href: '/instructor' }] : []),
     { label: 'Profile', icon: <IconProfile />, href: '/settings' },
     { label: 'Settings', icon: <IconSettings />, href: '/settings' },
     {
@@ -417,6 +419,7 @@ export default function TopHeader({
 }) {
   const pathname = usePathname();
   const identity = user?.username || user?.githubLogin || 'Nibras';
+  const isAdmin = user?.systemRole === 'admin';
 
   const githubAvatarUrl =
     user?.githubLogin && user.githubLinked
@@ -471,7 +474,7 @@ export default function TopHeader({
           </div>
 
           <nav style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {NAV_LINKS.map((link) => {
+            {NAV_LINKS.filter((link) => !link.adminOnly || isAdmin).map((link) => {
               const isActive = pathname === link.href || pathname?.startsWith(link.href + '/');
               return (
                 <Link
@@ -496,13 +499,16 @@ export default function TopHeader({
           </nav>
         </div>
 
-        {/* Right: User dropdown */}
-        <UserDropdown
-          user={user}
-          loading={loading}
-          githubAvatarUrl={githubAvatarUrl}
-          identity={identity}
-        />
+        {/* Right: Notifications + User dropdown */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          <NotificationsPanel />
+          <UserDropdown
+            user={user}
+            loading={loading}
+            githubAvatarUrl={githubAvatarUrl}
+            identity={identity}
+          />
+        </div>
       </div>
     </header>
   );

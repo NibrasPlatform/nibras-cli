@@ -37,6 +37,7 @@ import {
   InstructorDashboardRecord,
   MembershipRole,
   MilestoneRecord,
+  NotificationRecord,
   PaginationOpts,
   ProjectRecord,
   ProjectStarterRecord,
@@ -2062,6 +2063,64 @@ export class PrismaStore implements AppStore {
     }));
   }
 
+  async createNotification(
+    _apiBaseUrl: string,
+    userId: string,
+    notification: { type: string; title: string; body: string; link?: string }
+  ): Promise<void> {
+    await (this.prisma as unknown as { notification: { create: (args: unknown) => Promise<unknown> } }).notification.create({
+      data: {
+        userId,
+        type: notification.type,
+        title: notification.title,
+        body: notification.body,
+        link: notification.link ?? null,
+      },
+    });
+  }
+
+  async listNotifications(_apiBaseUrl: string, userId: string): Promise<NotificationRecord[]> {
+    const rows = await (
+      this.prisma as unknown as {
+        notification: {
+          findMany: (args: unknown) => Promise<
+            Array<{
+              id: string;
+              userId: string;
+              type: string;
+              title: string;
+              body: string;
+              link: string | null;
+              read: boolean;
+              createdAt: Date;
+            }>
+          >;
+        };
+      }
+    ).notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
+  }
+
+  async countUnreadNotifications(_apiBaseUrl: string, userId: string): Promise<number> {
+    return (
+      this.prisma as unknown as {
+        notification: { count: (args: unknown) => Promise<number> };
+      }
+    ).notification.count({ where: { userId, read: false } });
+  }
+
+  async markAllNotificationsRead(_apiBaseUrl: string, userId: string): Promise<void> {
+    await (
+      this.prisma as unknown as {
+        notification: { updateMany: (args: unknown) => Promise<unknown> };
+      }
+    ).notification.updateMany({ where: { userId, read: false }, data: { read: true } });
+  }
+
   async createCourseInvite(
     apiBaseUrl: string,
     courseId: string,
@@ -2723,12 +2782,13 @@ export class PrismaStore implements AppStore {
   async getSubmissionStudentEmail(
     _apiBaseUrl: string,
     submissionId: string
-  ): Promise<{ email: string; username: string } | null> {
+  ): Promise<{ userId: string; email: string; username: string } | null> {
     const attempt = await this.prisma.submissionAttempt.findUnique({
       where: { id: submissionId },
-      select: { user: { select: { email: true, username: true } } },
+      select: { user: { select: { id: true, email: true, username: true } } },
     });
-    return attempt ? attempt.user : null;
+    if (!attempt) return null;
+    return { userId: attempt.user.id, email: attempt.user.email, username: attempt.user.username };
   }
 
   async listTrackingReviewQueue(

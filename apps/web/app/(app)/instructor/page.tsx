@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiFetch } from '../../lib/session';
 import { useFetch } from '../../lib/use-fetch';
 import { useSession } from '../_components/session-context';
@@ -57,13 +58,24 @@ function QuickStartStep({
 }
 
 export default function InstructorPage() {
-  const { user } = useSession();
+  const { user, loading: sessionLoading } = useSession();
   const isAdmin = user?.systemRole === 'admin';
+  const router = useRouter();
+
+  // Redirect non-admins away once session is resolved
+  useEffect(() => {
+    if (!sessionLoading && user && !isAdmin) {
+      router.replace('/dashboard');
+    }
+  }, [sessionLoading, user, isAdmin, router]);
 
   const { data: fetchedCourses, loading, error } = useFetch<Course[]>('/v1/tracking/courses');
   const [courses, setCourses] = useState<Course[] | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  // Block render until session resolves; redirect effect handles non-admins
+  if (sessionLoading || !isAdmin) return null;
 
   // Use local state if we've done any mutations, otherwise use fetched data
   const allCourses = courses ?? fetchedCourses ?? [];

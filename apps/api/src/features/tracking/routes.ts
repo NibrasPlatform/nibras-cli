@@ -733,26 +733,47 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
         payload
       );
 
-      // Notify student by email (fire-and-forget; silently skipped if RESEND_API_KEY unset)
+      // Notify student by email + in-app notification (fire-and-forget; non-fatal)
       void store
         .getSubmissionStudentEmail(requestBaseUrl(request), params.submissionId)
-        .then((student) => {
+        .then(async (student) => {
           if (!student) return;
           const webBase =
             process.env.NIBRAS_WEB_BASE_URL ??
             process.env.NEXT_PUBLIC_NIBRAS_WEB_BASE_URL ??
             requestBaseUrl(request);
+          const submissionUrl = `${webBase}/submissions/${params.submissionId}`;
+          const statusLabel =
+            payload.status === 'approved'
+              ? 'Approved ✓'
+              : payload.status === 'graded'
+                ? 'Graded'
+                : payload.status === 'changes_requested'
+                  ? 'Changes requested'
+                  : 'Reviewed';
+
+          // In-app notification
+          await store.createNotification(requestBaseUrl(request), student.userId, {
+            type: 'feedback',
+            title: `${statusLabel} — ${project?.title ?? 'Submission'}`,
+            body: payload.feedback
+              ? payload.feedback.slice(0, 120) + (payload.feedback.length > 120 ? '…' : '')
+              : `Your submission has been reviewed.`,
+            link: submissionUrl,
+          });
+
+          // Email
           return sendReviewSubmittedEmail({
             studentEmail: student.email,
             studentName: student.username,
             projectName: project?.title ?? submission.projectId,
             reviewStatus: payload.status as 'approved' | 'graded' | 'changes_requested' | 'pending',
             feedback: payload.feedback,
-            submissionUrl: `${webBase}/submissions/${params.submissionId}`,
+            submissionUrl,
           });
         })
         .catch(() => {
-          /* email errors are non-fatal */
+          /* notification/email errors are non-fatal */
         });
 
       reply.code(201);

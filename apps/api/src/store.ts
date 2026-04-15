@@ -45,6 +45,17 @@ export type SubmissionWorkflowStatus = 'queued' | 'running' | 'passed' | 'failed
 export type SubmissionType = 'github' | 'link' | 'text';
 export type ReviewStatus = 'pending' | 'approved' | 'changes_requested' | 'graded';
 
+export type NotificationRecord = {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  body: string;
+  link: string | null;
+  read: boolean;
+  createdAt: string;
+};
+
 export type UserRecord = {
   id: string;
   username: string;
@@ -278,6 +289,7 @@ export type StoreData = {
   reviews: ReviewRecord[];
   githubDeliveries: GithubDeliveryRecord[];
   activity: ActivityRecord[];
+  notifications?: NotificationRecord[];
 };
 
 export interface AppStore {
@@ -382,6 +394,14 @@ export interface AppStore {
   listStudentsWithYearLevel(
     apiBaseUrl: string
   ): Promise<Array<{ userId: string; username: string; githubLogin: string; yearLevel: number }>>;
+  createNotification(
+    apiBaseUrl: string,
+    userId: string,
+    notification: { type: string; title: string; body: string; link?: string }
+  ): Promise<void>;
+  listNotifications(apiBaseUrl: string, userId: string): Promise<NotificationRecord[]>;
+  countUnreadNotifications(apiBaseUrl: string, userId: string): Promise<number>;
+  markAllNotificationsRead(apiBaseUrl: string, userId: string): Promise<void>;
   createCourseInvite(
     apiBaseUrl: string,
     courseId: string,
@@ -516,7 +536,7 @@ export interface AppStore {
   getSubmissionStudentEmail(
     apiBaseUrl: string,
     submissionId: string
-  ): Promise<{ email: string; username: string } | null>;
+  ): Promise<{ userId: string; email: string; username: string } | null>;
   listTrackingReviewQueue(
     apiBaseUrl: string,
     filters?: { courseId?: string; projectId?: string; status?: SubmissionWorkflowStatus },
@@ -1637,6 +1657,47 @@ export class FileStore implements AppStore {
       }));
   }
 
+  async createNotification(
+    apiBaseUrl: string,
+    userId: string,
+    notification: { type: string; title: string; body: string; link?: string }
+  ): Promise<void> {
+    const data = this.read(apiBaseUrl);
+    if (!data.notifications) data.notifications = [];
+    data.notifications.push({
+      id: randomUUID(),
+      userId,
+      type: notification.type,
+      title: notification.title,
+      body: notification.body,
+      link: notification.link ?? null,
+      read: false,
+      createdAt: nowIso(),
+    });
+    this.write(data);
+  }
+
+  async listNotifications(apiBaseUrl: string, userId: string): Promise<NotificationRecord[]> {
+    const data = this.read(apiBaseUrl);
+    return (data.notifications ?? [])
+      .filter((n) => n.userId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 50);
+  }
+
+  async countUnreadNotifications(apiBaseUrl: string, userId: string): Promise<number> {
+    const data = this.read(apiBaseUrl);
+    return (data.notifications ?? []).filter((n) => n.userId === userId && !n.read).length;
+  }
+
+  async markAllNotificationsRead(apiBaseUrl: string, userId: string): Promise<void> {
+    const data = this.read(apiBaseUrl);
+    for (const n of data.notifications ?? []) {
+      if (n.userId === userId) n.read = true;
+    }
+    this.write(data);
+  }
+
   async createCourseInvite(
     apiBaseUrl: string,
     courseId: string,
@@ -2232,12 +2293,12 @@ export class FileStore implements AppStore {
   async getSubmissionStudentEmail(
     apiBaseUrl: string,
     submissionId: string
-  ): Promise<{ email: string; username: string } | null> {
+  ): Promise<{ userId: string; email: string; username: string } | null> {
     const data = this.read(apiBaseUrl);
     const submission = data.submissions.find((entry) => entry.id === submissionId);
     if (!submission) return null;
     const user = data.users.find((entry) => entry.id === submission.userId);
-    return user ? { email: user.email, username: user.username } : null;
+    return user ? { userId: user.id, email: user.email, username: user.username } : null;
   }
 
   async listTrackingReviewQueue(
