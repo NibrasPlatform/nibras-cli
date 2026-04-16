@@ -155,6 +155,182 @@ export const TrackingDashboardStatsSchema = z.object({
   minutesRemaining: z.number().int(),
 });
 
+export const DashboardModeSchema = z.enum(['student', 'instructor']);
+
+export const DashboardCtaSchema = z.object({
+  label: z.string().min(1),
+  href: z.string().min(1),
+});
+
+export const StudentHomeAttentionItemSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum([
+    'changes_requested',
+    'failed_submission',
+    'needs_review',
+    'due_soon',
+    'recent_feedback',
+  ]),
+  courseId: z.string().min(1),
+  courseTitle: z.string().min(1),
+  projectId: z.string().min(1),
+  projectTitle: z.string().min(1),
+  milestoneId: z.string().nullable(),
+  milestoneTitle: z.string().nullable(),
+  submissionId: z.string().nullable(),
+  statusText: z.string().min(1),
+  reason: z.string().min(1),
+  dueAt: z.string().datetime().nullable(),
+  submittedAt: z.string().datetime().nullable(),
+  reviewedAt: z.string().datetime().nullable(),
+  cta: DashboardCtaSchema,
+});
+
+export const StudentCourseMilestoneSnapshotSchema = z.object({
+  milestoneId: z.string().min(1),
+  projectId: z.string().min(1),
+  projectTitle: z.string().min(1),
+  title: z.string().min(1),
+  dueAt: z.string().datetime().nullable(),
+  status: z.string().min(1),
+  statusLabel: z.string().min(1),
+});
+
+export const StudentCourseProjectSnapshotSchema = z.object({
+  projectId: z.string().min(1),
+  title: z.string().min(1),
+  completion: z.number().int().nonnegative(),
+  approved: z.number().int().nonnegative(),
+  underReview: z.number().int().nonnegative(),
+  open: z.number().int().nonnegative(),
+  minutesRemaining: z.number().int().nullable(),
+  nextMilestoneTitle: z.string().nullable(),
+  href: z.string().min(1),
+});
+
+export const StudentCourseSnapshotSchema = z.object({
+  courseId: z.string().min(1),
+  courseTitle: z.string().min(1),
+  completion: z.number().int().nonnegative(),
+  approved: z.number().int().nonnegative(),
+  underReview: z.number().int().nonnegative(),
+  open: z.number().int().nonnegative(),
+  nextMilestones: z.array(StudentCourseMilestoneSnapshotSchema),
+  projects: z.array(StudentCourseProjectSnapshotSchema),
+});
+
+export const StudentSubmissionHealthSchema = z.object({
+  failedChecks: z.number().int().nonnegative(),
+  needsReview: z.number().int().nonnegative(),
+  awaitingReview: z.number().int().nonnegative(),
+  recentlyPassed: z.number().int().nonnegative(),
+});
+
+export const StudentHomeRecentSubmissionSchema = z.object({
+  id: z.string().min(1),
+  projectKey: z.string().min(1),
+  projectTitle: z.string().min(1),
+  milestoneTitle: z.string().nullable(),
+  status: z.string().min(1),
+  statusLabel: z.string().min(1),
+  submittedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  href: z.string().min(1),
+});
+
+export const StudentHomeBlockerSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum([
+    'github_not_linked',
+    'github_app_not_installed',
+    'no_published_projects',
+    'no_memberships',
+  ]),
+  title: z.string().min(1),
+  body: z.string().min(1),
+  cta: DashboardCtaSchema,
+});
+
+export const StudentHomeDashboardSchema = z.object({
+  courses: z.array(TrackingCourseSummarySchema),
+  selectedCourseId: z.string().nullable(),
+  attentionItems: z.array(StudentHomeAttentionItemSchema),
+  courseSnapshots: z.array(StudentCourseSnapshotSchema),
+  submissionHealth: StudentSubmissionHealthSchema,
+  recentSubmissions: z.array(StudentHomeRecentSubmissionSchema),
+  blockers: z.array(StudentHomeBlockerSchema),
+});
+
+export const InstructorReviewSummaryByCourseSchema = z.object({
+  courseId: z.string().min(1),
+  courseTitle: z.string().min(1),
+  pendingReviewCount: z.number().int().nonnegative(),
+});
+
+export const InstructorReviewSummarySchema = z.object({
+  totalAwaitingReview: z.number().int().nonnegative(),
+  oldestWaitingMinutes: z.number().int().nullable(),
+  submittedLast24Hours: z.number().int().nonnegative(),
+  byCourse: z.array(InstructorReviewSummaryByCourseSchema),
+});
+
+export const InstructorUrgentQueueItemSchema = z.object({
+  submissionId: z.string().min(1),
+  courseId: z.string().min(1),
+  courseTitle: z.string().min(1),
+  projectId: z.string().min(1),
+  projectTitle: z.string().min(1),
+  projectKey: z.string().min(1),
+  studentName: z.string().min(1),
+  status: z.string().min(1),
+  submittedAt: z.string().datetime(),
+  waitingMinutes: z.number().int().nonnegative(),
+  cta: DashboardCtaSchema,
+});
+
+export const InstructorCourseSummarySchema = z.object({
+  courseId: z.string().min(1),
+  title: z.string().min(1),
+  courseCode: z.string().min(1),
+  termLabel: z.string().min(1),
+  pendingReviewCount: z.number().int().nonnegative(),
+  publishedProjectCount: z.number().int().nonnegative(),
+  memberCount: z.number().int().nonnegative(),
+  lastActivityAt: z.string().datetime().nullable(),
+});
+
+export const DashboardOperationSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  description: z.string().min(1),
+  href: z.string().min(1),
+});
+
+export const InstructorRecentActivityItemSchema = z.object({
+  id: z.string().min(1),
+  action: z.string().min(1),
+  summary: z.string().min(1),
+  createdAt: z.string().datetime(),
+  courseId: z.string().nullable(),
+  courseTitle: z.string().nullable(),
+  href: z.string().nullable(),
+});
+
+export const InstructorHomeDashboardSchema = z.object({
+  reviewSummary: InstructorReviewSummarySchema,
+  urgentQueue: z.array(InstructorUrgentQueueItemSchema),
+  courseSummaries: z.array(InstructorCourseSummarySchema),
+  recentActivity: z.array(InstructorRecentActivityItemSchema),
+  operations: z.array(DashboardOperationSchema),
+});
+
+export const DashboardHomeResponseSchema = z.object({
+  availableModes: z.array(DashboardModeSchema),
+  defaultMode: DashboardModeSchema,
+  student: StudentHomeDashboardSchema.optional(),
+  instructor: InstructorHomeDashboardSchema.optional(),
+});
+
 export const StudentProjectsDashboardResponseSchema = z.object({
   course: TrackingCourseSummarySchema.nullable(),
   memberships: z.array(TrackingMembershipSchema),
@@ -283,6 +459,10 @@ export type StudentProjectsDashboardResponse = z.infer<
   typeof StudentProjectsDashboardResponseSchema
 >;
 export type InstructorDashboardResponse = z.infer<typeof InstructorDashboardResponseSchema>;
+export type DashboardHomeResponse = z.infer<typeof DashboardHomeResponseSchema>;
+export type DashboardMode = z.infer<typeof DashboardModeSchema>;
+export type StudentHomeDashboard = z.infer<typeof StudentHomeDashboardSchema>;
+export type InstructorHomeDashboard = z.infer<typeof InstructorHomeDashboardSchema>;
 export type CreateTrackingProjectRequest = z.infer<typeof CreateTrackingProjectRequestSchema>;
 export type UpdateTrackingProjectRequest = z.infer<typeof UpdateTrackingProjectRequestSchema>;
 export type CreateMilestoneRequest = z.infer<typeof CreateMilestoneRequestSchema>;

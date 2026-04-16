@@ -1,23 +1,10 @@
-import type {
-  GitHubConfigResponse,
-  MeResponse,
-  StudentProjectsDashboardResponse,
-  TrackingCourseSummary,
-} from '@nibras/contracts';
+import type { DashboardHomeResponse } from '@nibras/contracts';
 
-export type GitHubAppStatus = 'configured' | 'unconfigured' | 'unavailable';
+type FetchJson = (path: string, init?: RequestInit & { auth?: boolean }) => Promise<unknown>;
 
-export type LoadDashboardDataResult = {
-  me: MeResponse;
-  courses: TrackingCourseSummary[];
-  dashboard: StudentProjectsDashboardResponse;
-  githubConfig: GitHubConfigResponse | null;
-  installUrl: string;
-  githubAppMessage: string;
-  githubAppStatus: GitHubAppStatus;
-};
+export type LoadDashboardDataResult = DashboardHomeResponse;
 
 export function loadDashboardData(args: {
-  fetchJson: (path: string, init?: RequestInit & { auth?: boolean }) => Promise<unknown>;
-  courseId?: string | null;
+  fetchJson: FetchJson;
+  mode?: 'student' | 'instructor' | null;
 }): Promise<LoadDashboardDataResult>;

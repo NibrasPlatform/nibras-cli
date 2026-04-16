@@ -27,6 +27,7 @@ import { validateId } from '../../lib/validate';
 import { AppStore, PaginationOpts } from '../../store';
 import {
   presentInstructorDashboard,
+  presentHomeDashboard,
   presentMilestone,
   presentProject,
   presentStudentDashboard,
@@ -665,9 +666,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       ) {
         const review = await store.getTrackingReview(requestBaseUrl(request), params.submissionId);
         if (review && (review.status === 'approved' || review.status === 'graded')) {
-          reply
-            .code(422)
-            .send(Errors.validation('Approved submissions can no longer be edited.'));
+          reply.code(422).send(Errors.validation('Approved submissions can no longer be edited.'));
           return;
         }
       }
@@ -854,6 +853,33 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       const auth = await requireUser(request, reply, store);
       if (!auth) return;
       return await store.listTrackingActivity(requestBaseUrl(request), auth.user.id);
+    }
+  );
+
+  app.get(
+    '/v1/tracking/dashboard/home',
+    { schema: { tags: ['tracking'], summary: 'Get role-aware home dashboard' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const query = request.query as { mode?: string };
+      if (query.mode && query.mode !== 'student' && query.mode !== 'instructor') {
+        reply.code(400).send(Errors.validation('mode must be "student" or "instructor"'));
+        return;
+      }
+      const dashboard = await store.getHomeDashboard(
+        requestBaseUrl(request),
+        auth.user.id,
+        query.mode as 'student' | 'instructor' | undefined
+      );
+      if (
+        query.mode &&
+        !dashboard.availableModes.includes(query.mode as 'student' | 'instructor')
+      ) {
+        reply.code(403).send(Errors.forbidden());
+        return;
+      }
+      return presentHomeDashboard(dashboard);
     }
   );
 

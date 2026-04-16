@@ -35,7 +35,7 @@ export const appNavItems: AppNavItem[] = [
 export const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/dashboard': {
     title: 'Dashboard',
-    subtitle: 'Track your current course operations and GitHub-linked progress.',
+    subtitle: 'See the next work, blockers, reviews, and course actions that matter now.',
   },
   '/projects': {
     title: 'Projects',

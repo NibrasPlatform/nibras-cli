@@ -9,6 +9,11 @@ import {
   listCs106lProjectDefinitions,
   readCs106lTaskText,
 } from './lib/cs106l';
+import {
+  buildDashboardHomeRecord,
+  buildInstructorHomeDashboard,
+  buildStudentHomeDashboard,
+} from './features/tracking/home-dashboard';
 
 export type PaginationOpts = { limit?: number; offset?: number };
 
@@ -259,6 +264,175 @@ export type InstructorDashboardRecord = {
   courses: CourseRecord[];
   reviewQueue: SubmissionRecord[];
   activity: ActivityRecord[];
+};
+
+export type DashboardModeRecord = 'student' | 'instructor';
+
+export type DashboardCtaRecord = {
+  label: string;
+  href: string;
+};
+
+export type StudentHomeAttentionItemRecord = {
+  id: string;
+  kind: 'changes_requested' | 'failed_submission' | 'needs_review' | 'due_soon' | 'recent_feedback';
+  courseId: string;
+  courseTitle: string;
+  projectId: string;
+  projectTitle: string;
+  milestoneId: string | null;
+  milestoneTitle: string | null;
+  submissionId: string | null;
+  statusText: string;
+  reason: string;
+  dueAt: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  cta: DashboardCtaRecord;
+};
+
+export type StudentCourseMilestoneSnapshotRecord = {
+  milestoneId: string;
+  projectId: string;
+  projectTitle: string;
+  title: string;
+  dueAt: string | null;
+  status: string;
+  statusLabel: string;
+};
+
+export type StudentCourseProjectSnapshotRecord = {
+  projectId: string;
+  title: string;
+  completion: number;
+  approved: number;
+  underReview: number;
+  open: number;
+  minutesRemaining: number | null;
+  nextMilestoneTitle: string | null;
+  href: string;
+};
+
+export type StudentCourseSnapshotRecord = {
+  courseId: string;
+  courseTitle: string;
+  completion: number;
+  approved: number;
+  underReview: number;
+  open: number;
+  nextMilestones: StudentCourseMilestoneSnapshotRecord[];
+  projects: StudentCourseProjectSnapshotRecord[];
+};
+
+export type StudentSubmissionHealthRecord = {
+  failedChecks: number;
+  needsReview: number;
+  awaitingReview: number;
+  recentlyPassed: number;
+};
+
+export type StudentHomeRecentSubmissionRecord = {
+  id: string;
+  projectKey: string;
+  projectTitle: string;
+  milestoneTitle: string | null;
+  status: string;
+  statusLabel: string;
+  submittedAt: string | null;
+  createdAt: string;
+  href: string;
+};
+
+export type StudentHomeBlockerRecord = {
+  id: string;
+  kind:
+    | 'github_not_linked'
+    | 'github_app_not_installed'
+    | 'no_published_projects'
+    | 'no_memberships';
+  title: string;
+  body: string;
+  cta: DashboardCtaRecord;
+};
+
+export type StudentHomeDashboardRecord = {
+  courses: CourseRecord[];
+  selectedCourseId: string | null;
+  attentionItems: StudentHomeAttentionItemRecord[];
+  courseSnapshots: StudentCourseSnapshotRecord[];
+  submissionHealth: StudentSubmissionHealthRecord;
+  recentSubmissions: StudentHomeRecentSubmissionRecord[];
+  blockers: StudentHomeBlockerRecord[];
+};
+
+export type InstructorReviewSummaryByCourseRecord = {
+  courseId: string;
+  courseTitle: string;
+  pendingReviewCount: number;
+};
+
+export type InstructorReviewSummaryRecord = {
+  totalAwaitingReview: number;
+  oldestWaitingMinutes: number | null;
+  submittedLast24Hours: number;
+  byCourse: InstructorReviewSummaryByCourseRecord[];
+};
+
+export type InstructorUrgentQueueItemRecord = {
+  submissionId: string;
+  courseId: string;
+  courseTitle: string;
+  projectId: string;
+  projectTitle: string;
+  projectKey: string;
+  studentName: string;
+  status: string;
+  submittedAt: string;
+  waitingMinutes: number;
+  cta: DashboardCtaRecord;
+};
+
+export type InstructorCourseSummaryRecord = {
+  courseId: string;
+  title: string;
+  courseCode: string;
+  termLabel: string;
+  pendingReviewCount: number;
+  publishedProjectCount: number;
+  memberCount: number;
+  lastActivityAt: string | null;
+};
+
+export type DashboardOperationRecord = {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+};
+
+export type InstructorRecentActivityItemRecord = {
+  id: string;
+  action: string;
+  summary: string;
+  createdAt: string;
+  courseId: string | null;
+  courseTitle: string | null;
+  href: string | null;
+};
+
+export type InstructorHomeDashboardRecord = {
+  reviewSummary: InstructorReviewSummaryRecord;
+  urgentQueue: InstructorUrgentQueueItemRecord[];
+  courseSummaries: InstructorCourseSummaryRecord[];
+  recentActivity: InstructorRecentActivityItemRecord[];
+  operations: DashboardOperationRecord[];
+};
+
+export type DashboardHomeRecord = {
+  availableModes: DashboardModeRecord[];
+  defaultMode: DashboardModeRecord;
+  student?: StudentHomeDashboardRecord;
+  instructor?: InstructorHomeDashboardRecord;
 };
 
 export type CourseInviteRecord = {
@@ -561,6 +735,11 @@ export interface AppStore {
     userId: string,
     courseId: string
   ): Promise<InstructorDashboardRecord>;
+  getHomeDashboard(
+    apiBaseUrl: string,
+    userId: string,
+    mode?: DashboardModeRecord
+  ): Promise<DashboardHomeRecord>;
   getTrackingSubmissionCommits(
     apiBaseUrl: string,
     submissionId: string
@@ -2448,6 +2627,117 @@ export class FileStore implements AppStore {
       reviewQueue,
       activity,
     };
+  }
+
+  async getHomeDashboard(
+    apiBaseUrl: string,
+    userId: string,
+    mode?: DashboardModeRecord
+  ): Promise<DashboardHomeRecord> {
+    const data = this.read(apiBaseUrl);
+    const user = data.users.find((entry) => entry.id === userId);
+    if (!user) {
+      throw new Error('User not found.');
+    }
+    const memberships = await this.listCourseMemberships(apiBaseUrl, userId);
+    const studentCourseIds = new Set(
+      memberships.filter((entry) => entry.role === 'student').map((entry) => entry.courseId)
+    );
+    const instructorCourseIds = new Set(
+      memberships
+        .filter((entry) => entry.role === 'instructor' || entry.role === 'ta')
+        .map((entry) => entry.courseId)
+    );
+
+    let student: StudentHomeDashboardRecord | undefined;
+    if (user.systemRole !== 'admin' || studentCourseIds.size > 0) {
+      const studentCourses = (await this.listTrackingCourses(apiBaseUrl, userId)).filter((course) =>
+        studentCourseIds.has(course.id)
+      );
+      const snapshots = await Promise.all(
+        studentCourses.map((course) =>
+          this.getStudentTrackingDashboard(apiBaseUrl, userId, course.id)
+        )
+      );
+      const submissions = await this.listUserSubmissions(apiBaseUrl, userId);
+      const reviewsBySubmission = Object.fromEntries(
+        await Promise.all(
+          submissions.map(async (submission) => [
+            submission.id,
+            await this.getTrackingReview(apiBaseUrl, submission.id),
+          ])
+        )
+      ) as Record<string, ReviewRecord | null>;
+      student = buildStudentHomeDashboard({
+        user,
+        courses: studentCourses,
+        snapshots,
+        submissions,
+        reviewsBySubmission,
+      });
+    }
+
+    let instructor: InstructorHomeDashboardRecord | undefined;
+    if (user.systemRole === 'admin' || instructorCourseIds.size > 0) {
+      const dashboard = await this.getInstructorTrackingDashboard(apiBaseUrl, userId);
+      const managedCourseIds =
+        user.systemRole === 'admin'
+          ? new Set(dashboard.courses.map((entry) => entry.id))
+          : instructorCourseIds;
+      const courseTitleById = Object.fromEntries(
+        dashboard.courses.map((course) => [course.id, course.title])
+      ) as Record<string, string>;
+      const managedProjects = data.projects.filter(
+        (project) => project.courseId && managedCourseIds.has(project.courseId)
+      );
+      const projectTitleById = Object.fromEntries(
+        managedProjects.map((project) => [project.id, project.title])
+      ) as Record<string, string>;
+      const courseIdByProjectId = Object.fromEntries(
+        managedProjects
+          .filter((project) => project.courseId)
+          .map((project) => [project.id, project.courseId as string])
+      ) as Record<string, string>;
+      const studentNameById = Object.fromEntries(
+        data.users.map((entry) => [entry.id, entry.username])
+      ) as Record<string, string>;
+      const memberCountsByCourse = data.courseMemberships.reduce<Record<string, number>>(
+        (acc, membership) => {
+          if (!managedCourseIds.has(membership.courseId)) return acc;
+          acc[membership.courseId] = (acc[membership.courseId] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
+      const publishedProjectCountsByCourse = managedProjects.reduce<Record<string, number>>(
+        (acc, project) => {
+          if (project.courseId && project.status === 'published') {
+            acc[project.courseId] = (acc[project.courseId] || 0) + 1;
+          }
+          return acc;
+        },
+        {}
+      );
+      instructor = buildInstructorHomeDashboard({
+        courses: dashboard.courses,
+        reviewQueue: dashboard.reviewQueue,
+        activities: dashboard.activity,
+        projectTitleById,
+        courseIdByProjectId,
+        courseTitleById,
+        studentNameById,
+        memberCountsByCourse,
+        publishedProjectCountsByCourse,
+      });
+    }
+
+    return buildDashboardHomeRecord({
+      user,
+      memberships,
+      requestedMode: mode,
+      ...(student ? { student } : {}),
+      ...(instructor ? { instructor } : {}),
+    });
   }
 
   async getTrackingSubmissionCommits(

@@ -51,6 +51,199 @@ test('student dashboard returns the migrated projects view model', async () => {
   }
 });
 
+test('home dashboard returns the student mode by default for student-only users', async () => {
+  const storePath = makeStorePath();
+  const store = new FileStore(storePath);
+  const app = createSession(store, storePath, 'user_demo', 'student-token');
+
+  try {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/tracking/dashboard/home',
+      headers: { authorization: 'Bearer student-token' },
+    });
+    assert.equal(response.statusCode, 200);
+    const payload = response.json();
+    assert.deepEqual(payload.availableModes, ['student']);
+    assert.equal(payload.defaultMode, 'student');
+    assert.ok(payload.student);
+    assert.equal(payload.instructor, undefined);
+  } finally {
+    await app.close();
+  }
+});
+
+test('home dashboard rejects unavailable mode overrides', async () => {
+  const storePath = makeStorePath();
+  const store = new FileStore(storePath);
+  const app = createSession(store, storePath, 'user_demo', 'student-token');
+
+  try {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/tracking/dashboard/home?mode=instructor',
+      headers: { authorization: 'Bearer student-token' },
+    });
+    assert.equal(response.statusCode, 403);
+  } finally {
+    await app.close();
+  }
+});
+
+test('home dashboard defaults to instructor for dual-role users and exposes both modes', async () => {
+  const storePath = makeStorePath();
+  const store = new FileStore(storePath);
+  const data = store.read('http://127.0.0.1');
+  data.courseMemberships.push({
+    id: 'membership_demo_ta_cs161',
+    courseId: 'course_cs161',
+    userId: 'user_demo',
+    role: 'ta',
+    level: 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+  data.sessions.push({
+    accessToken: 'dual-role-token',
+    refreshToken: 'dual-role-refresh',
+    userId: 'user_demo',
+    createdAt: new Date().toISOString(),
+  });
+  store.write(data);
+  const app = buildApp(new FileStore(storePath));
+
+  try {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/tracking/dashboard/home',
+      headers: { authorization: 'Bearer dual-role-token' },
+    });
+    assert.equal(response.statusCode, 200);
+    const payload = response.json();
+    assert.deepEqual(payload.availableModes, ['instructor', 'student']);
+    assert.equal(payload.defaultMode, 'instructor');
+    assert.ok(payload.student);
+    assert.ok(payload.instructor);
+  } finally {
+    await app.close();
+  }
+});
+
+test('student home dashboard prioritizes failed submissions with a resubmit action', async () => {
+  const storePath = makeStorePath();
+  const store = new FileStore(storePath);
+  const data = store.read('http://127.0.0.1');
+  data.sessions.push({
+    accessToken: 'student-token',
+    refreshToken: 'student-refresh',
+    userId: 'user_demo',
+    createdAt: new Date().toISOString(),
+  });
+  data.submissions.push({
+    id: 'submission_failed_home',
+    userId: 'user_demo',
+    projectId: 'project_cs161_exam1',
+    projectKey: 'cs161/exam1',
+    milestoneId: 'milestone_exam1_design',
+    commitSha: 'deadbeef',
+    repoUrl: 'https://github.com/demo-user/nibras-cs161-exam1',
+    branch: 'main',
+    status: 'failed',
+    summary: 'Tests failed.',
+    submissionType: 'github',
+    submissionValue: 'https://github.com/demo-user/nibras-cs161-exam1',
+    notes: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    submittedAt: new Date().toISOString(),
+    localTestExitCode: 1,
+  });
+  store.write(data);
+  const app = buildApp(new FileStore(storePath));
+
+  try {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/tracking/dashboard/home',
+      headers: { authorization: 'Bearer student-token' },
+    });
+    assert.equal(response.statusCode, 200);
+    const payload = response.json();
+    assert.equal(payload.student.attentionItems[0].kind, 'failed_submission');
+    assert.equal(payload.student.attentionItems[0].cta.label, 'Resubmit');
+  } finally {
+    await app.close();
+  }
+});
+
+test('instructor home dashboard orders urgent queue by oldest pending review first', async () => {
+  const storePath = makeStorePath();
+  const store = new FileStore(storePath);
+  const data = store.read('http://127.0.0.1');
+  data.sessions.push({
+    accessToken: 'instructor-token',
+    refreshToken: 'instructor-refresh',
+    userId: 'user_instructor',
+    createdAt: new Date().toISOString(),
+  });
+  data.submissions.push(
+    {
+      id: 'submission_newer_review',
+      userId: 'user_demo',
+      projectId: 'project_cs161_exam1',
+      projectKey: 'cs161/exam1',
+      milestoneId: 'milestone_exam1_design',
+      commitSha: 'newer',
+      repoUrl: 'https://github.com/demo-user/nibras-cs161-exam1',
+      branch: 'main',
+      status: 'needs_review',
+      summary: 'Awaiting review.',
+      submissionType: 'text',
+      submissionValue: 'draft',
+      notes: null,
+      createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      submittedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      localTestExitCode: null,
+    },
+    {
+      id: 'submission_older_review',
+      userId: 'user_demo',
+      projectId: 'project_cs161_exam1',
+      projectKey: 'cs161/exam1',
+      milestoneId: 'milestone_exam1_final',
+      commitSha: 'older',
+      repoUrl: 'https://github.com/demo-user/nibras-cs161-exam1',
+      branch: 'main',
+      status: 'needs_review',
+      summary: 'Awaiting review.',
+      submissionType: 'text',
+      submissionValue: 'draft',
+      notes: null,
+      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+      submittedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+      localTestExitCode: null,
+    }
+  );
+  store.write(data);
+  const app = buildApp(new FileStore(storePath));
+
+  try {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/tracking/dashboard/home',
+      headers: { authorization: 'Bearer instructor-token' },
+    });
+    assert.equal(response.statusCode, 200);
+    const payload = response.json();
+    assert.equal(payload.instructor.reviewSummary.totalAwaitingReview >= 2, true);
+    assert.equal(payload.instructor.urgentQueue[0].submissionId, 'submission_older_review');
+  } finally {
+    await app.close();
+  }
+});
+
 test('tracking project creation is instructor-only', async () => {
   const storePath = makeStorePath();
   const store = new FileStore(storePath);
