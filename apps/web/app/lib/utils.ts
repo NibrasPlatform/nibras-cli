@@ -7,13 +7,19 @@ export function formatShortDate(value: string | null | undefined): string {
   return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export function daysUntil(dateStr: string | null | undefined): number | null {
+export function minutesUntil(dateStr: string | null | undefined): number | null {
   if (!dateStr) return null;
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const d = new Date(dateStr);
-  d.setHours(0, 0, 0, 0);
-  return Math.round((d.getTime() - now.getTime()) / 86_400_000);
+  const diffMinutes = (new Date(dateStr).getTime() - Date.now()) / 60_000;
+  return diffMinutes >= 0 ? Math.ceil(diffMinutes) : Math.floor(diffMinutes);
+}
+
+export function formatHoursMinutes(totalMinutes: number): string {
+  const absoluteMinutes = Math.abs(totalMinutes);
+  const hours = Math.floor(absoluteMinutes / 60);
+  const minutes = absoluteMinutes % 60;
+
+  if (hours === 0) return `${minutes}m`;
+  return `${hours}h ${minutes}m`;
 }
 
 export function getInitials(value: string): string {

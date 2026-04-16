@@ -152,7 +152,7 @@ export const TrackingDashboardStatsSchema = z.object({
   underReview: z.number().int().nonnegative(),
   completion: z.number().int().nonnegative(),
   total: z.number().int().nonnegative(),
-  daysRemaining: z.number().int(),
+  minutesRemaining: z.number().int(),
 });
 
 export const StudentProjectsDashboardResponseSchema = z.object({

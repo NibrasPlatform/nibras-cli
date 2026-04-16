@@ -241,7 +241,7 @@ export type TrackingDashboardStats = {
   underReview: number;
   completion: number;
   total: number;
-  daysRemaining: number;
+  minutesRemaining: number;
 };
 
 export type StudentDashboardRecord = {
@@ -689,7 +689,7 @@ function calculateProjectStats(
     underReview,
     completion: milestones.length ? Math.round((approved / milestones.length) * 100) : 0,
     total: milestones.length,
-    daysRemaining: lastDue ? Math.ceil((lastDue.getTime() - Date.now()) / 86_400_000) : 0,
+    minutesRemaining: lastDue ? Math.ceil((lastDue.getTime() - Date.now()) / 60_000) : 0,
   };
 }
 

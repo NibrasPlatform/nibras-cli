@@ -11,7 +11,7 @@ import type {
 } from '@nibras/contracts';
 import { prefs } from '../../../lib/prefs';
 import { apiFetch } from '../../../lib/session';
-import { daysUntil } from '../../../lib/utils';
+import { formatHoursMinutes, minutesUntil } from '../../../lib/utils';
 import {
   getLevelLabel,
   getLevelName,
@@ -49,21 +49,20 @@ function statusColor(status: string): string {
 
 function dueDateColor(dueAt: string | null | undefined, status: string): string {
   if (status === 'approved' || status === 'graded') return styles.dueDateDone;
-  const days = daysUntil(dueAt);
-  if (days === null) return '';
-  if (days < 0) return styles.dueDateOverdue;
-  if (days <= 2) return styles.dueDateUrgent;
+  const minutes = minutesUntil(dueAt);
+  if (minutes === null) return '';
+  if (minutes < 0) return styles.dueDateOverdue;
+  if (minutes <= 48 * 60) return styles.dueDateUrgent;
   return '';
 }
 
-function dueDateText(dueAt: string | null | undefined, label: string | undefined): string {
-  if (!dueAt) return label || 'No due date';
-  const days = daysUntil(dueAt);
-  if (days === null) return label || '';
-  if (days < 0) return `Overdue by ${Math.abs(days)} day${Math.abs(days) !== 1 ? 's' : ''}`;
-  if (days === 0) return 'Due today';
-  if (days === 1) return 'Due tomorrow';
-  return label || '';
+function dueDateText(dueAt: string | null | undefined): string {
+  if (!dueAt) return 'No due date';
+  const minutes = minutesUntil(dueAt);
+  if (minutes === null) return 'No due date';
+  if (minutes < 0) return `Overdue by ${formatHoursMinutes(minutes)}`;
+  if (minutes === 0) return 'Due now';
+  return `Due in ${formatHoursMinutes(minutes)}`;
 }
 
 function statusIcon(status: string): string {
@@ -95,7 +94,7 @@ function MilestoneCard({
   onSubmit: (m: TrackingMilestone) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const days = daysUntil(milestone.dueAt);
+  const minutes = minutesUntil(milestone.dueAt);
   const isApproved = milestone.status === 'approved' || milestone.status === 'graded';
   const isSubmitted = milestone.status === 'submitted' || milestone.status === 'under_review';
   const canSubmit = !isApproved;
@@ -127,8 +126,8 @@ function MilestoneCard({
               <span
                 className={`${styles.dueDate} ${dueDateColor(milestone.dueAt, milestone.status)}`}
               >
-                {dueDateText(milestone.dueAt, milestone.dueDateLabel)}
-                {days !== null && days < 0 && !isApproved ? ' ⚠' : ''}
+                {dueDateText(milestone.dueAt)}
+                {minutes !== null && minutes < 0 && !isApproved ? ' ⚠' : ''}
               </span>
             )}
           </div>
@@ -817,8 +816,8 @@ export default function ProjectsDashboard({
 
                 <dl className={styles.statGrid}>
                   <div>
-                    <dt>Days Remaining</dt>
-                    <dd>{activeStats?.daysRemaining ?? '—'}</dd>
+                    <dt>Time Remaining</dt>
+                    <dd>{activeStats ? formatHoursMinutes(activeStats.minutesRemaining) : '—'}</dd>
                   </div>
                   <div>
                     <dt>Approved</dt>

@@ -44,6 +44,8 @@ test('student dashboard returns the migrated projects view model', async () => {
     assert.equal(payload.projects[0].projectKey, 'cs161/exam1');
     assert.equal(payload.projects[0].deliveryMode, 'individual');
     assert.ok(payload.milestonesByProject[payload.projects[0].id].length >= 2);
+    assert.equal(typeof payload.statsByProject[payload.projects[0].id].minutesRemaining, 'number');
+    assert.equal('daysRemaining' in payload.statsByProject[payload.projects[0].id], false);
   } finally {
     await app.close();
   }
