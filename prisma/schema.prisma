@@ -80,6 +80,7 @@ model User {
   submissionAttempts SubmissionAttempt[]
   auditLogs         AuditLog[]
   reviews           Review[]
+  notifications     Notification[]
 
   @@index([systemRole])
   @@index([yearLevel])
@@ -385,6 +386,21 @@ model VerificationJob {
   submissionAttempt   SubmissionAttempt @relation(fields: [submissionAttemptId], references: [id], onDelete: Cascade)
 
   @@index([status, claimedAt, createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }
 
 model AuditLog {

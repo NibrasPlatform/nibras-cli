@@ -27,16 +27,25 @@ import {
   readCs106lTaskText,
 } from './lib/cs106l';
 import {
+  buildDashboardHomeRecord,
+  buildInstructorHomeDashboard,
+  buildStudentHomeDashboard,
+} from './features/tracking/home-dashboard';
+import {
   ActivityRecord,
   AppStore,
   CourseMembershipRecord,
   CourseRecord,
+  DashboardHomeRecord,
+  DashboardModeRecord,
   defaultManifest,
   DeviceCodeRecord,
   GithubDeliveryRecord,
   InstructorDashboardRecord,
+  InstructorHomeDashboardRecord,
   MembershipRole,
   MilestoneRecord,
+  NotificationRecord,
   PaginationOpts,
   ProjectRecord,
   ProjectStarterRecord,
@@ -46,6 +55,7 @@ import {
   ReviewStatus as StoreReviewStatus,
   SessionRecord,
   StudentDashboardRecord,
+  StudentHomeDashboardRecord,
   SubmissionRecord,
   SubmissionType,
   TrackingDashboardStats,
@@ -356,7 +366,7 @@ function projectStats(
     underReview,
     completion: milestones.length ? Math.round((approved / milestones.length) * 100) : 0,
     total: milestones.length,
-    daysRemaining: lastDue ? Math.ceil((lastDue.getTime() - Date.now()) / 86_400_000) : 0,
+    minutesRemaining: lastDue ? Math.ceil((lastDue.getTime() - Date.now()) / 60_000) : 0,
   };
 }
 
@@ -1885,6 +1895,12 @@ export class PrismaStore implements AppStore {
     return toCourseRecord(course);
   }
 
+  async deleteTrackingCourse(apiBaseUrl: string, courseId: string): Promise<boolean> {
+    await this.seed(apiBaseUrl);
+    const deleted = await this.prisma.course.delete({ where: { id: courseId } }).catch(() => null);
+    return deleted !== null;
+  }
+
   async listCourseMembersForInstructor(
     apiBaseUrl: string,
     courseId: string
@@ -2054,6 +2070,66 @@ export class PrismaStore implements AppStore {
       githubLogin: u.githubAccount?.login ?? '',
       yearLevel: (u as { yearLevel?: number }).yearLevel ?? 1,
     }));
+  }
+
+  async createNotification(
+    _apiBaseUrl: string,
+    userId: string,
+    notification: { type: string; title: string; body: string; link?: string }
+  ): Promise<void> {
+    await (
+      this.prisma as unknown as { notification: { create: (args: unknown) => Promise<unknown> } }
+    ).notification.create({
+      data: {
+        userId,
+        type: notification.type,
+        title: notification.title,
+        body: notification.body,
+        link: notification.link ?? null,
+      },
+    });
+  }
+
+  async listNotifications(_apiBaseUrl: string, userId: string): Promise<NotificationRecord[]> {
+    const rows = await (
+      this.prisma as unknown as {
+        notification: {
+          findMany: (args: unknown) => Promise<
+            Array<{
+              id: string;
+              userId: string;
+              type: string;
+              title: string;
+              body: string;
+              link: string | null;
+              read: boolean;
+              createdAt: Date;
+            }>
+          >;
+        };
+      }
+    ).notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
+  }
+
+  async countUnreadNotifications(_apiBaseUrl: string, userId: string): Promise<number> {
+    return (
+      this.prisma as unknown as {
+        notification: { count: (args: unknown) => Promise<number> };
+      }
+    ).notification.count({ where: { userId, read: false } });
+  }
+
+  async markAllNotificationsRead(_apiBaseUrl: string, userId: string): Promise<void> {
+    await (
+      this.prisma as unknown as {
+        notification: { updateMany: (args: unknown) => Promise<unknown> };
+      }
+    ).notification.updateMany({ where: { userId, read: false }, data: { read: true } });
   }
 
   async createCourseInvite(
@@ -2622,16 +2698,68 @@ export class PrismaStore implements AppStore {
     }>
   ): Promise<SubmissionRecord | null> {
     await this.seed(apiBaseUrl);
+    const existing = await this.prisma.submissionAttempt.findUnique({
+      where: { id: submissionId },
+    });
+    if (!existing) {
+      return null;
+    }
+
+    const nextSubmissionType = payload.submissionType ?? existing.submissionType;
+    const nextSubmissionValue = payload.submissionValue ?? existing.submissionValue ?? '';
+    const nextBranch = payload.branch || existing.branch || 'main';
+    const nextRepoUrl =
+      nextSubmissionType === 'github'
+        ? payload.repoUrl || nextSubmissionValue || existing.repoUrl
+        : nextSubmissionValue || existing.repoUrl;
+    const nextCommitSha =
+      payload.commitSha && payload.commitSha.trim()
+        ? payload.commitSha.trim()
+        : nextSubmissionType === 'github'
+          ? `github-pending-${randomUUID().slice(0, 8)}`
+          : `manual-${randomUUID().slice(0, 8)}`;
+    const nextStatus =
+      nextSubmissionType === 'github' ? SubmissionStatus.running : SubmissionStatus.needs_review;
+    const nextSummary =
+      nextSubmissionType === 'github'
+        ? 'GitHub submission updated. Waiting for webhook activity.'
+        : 'Submission updated and queued for instructor review.';
+    const submittedAt = new Date();
+
+    if (nextSubmissionType === 'github') {
+      const parsedRepo = parseGitHubRepoUrl(nextRepoUrl);
+      if (parsedRepo) {
+        await this.prisma.userProjectRepo.update({
+          where: {
+            userId_projectId: {
+              userId: existing.userId,
+              projectId: existing.projectId,
+            },
+          },
+          data: {
+            owner: parsedRepo.owner,
+            name: parsedRepo.name,
+            cloneUrl: nextRepoUrl,
+            defaultBranch: nextBranch,
+          },
+        });
+      }
+    }
+
     const updated = await this.prisma.submissionAttempt
       .update({
         where: { id: submissionId },
         data: {
-          submissionType: payload.submissionType as TrackingSubmissionType | undefined,
-          submissionValue: payload.submissionValue,
-          notes: payload.notes,
-          repoUrl: payload.repoUrl,
-          branch: payload.branch,
-          commitSha: payload.commitSha,
+          submissionType: nextSubmissionType as TrackingSubmissionType,
+          submissionValue: nextSubmissionValue,
+          notes: payload.notes ?? existing.notes,
+          repoUrl: nextRepoUrl,
+          branch: nextBranch,
+          commitSha: nextCommitSha,
+          status: nextStatus,
+          summary: nextSummary,
+          submittedAt,
+          localTestExitCode: null,
         },
         include: { project: true },
       })
@@ -2717,12 +2845,13 @@ export class PrismaStore implements AppStore {
   async getSubmissionStudentEmail(
     _apiBaseUrl: string,
     submissionId: string
-  ): Promise<{ email: string; username: string } | null> {
+  ): Promise<{ userId: string; email: string; username: string } | null> {
     const attempt = await this.prisma.submissionAttempt.findUnique({
       where: { id: submissionId },
-      select: { user: { select: { email: true, username: true } } },
+      select: { user: { select: { id: true, email: true, username: true } } },
     });
-    return attempt ? attempt.user : null;
+    if (!attempt) return null;
+    return { userId: attempt.user.id, email: attempt.user.email, username: attempt.user.username };
   }
 
   async listTrackingReviewQueue(
@@ -2911,6 +3040,138 @@ export class PrismaStore implements AppStore {
     };
   }
 
+  async getHomeDashboard(
+    apiBaseUrl: string,
+    userId: string,
+    mode?: DashboardModeRecord
+  ): Promise<DashboardHomeRecord> {
+    await this.seed(apiBaseUrl);
+    const prismaUser = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: { githubAccount: { select: { login: true } } },
+    });
+    const user = toUserRecord(prismaUser);
+    const memberships = await this.listCourseMemberships(apiBaseUrl, userId);
+    const studentCourseIds = new Set(
+      memberships.filter((entry) => entry.role === 'student').map((entry) => entry.courseId)
+    );
+    const instructorCourseIds = new Set(
+      memberships
+        .filter((entry) => entry.role === 'instructor' || entry.role === 'ta')
+        .map((entry) => entry.courseId)
+    );
+
+    let student: StudentHomeDashboardRecord | undefined;
+    if (user.systemRole !== 'admin' || studentCourseIds.size > 0) {
+      const studentCourses = (await this.listTrackingCourses(apiBaseUrl, userId)).filter((course) =>
+        studentCourseIds.has(course.id)
+      );
+      const snapshots = await Promise.all(
+        studentCourses.map((course) =>
+          this.getStudentTrackingDashboard(apiBaseUrl, userId, course.id)
+        )
+      );
+      const submissions = await this.listUserSubmissions(apiBaseUrl, userId);
+      const reviewsBySubmission: Record<string, ReviewRecord | null> = {};
+      if (submissions.length > 0) {
+        const reviews = await this.prisma.review.findMany({
+          where: { submissionAttemptId: { in: submissions.map((entry) => entry.id) } },
+          orderBy: { createdAt: 'desc' },
+        });
+        for (const review of reviews) {
+          if (!reviewsBySubmission[review.submissionAttemptId]) {
+            reviewsBySubmission[review.submissionAttemptId] = toReviewRecord(review);
+          }
+        }
+      }
+      for (const submission of submissions) {
+        if (!(submission.id in reviewsBySubmission)) {
+          reviewsBySubmission[submission.id] = null;
+        }
+      }
+      student = buildStudentHomeDashboard({
+        user,
+        courses: studentCourses,
+        snapshots,
+        submissions,
+        reviewsBySubmission,
+      });
+    }
+
+    let instructor: InstructorHomeDashboardRecord | undefined;
+    if (user.systemRole === 'admin' || instructorCourseIds.size > 0) {
+      const dashboard = await this.getInstructorTrackingDashboard(apiBaseUrl, userId);
+      const managedCourseIds =
+        user.systemRole === 'admin'
+          ? new Set(dashboard.courses.map((entry) => entry.id))
+          : instructorCourseIds;
+      const managedCourseIdsList = [...managedCourseIds];
+      const managedProjects = managedCourseIdsList.length
+        ? await this.prisma.project.findMany({
+            where: { courseId: { in: managedCourseIdsList } },
+            select: { id: true, name: true, courseId: true, status: true },
+          })
+        : [];
+      const studentIds = [...new Set(dashboard.reviewQueue.map((entry) => entry.userId))];
+      const studentRows = studentIds.length
+        ? await this.prisma.user.findMany({
+            where: { id: { in: studentIds } },
+            select: { id: true, username: true },
+          })
+        : [];
+      const memberCounts = managedCourseIdsList.length
+        ? await this.prisma.courseMembership.groupBy({
+            by: ['courseId'],
+            where: { courseId: { in: managedCourseIdsList } },
+            _count: { _all: true },
+          })
+        : [];
+      const projectTitleById = Object.fromEntries(
+        managedProjects.map((project) => [project.id, project.name])
+      ) as Record<string, string>;
+      const courseIdByProjectId = Object.fromEntries(
+        managedProjects.map((project) => [project.id, project.courseId || ''])
+      ) as Record<string, string>;
+      const courseTitleById = Object.fromEntries(
+        dashboard.courses.map((course) => [course.id, course.title])
+      ) as Record<string, string>;
+      const studentNameById = Object.fromEntries(
+        studentRows.map((entry) => [entry.id, entry.username])
+      ) as Record<string, string>;
+      const memberCountsByCourse = Object.fromEntries(
+        memberCounts.map((entry) => [entry.courseId, entry._count._all])
+      ) as Record<string, number>;
+      const publishedProjectCountsByCourse = managedProjects.reduce<Record<string, number>>(
+        (acc, project) => {
+          if (project.courseId && project.status === PrismaProjectStatus.published) {
+            acc[project.courseId] = (acc[project.courseId] || 0) + 1;
+          }
+          return acc;
+        },
+        {}
+      );
+      instructor = buildInstructorHomeDashboard({
+        courses: dashboard.courses,
+        reviewQueue: dashboard.reviewQueue,
+        activities: dashboard.activity,
+        projectTitleById,
+        courseIdByProjectId,
+        courseTitleById,
+        studentNameById,
+        memberCountsByCourse,
+        publishedProjectCountsByCourse,
+      });
+    }
+
+    return buildDashboardHomeRecord({
+      user,
+      memberships,
+      requestedMode: mode,
+      ...(student ? { student } : {}),
+      ...(instructor ? { instructor } : {}),
+    });
+  }
+
   async getTrackingSubmissionCommits(
     apiBaseUrl: string,
     submissionId: string
@@ -2932,7 +3193,7 @@ export class PrismaStore implements AppStore {
     const rows = await this.prisma.submissionAttempt.findMany({
       where: { userId },
       include: { project: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ submittedAt: 'desc' }, { createdAt: 'desc' }],
       take: opts?.limit,
       skip: opts?.offset,
     });

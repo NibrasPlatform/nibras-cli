@@ -15,6 +15,7 @@ import { registerGitHubRoutes } from './features/github/routes';
 import { registerHostedCliRoutes } from './features/hosted-cli/routes';
 import { registerTrackingRoutes } from './features/tracking/routes';
 import { registerAdminRoutes } from './features/admin/routes';
+import { registerNotificationRoutes } from './features/notifications/routes';
 
 function normalizeOrigin(value: string | undefined): string | null {
   if (!value) {
@@ -302,6 +303,7 @@ export function buildApp(store: AppStore = createDefaultStore()): FastifyInstanc
   registerHostedCliRoutes(app, store, githubConfig);
   registerTrackingRoutes(app, store);
   registerAdminRoutes(app, store);
+  registerNotificationRoutes(app, store);
 
   return app;
 }

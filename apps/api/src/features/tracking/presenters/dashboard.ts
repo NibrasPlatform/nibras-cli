@@ -1,4 +1,6 @@
 import {
+  DashboardHomeResponse,
+  DashboardHomeResponseSchema,
   InstructorDashboardResponse,
   InstructorDashboardResponseSchema,
   StudentProjectsDashboardResponse,
@@ -7,6 +9,7 @@ import {
   TrackingProjectSummary,
 } from '@nibras/contracts';
 import {
+  DashboardHomeRecord,
   MilestoneRecord,
   ProjectRecord,
   ReviewRecord,
@@ -128,4 +131,8 @@ export function presentInstructorDashboard(
   value: InstructorDashboardResponse
 ): InstructorDashboardResponse {
   return InstructorDashboardResponseSchema.parse(value);
+}
+
+export function presentHomeDashboard(value: DashboardHomeRecord): DashboardHomeResponse {
+  return DashboardHomeResponseSchema.parse(value);
 }

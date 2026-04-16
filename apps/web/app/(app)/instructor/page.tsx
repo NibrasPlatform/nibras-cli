@@ -1,7 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { apiFetch } from '../../lib/session';
 import { useFetch } from '../../lib/use-fetch';
+import { useSession } from '../_components/session-context';
 import styles from './instructor.module.css';
 
 type Course = {
@@ -54,15 +58,74 @@ function QuickStartStep({
 }
 
 export default function InstructorPage() {
-  const { data: courses, loading, error } = useFetch<Course[]>('/v1/tracking/courses');
+  const { user, loading: sessionLoading } = useSession();
+  const isAdmin = user?.systemRole === 'admin';
+  const router = useRouter();
 
-  const allCourses = courses ?? [];
+  // Redirect non-admins away once session is resolved
+  useEffect(() => {
+    if (!sessionLoading && user && !isAdmin) {
+      router.replace('/dashboard');
+    }
+  }, [sessionLoading, user, isAdmin, router]);
+
+  const { data: fetchedCourses, loading, error } = useFetch<Course[]>('/v1/tracking/courses');
+  const [courses, setCourses] = useState<Course[] | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  // Block render until session resolves; redirect effect handles non-admins
+  if (sessionLoading || !isAdmin) return null;
+
+  // Use local state if we've done any mutations, otherwise use fetched data
+  const allCourses = courses ?? fetchedCourses ?? [];
   const groups = groupByTerm(allCourses);
-  // Only group visually when more than one distinct term exists
   const useGroups = groups.length > 1;
+
+  async function handleDelete(courseId: string) {
+    setDeletingId(courseId);
+    setConfirmId(null);
+    try {
+      const res = await apiFetch(`/v1/admin/courses/${courseId}`, {
+        method: 'DELETE',
+        auth: true,
+      });
+      if (res.ok) {
+        setCourses((prev) => (prev ?? fetchedCourses ?? []).filter((c) => c.id !== courseId));
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className={styles.page}>
+      {/* Confirm delete overlay */}
+      {confirmId && (
+        <div className={styles.confirmOverlay}>
+          <div className={styles.confirmDialog}>
+            <h3>Delete course?</h3>
+            <p>
+              This will permanently delete{' '}
+              <strong>{allCourses.find((c) => c.id === confirmId)?.title}</strong> and all its
+              projects, milestones, and submissions. This cannot be undone.
+            </p>
+            <div className={styles.confirmActions}>
+              <button className={styles.btnSecondary} onClick={() => setConfirmId(null)}>
+                Cancel
+              </button>
+              <button
+                className={styles.btnDanger}
+                onClick={() => void handleDelete(confirmId)}
+                disabled={deletingId === confirmId}
+              >
+                {deletingId === confirmId ? 'Deleting…' : 'Delete course'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page header */}
       <div className={styles.pageHeader}>
         <div>
@@ -174,7 +237,12 @@ export default function InstructorPage() {
                 </div>
                 <div className={styles.courseGrid}>
                   {groupCourses.map((course) => (
-                    <CourseCard key={course.id} course={course} />
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      isAdmin={isAdmin}
+                      onDelete={() => setConfirmId(course.id)}
+                    />
                   ))}
                 </div>
               </section>
@@ -182,7 +250,12 @@ export default function InstructorPage() {
           ) : (
             <div className={styles.courseGrid}>
               {allCourses.map((course) => (
-                <CourseCard key={course.id} course={course} />
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  isAdmin={isAdmin}
+                  onDelete={() => setConfirmId(course.id)}
+                />
               ))}
             </div>
           )}
@@ -192,19 +265,57 @@ export default function InstructorPage() {
   );
 }
 
-function CourseCard({ course }: { course: Course }) {
+function CourseCard({
+  course,
+  isAdmin,
+  onDelete,
+}: {
+  course: Course;
+  isAdmin: boolean;
+  onDelete: () => void;
+}) {
   return (
-    <Link href={`/instructor/courses/${course.id}`} className={styles.courseCard}>
-      <div className={styles.courseCardTop}>
-        <span className={styles.courseCode}>{course.courseCode}</span>
-        <span
-          className={`${styles.courseBadge} ${course.isActive ? styles.courseBadgeActive : styles.courseBadgeArchived}`}
+    <div className={styles.courseCardWrap}>
+      <Link href={`/instructor/courses/${course.id}`} className={styles.courseCard}>
+        <div className={styles.courseCardTop}>
+          <span className={styles.courseCode}>{course.courseCode}</span>
+          <span
+            className={`${styles.courseBadge} ${course.isActive ? styles.courseBadgeActive : styles.courseBadgeArchived}`}
+          >
+            {course.isActive ? 'Active' : 'Archived'}
+          </span>
+        </div>
+        <strong className={styles.courseTitle}>{course.title}</strong>
+        <span className={styles.muted}>{course.termLabel}</span>
+      </Link>
+      {isAdmin && (
+        <button
+          className={styles.deleteBtn}
+          onClick={(e) => {
+            e.preventDefault();
+            onDelete();
+          }}
+          title="Delete course"
+          aria-label={`Delete ${course.title}`}
         >
-          {course.isActive ? 'Active' : 'Archived'}
-        </span>
-      </div>
-      <strong className={styles.courseTitle}>{course.title}</strong>
-      <span className={styles.muted}>{course.termLabel}</span>
-    </Link>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M10 11v6M14 11v6" />
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+          </svg>
+        </button>
+      )}
+    </div>
   );
 }

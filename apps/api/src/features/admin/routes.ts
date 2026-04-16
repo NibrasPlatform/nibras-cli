@@ -230,6 +230,28 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
   );
 
   /**
+   * DELETE /v1/admin/courses/:courseId
+   * Permanently delete a course and all its data. Admin only.
+   */
+  app.delete(
+    '/v1/admin/courses/:courseId',
+    { schema: { tags: ['admin'], summary: 'Delete a course (admin)' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!requireAdmin(auth, reply)) return;
+
+      const params = request.params as { courseId: string };
+      if (!validateId(params.courseId, reply, 'courseId')) return;
+
+      const deleted = await store.deleteTrackingCourse(requestBaseUrl(request), params.courseId);
+      if (!deleted) {
+        return reply.code(404).send(Errors.notFound('Course'));
+      }
+      return { ok: true, courseId: params.courseId };
+    }
+  );
+
+  /**
    * GET /v1/admin/students
    * List all students with their global year level. Admin only.
    */

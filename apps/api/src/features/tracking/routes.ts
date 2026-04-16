@@ -27,6 +27,7 @@ import { validateId } from '../../lib/validate';
 import { AppStore, PaginationOpts } from '../../store';
 import {
   presentInstructorDashboard,
+  presentHomeDashboard,
   presentMilestone,
   presentProject,
   presentStudentDashboard,
@@ -657,6 +658,18 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
         reply.code(403).send(Errors.forbidden());
         return;
       }
+      const canManageExistingProject = project ? canManageProject(auth, project) : false;
+      if (
+        existing.userId === auth.user.id &&
+        auth.user.systemRole !== 'admin' &&
+        !canManageExistingProject
+      ) {
+        const review = await store.getTrackingReview(requestBaseUrl(request), params.submissionId);
+        if (review && (review.status === 'approved' || review.status === 'graded')) {
+          reply.code(422).send(Errors.validation('Approved submissions can no longer be edited.'));
+          return;
+        }
+      }
       const payload = UpdateTrackingSubmissionRequestSchema.parse(request.body);
       const updated = await store.updateTrackingSubmission(
         requestBaseUrl(request),
@@ -733,26 +746,47 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
         payload
       );
 
-      // Notify student by email (fire-and-forget; silently skipped if RESEND_API_KEY unset)
+      // Notify student by email + in-app notification (fire-and-forget; non-fatal)
       void store
         .getSubmissionStudentEmail(requestBaseUrl(request), params.submissionId)
-        .then((student) => {
+        .then(async (student) => {
           if (!student) return;
           const webBase =
             process.env.NIBRAS_WEB_BASE_URL ??
             process.env.NEXT_PUBLIC_NIBRAS_WEB_BASE_URL ??
             requestBaseUrl(request);
+          const submissionUrl = `${webBase}/submissions/${params.submissionId}`;
+          const statusLabel =
+            payload.status === 'approved'
+              ? 'Approved ✓'
+              : payload.status === 'graded'
+                ? 'Graded'
+                : payload.status === 'changes_requested'
+                  ? 'Changes requested'
+                  : 'Reviewed';
+
+          // In-app notification
+          await store.createNotification(requestBaseUrl(request), student.userId, {
+            type: 'feedback',
+            title: `${statusLabel} — ${project?.title ?? 'Submission'}`,
+            body: payload.feedback
+              ? payload.feedback.slice(0, 120) + (payload.feedback.length > 120 ? '…' : '')
+              : `Your submission has been reviewed.`,
+            link: submissionUrl,
+          });
+
+          // Email
           return sendReviewSubmittedEmail({
             studentEmail: student.email,
             studentName: student.username,
             projectName: project?.title ?? submission.projectId,
             reviewStatus: payload.status as 'approved' | 'graded' | 'changes_requested' | 'pending',
             feedback: payload.feedback,
-            submissionUrl: `${webBase}/submissions/${params.submissionId}`,
+            submissionUrl,
           });
         })
         .catch(() => {
-          /* email errors are non-fatal */
+          /* notification/email errors are non-fatal */
         });
 
       reply.code(201);
@@ -819,6 +853,33 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       const auth = await requireUser(request, reply, store);
       if (!auth) return;
       return await store.listTrackingActivity(requestBaseUrl(request), auth.user.id);
+    }
+  );
+
+  app.get(
+    '/v1/tracking/dashboard/home',
+    { schema: { tags: ['tracking'], summary: 'Get role-aware home dashboard' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const query = request.query as { mode?: string };
+      if (query.mode && query.mode !== 'student' && query.mode !== 'instructor') {
+        reply.code(400).send(Errors.validation('mode must be "student" or "instructor"'));
+        return;
+      }
+      const dashboard = await store.getHomeDashboard(
+        requestBaseUrl(request),
+        auth.user.id,
+        query.mode as 'student' | 'instructor' | undefined
+      );
+      if (
+        query.mode &&
+        !dashboard.availableModes.includes(query.mode as 'student' | 'instructor')
+      ) {
+        reply.code(403).send(Errors.forbidden());
+        return;
+      }
+      return presentHomeDashboard(dashboard);
     }
   );
 

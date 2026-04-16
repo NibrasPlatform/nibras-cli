@@ -9,6 +9,11 @@ import {
   listCs106lProjectDefinitions,
   readCs106lTaskText,
 } from './lib/cs106l';
+import {
+  buildDashboardHomeRecord,
+  buildInstructorHomeDashboard,
+  buildStudentHomeDashboard,
+} from './features/tracking/home-dashboard';
 
 export type PaginationOpts = { limit?: number; offset?: number };
 
@@ -44,6 +49,17 @@ export type DeliveryMode = 'individual' | 'team';
 export type SubmissionWorkflowStatus = 'queued' | 'running' | 'passed' | 'failed' | 'needs_review';
 export type SubmissionType = 'github' | 'link' | 'text';
 export type ReviewStatus = 'pending' | 'approved' | 'changes_requested' | 'graded';
+
+export type NotificationRecord = {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  body: string;
+  link: string | null;
+  read: boolean;
+  createdAt: string;
+};
 
 export type UserRecord = {
   id: string;
@@ -230,7 +246,7 @@ export type TrackingDashboardStats = {
   underReview: number;
   completion: number;
   total: number;
-  daysRemaining: number;
+  minutesRemaining: number;
 };
 
 export type StudentDashboardRecord = {
@@ -248,6 +264,175 @@ export type InstructorDashboardRecord = {
   courses: CourseRecord[];
   reviewQueue: SubmissionRecord[];
   activity: ActivityRecord[];
+};
+
+export type DashboardModeRecord = 'student' | 'instructor';
+
+export type DashboardCtaRecord = {
+  label: string;
+  href: string;
+};
+
+export type StudentHomeAttentionItemRecord = {
+  id: string;
+  kind: 'changes_requested' | 'failed_submission' | 'needs_review' | 'due_soon' | 'recent_feedback';
+  courseId: string;
+  courseTitle: string;
+  projectId: string;
+  projectTitle: string;
+  milestoneId: string | null;
+  milestoneTitle: string | null;
+  submissionId: string | null;
+  statusText: string;
+  reason: string;
+  dueAt: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  cta: DashboardCtaRecord;
+};
+
+export type StudentCourseMilestoneSnapshotRecord = {
+  milestoneId: string;
+  projectId: string;
+  projectTitle: string;
+  title: string;
+  dueAt: string | null;
+  status: string;
+  statusLabel: string;
+};
+
+export type StudentCourseProjectSnapshotRecord = {
+  projectId: string;
+  title: string;
+  completion: number;
+  approved: number;
+  underReview: number;
+  open: number;
+  minutesRemaining: number | null;
+  nextMilestoneTitle: string | null;
+  href: string;
+};
+
+export type StudentCourseSnapshotRecord = {
+  courseId: string;
+  courseTitle: string;
+  completion: number;
+  approved: number;
+  underReview: number;
+  open: number;
+  nextMilestones: StudentCourseMilestoneSnapshotRecord[];
+  projects: StudentCourseProjectSnapshotRecord[];
+};
+
+export type StudentSubmissionHealthRecord = {
+  failedChecks: number;
+  needsReview: number;
+  awaitingReview: number;
+  recentlyPassed: number;
+};
+
+export type StudentHomeRecentSubmissionRecord = {
+  id: string;
+  projectKey: string;
+  projectTitle: string;
+  milestoneTitle: string | null;
+  status: string;
+  statusLabel: string;
+  submittedAt: string | null;
+  createdAt: string;
+  href: string;
+};
+
+export type StudentHomeBlockerRecord = {
+  id: string;
+  kind:
+    | 'github_not_linked'
+    | 'github_app_not_installed'
+    | 'no_published_projects'
+    | 'no_memberships';
+  title: string;
+  body: string;
+  cta: DashboardCtaRecord;
+};
+
+export type StudentHomeDashboardRecord = {
+  courses: CourseRecord[];
+  selectedCourseId: string | null;
+  attentionItems: StudentHomeAttentionItemRecord[];
+  courseSnapshots: StudentCourseSnapshotRecord[];
+  submissionHealth: StudentSubmissionHealthRecord;
+  recentSubmissions: StudentHomeRecentSubmissionRecord[];
+  blockers: StudentHomeBlockerRecord[];
+};
+
+export type InstructorReviewSummaryByCourseRecord = {
+  courseId: string;
+  courseTitle: string;
+  pendingReviewCount: number;
+};
+
+export type InstructorReviewSummaryRecord = {
+  totalAwaitingReview: number;
+  oldestWaitingMinutes: number | null;
+  submittedLast24Hours: number;
+  byCourse: InstructorReviewSummaryByCourseRecord[];
+};
+
+export type InstructorUrgentQueueItemRecord = {
+  submissionId: string;
+  courseId: string;
+  courseTitle: string;
+  projectId: string;
+  projectTitle: string;
+  projectKey: string;
+  studentName: string;
+  status: string;
+  submittedAt: string;
+  waitingMinutes: number;
+  cta: DashboardCtaRecord;
+};
+
+export type InstructorCourseSummaryRecord = {
+  courseId: string;
+  title: string;
+  courseCode: string;
+  termLabel: string;
+  pendingReviewCount: number;
+  publishedProjectCount: number;
+  memberCount: number;
+  lastActivityAt: string | null;
+};
+
+export type DashboardOperationRecord = {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+};
+
+export type InstructorRecentActivityItemRecord = {
+  id: string;
+  action: string;
+  summary: string;
+  createdAt: string;
+  courseId: string | null;
+  courseTitle: string | null;
+  href: string | null;
+};
+
+export type InstructorHomeDashboardRecord = {
+  reviewSummary: InstructorReviewSummaryRecord;
+  urgentQueue: InstructorUrgentQueueItemRecord[];
+  courseSummaries: InstructorCourseSummaryRecord[];
+  recentActivity: InstructorRecentActivityItemRecord[];
+  operations: DashboardOperationRecord[];
+};
+
+export type DashboardHomeRecord = {
+  availableModes: DashboardModeRecord[];
+  defaultMode: DashboardModeRecord;
+  student?: StudentHomeDashboardRecord;
+  instructor?: InstructorHomeDashboardRecord;
 };
 
 export type CourseInviteRecord = {
@@ -278,6 +463,7 @@ export type StoreData = {
   reviews: ReviewRecord[];
   githubDeliveries: GithubDeliveryRecord[];
   activity: ActivityRecord[];
+  notifications?: NotificationRecord[];
 };
 
 export interface AppStore {
@@ -360,6 +546,7 @@ export interface AppStore {
     userId: string,
     payload: { slug: string; title: string; termLabel: string; courseCode: string }
   ): Promise<CourseRecord>;
+  deleteTrackingCourse(apiBaseUrl: string, courseId: string): Promise<boolean>;
   listCourseMembersForInstructor(
     apiBaseUrl: string,
     courseId: string
@@ -381,6 +568,14 @@ export interface AppStore {
   listStudentsWithYearLevel(
     apiBaseUrl: string
   ): Promise<Array<{ userId: string; username: string; githubLogin: string; yearLevel: number }>>;
+  createNotification(
+    apiBaseUrl: string,
+    userId: string,
+    notification: { type: string; title: string; body: string; link?: string }
+  ): Promise<void>;
+  listNotifications(apiBaseUrl: string, userId: string): Promise<NotificationRecord[]>;
+  countUnreadNotifications(apiBaseUrl: string, userId: string): Promise<number>;
+  markAllNotificationsRead(apiBaseUrl: string, userId: string): Promise<void>;
   createCourseInvite(
     apiBaseUrl: string,
     courseId: string,
@@ -515,7 +710,7 @@ export interface AppStore {
   getSubmissionStudentEmail(
     apiBaseUrl: string,
     submissionId: string
-  ): Promise<{ email: string; username: string } | null>;
+  ): Promise<{ userId: string; email: string; username: string } | null>;
   listTrackingReviewQueue(
     apiBaseUrl: string,
     filters?: { courseId?: string; projectId?: string; status?: SubmissionWorkflowStatus },
@@ -540,6 +735,11 @@ export interface AppStore {
     userId: string,
     courseId: string
   ): Promise<InstructorDashboardRecord>;
+  getHomeDashboard(
+    apiBaseUrl: string,
+    userId: string,
+    mode?: DashboardModeRecord
+  ): Promise<DashboardHomeRecord>;
   getTrackingSubmissionCommits(
     apiBaseUrl: string,
     submissionId: string
@@ -668,7 +868,7 @@ function calculateProjectStats(
     underReview,
     completion: milestones.length ? Math.round((approved / milestones.length) * 100) : 0,
     total: milestones.length,
-    daysRemaining: lastDue ? Math.ceil((lastDue.getTime() - Date.now()) / 86_400_000) : 0,
+    minutesRemaining: lastDue ? Math.ceil((lastDue.getTime() - Date.now()) / 60_000) : 0,
   };
 }
 
@@ -1205,7 +1405,11 @@ export class FileStore implements AppStore {
     opts?: PaginationOpts
   ): Promise<SubmissionRecord[]> {
     const data = this.read(_apiBaseUrl);
-    let results = data.submissions.filter((s) => s.userId === userId);
+    let results = data.submissions
+      .filter((s) => s.userId === userId)
+      .sort((left, right) =>
+        (right.submittedAt || right.createdAt).localeCompare(left.submittedAt || left.createdAt)
+      );
     if (opts?.offset) results = results.slice(opts.offset);
     if (opts?.limit) results = results.slice(0, opts.limit);
     return results;
@@ -1636,6 +1840,47 @@ export class FileStore implements AppStore {
       }));
   }
 
+  async createNotification(
+    apiBaseUrl: string,
+    userId: string,
+    notification: { type: string; title: string; body: string; link?: string }
+  ): Promise<void> {
+    const data = this.read(apiBaseUrl);
+    if (!data.notifications) data.notifications = [];
+    data.notifications.push({
+      id: randomUUID(),
+      userId,
+      type: notification.type,
+      title: notification.title,
+      body: notification.body,
+      link: notification.link ?? null,
+      read: false,
+      createdAt: nowIso(),
+    });
+    this.write(data);
+  }
+
+  async listNotifications(apiBaseUrl: string, userId: string): Promise<NotificationRecord[]> {
+    const data = this.read(apiBaseUrl);
+    return (data.notifications ?? [])
+      .filter((n) => n.userId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 50);
+  }
+
+  async countUnreadNotifications(apiBaseUrl: string, userId: string): Promise<number> {
+    const data = this.read(apiBaseUrl);
+    return (data.notifications ?? []).filter((n) => n.userId === userId && !n.read).length;
+  }
+
+  async markAllNotificationsRead(apiBaseUrl: string, userId: string): Promise<void> {
+    const data = this.read(apiBaseUrl);
+    for (const n of data.notifications ?? []) {
+      if (n.userId === userId) n.read = true;
+    }
+    this.write(data);
+  }
+
   async createCourseInvite(
     apiBaseUrl: string,
     courseId: string,
@@ -1744,6 +1989,16 @@ export class FileStore implements AppStore {
     data.courseMemberships.push(membership);
     this.write(data);
     return course;
+  }
+
+  async deleteTrackingCourse(apiBaseUrl: string, courseId: string): Promise<boolean> {
+    const data = this.read(apiBaseUrl);
+    const idx = data.courses.findIndex((c) => c.id === courseId);
+    if (idx === -1) return false;
+    data.courses.splice(idx, 1);
+    data.courseMemberships = data.courseMemberships.filter((m) => m.courseId !== courseId);
+    this.write(data);
+    return true;
   }
 
   async listTrackingProjects(
@@ -2126,13 +2381,37 @@ export class FileStore implements AppStore {
     if (!submission) {
       return null;
     }
-    if (payload.submissionType !== undefined) submission.submissionType = payload.submissionType;
-    if (payload.submissionValue !== undefined) submission.submissionValue = payload.submissionValue;
-    if (payload.notes !== undefined) submission.notes = payload.notes;
-    if (payload.repoUrl !== undefined) submission.repoUrl = payload.repoUrl;
-    if (payload.branch !== undefined) submission.branch = payload.branch;
-    if (payload.commitSha !== undefined) submission.commitSha = payload.commitSha;
-    submission.updatedAt = nowIso();
+    const nextSubmissionType = payload.submissionType ?? submission.submissionType;
+    const nextSubmissionValue = payload.submissionValue ?? submission.submissionValue ?? '';
+    const nextBranch = payload.branch || submission.branch || 'main';
+    const nextRepoUrl =
+      nextSubmissionType === 'github'
+        ? payload.repoUrl || nextSubmissionValue || submission.repoUrl
+        : nextSubmissionValue || submission.repoUrl;
+    const nextCommitSha =
+      payload.commitSha && payload.commitSha.trim()
+        ? payload.commitSha.trim()
+        : nextSubmissionType === 'github'
+          ? `github-pending-${randomUUID().slice(0, 8)}`
+          : `manual-${randomUUID().slice(0, 8)}`;
+    const nextStatus = nextSubmissionType === 'github' ? 'running' : 'needs_review';
+    const nextSummary =
+      nextSubmissionType === 'github'
+        ? 'GitHub submission updated. Waiting for webhook activity.'
+        : 'Submission updated and queued for instructor review.';
+    const submittedAt = nowIso();
+
+    submission.submissionType = nextSubmissionType;
+    submission.submissionValue = nextSubmissionValue;
+    submission.notes = payload.notes ?? submission.notes;
+    submission.repoUrl = nextRepoUrl;
+    submission.branch = nextBranch;
+    submission.commitSha = nextCommitSha;
+    submission.status = nextStatus;
+    submission.summary = nextSummary;
+    submission.submittedAt = submittedAt;
+    submission.localTestExitCode = null;
+    submission.updatedAt = submittedAt;
     data.activity.unshift(
       makeActivityRecord({
         actorUserId: userId,
@@ -2142,7 +2421,7 @@ export class FileStore implements AppStore {
         milestoneId: submission.milestoneId,
         submissionId,
         action: 'submission.updated',
-        summary: 'Submission details were updated.',
+        summary: 'Submission details were updated and resubmitted.',
       })
     );
     this.write(data);
@@ -2221,12 +2500,12 @@ export class FileStore implements AppStore {
   async getSubmissionStudentEmail(
     apiBaseUrl: string,
     submissionId: string
-  ): Promise<{ email: string; username: string } | null> {
+  ): Promise<{ userId: string; email: string; username: string } | null> {
     const data = this.read(apiBaseUrl);
     const submission = data.submissions.find((entry) => entry.id === submissionId);
     if (!submission) return null;
     const user = data.users.find((entry) => entry.id === submission.userId);
-    return user ? { email: user.email, username: user.username } : null;
+    return user ? { userId: user.id, email: user.email, username: user.username } : null;
   }
 
   async listTrackingReviewQueue(
@@ -2348,6 +2627,117 @@ export class FileStore implements AppStore {
       reviewQueue,
       activity,
     };
+  }
+
+  async getHomeDashboard(
+    apiBaseUrl: string,
+    userId: string,
+    mode?: DashboardModeRecord
+  ): Promise<DashboardHomeRecord> {
+    const data = this.read(apiBaseUrl);
+    const user = data.users.find((entry) => entry.id === userId);
+    if (!user) {
+      throw new Error('User not found.');
+    }
+    const memberships = await this.listCourseMemberships(apiBaseUrl, userId);
+    const studentCourseIds = new Set(
+      memberships.filter((entry) => entry.role === 'student').map((entry) => entry.courseId)
+    );
+    const instructorCourseIds = new Set(
+      memberships
+        .filter((entry) => entry.role === 'instructor' || entry.role === 'ta')
+        .map((entry) => entry.courseId)
+    );
+
+    let student: StudentHomeDashboardRecord | undefined;
+    if (user.systemRole !== 'admin' || studentCourseIds.size > 0) {
+      const studentCourses = (await this.listTrackingCourses(apiBaseUrl, userId)).filter((course) =>
+        studentCourseIds.has(course.id)
+      );
+      const snapshots = await Promise.all(
+        studentCourses.map((course) =>
+          this.getStudentTrackingDashboard(apiBaseUrl, userId, course.id)
+        )
+      );
+      const submissions = await this.listUserSubmissions(apiBaseUrl, userId);
+      const reviewsBySubmission = Object.fromEntries(
+        await Promise.all(
+          submissions.map(async (submission) => [
+            submission.id,
+            await this.getTrackingReview(apiBaseUrl, submission.id),
+          ])
+        )
+      ) as Record<string, ReviewRecord | null>;
+      student = buildStudentHomeDashboard({
+        user,
+        courses: studentCourses,
+        snapshots,
+        submissions,
+        reviewsBySubmission,
+      });
+    }
+
+    let instructor: InstructorHomeDashboardRecord | undefined;
+    if (user.systemRole === 'admin' || instructorCourseIds.size > 0) {
+      const dashboard = await this.getInstructorTrackingDashboard(apiBaseUrl, userId);
+      const managedCourseIds =
+        user.systemRole === 'admin'
+          ? new Set(dashboard.courses.map((entry) => entry.id))
+          : instructorCourseIds;
+      const courseTitleById = Object.fromEntries(
+        dashboard.courses.map((course) => [course.id, course.title])
+      ) as Record<string, string>;
+      const managedProjects = data.projects.filter(
+        (project) => project.courseId && managedCourseIds.has(project.courseId)
+      );
+      const projectTitleById = Object.fromEntries(
+        managedProjects.map((project) => [project.id, project.title])
+      ) as Record<string, string>;
+      const courseIdByProjectId = Object.fromEntries(
+        managedProjects
+          .filter((project) => project.courseId)
+          .map((project) => [project.id, project.courseId as string])
+      ) as Record<string, string>;
+      const studentNameById = Object.fromEntries(
+        data.users.map((entry) => [entry.id, entry.username])
+      ) as Record<string, string>;
+      const memberCountsByCourse = data.courseMemberships.reduce<Record<string, number>>(
+        (acc, membership) => {
+          if (!managedCourseIds.has(membership.courseId)) return acc;
+          acc[membership.courseId] = (acc[membership.courseId] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
+      const publishedProjectCountsByCourse = managedProjects.reduce<Record<string, number>>(
+        (acc, project) => {
+          if (project.courseId && project.status === 'published') {
+            acc[project.courseId] = (acc[project.courseId] || 0) + 1;
+          }
+          return acc;
+        },
+        {}
+      );
+      instructor = buildInstructorHomeDashboard({
+        courses: dashboard.courses,
+        reviewQueue: dashboard.reviewQueue,
+        activities: dashboard.activity,
+        projectTitleById,
+        courseIdByProjectId,
+        courseTitleById,
+        studentNameById,
+        memberCountsByCourse,
+        publishedProjectCountsByCourse,
+      });
+    }
+
+    return buildDashboardHomeRecord({
+      user,
+      memberships,
+      requestedMode: mode,
+      ...(student ? { student } : {}),
+      ...(instructor ? { instructor } : {}),
+    });
   }
 
   async getTrackingSubmissionCommits(

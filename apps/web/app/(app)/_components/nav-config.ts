@@ -16,6 +16,11 @@ export const appNavItems: AppNavItem[] = [
     description: 'Manage submissions, progress, and reviews.',
   },
   {
+    href: '/submissions',
+    label: 'Submissions',
+    description: 'Review, edit, and resubmit your milestone work.',
+  },
+  {
     href: '/instructor',
     label: 'Instructor',
     description: 'Manage courses, projects, and review submissions.',
@@ -30,11 +35,15 @@ export const appNavItems: AppNavItem[] = [
 export const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/dashboard': {
     title: 'Dashboard',
-    subtitle: 'Track your current course operations and GitHub-linked progress.',
+    subtitle: 'See the next work, blockers, reviews, and course actions that matter now.',
   },
   '/projects': {
     title: 'Projects',
     subtitle: 'Review milestones, submissions, and grading details.',
+  },
+  '/submissions': {
+    title: 'Submissions',
+    subtitle: 'Review, edit, and resubmit your milestone work.',
   },
   '/instructor': {
     title: 'Instructor',

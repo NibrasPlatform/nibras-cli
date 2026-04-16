@@ -1,91 +1,27 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/session';
 
-type ShellSessionUser = {
-  username: string;
-  githubLogin: string;
-  githubLinked: boolean;
-  githubAppInstalled: boolean;
-};
-
-type Notification = {
+type NotificationRecord = {
   id: string;
-  type: 'deadline' | 'overdue' | 'review' | 'github';
+  type: string;
   title: string;
   body: string;
-  color: string;
+  link?: string | null;
+  read: boolean;
+  createdAt: string;
 };
 
-type Milestone = {
-  id: string;
-  title: string;
-  dueAt: string | null;
-  status: string;
+const TYPE_COLOR: Record<string, string> = {
+  feedback: 'var(--purple)',
+  passed: 'var(--success)',
+  failed: 'var(--danger)',
+  review: 'var(--warning)',
 };
 
-type DashboardPayload = {
-  milestonesByProject?: Record<string, Milestone[]>;
-};
-
-function deriveNotifications(
-  dashboard: DashboardPayload,
-  user: ShellSessionUser | null
-): Notification[] {
-  const notifications: Notification[] = [];
-  const now = Date.now();
-  const sevenDays = 7 * 24 * 60 * 60 * 1000;
-
-  if (user && !user.githubAppInstalled) {
-    notifications.push({
-      id: 'github-install',
-      type: 'github',
-      title: 'GitHub App not installed',
-      body: 'Install the GitHub App to enable repo provisioning and submissions.',
-      color: 'var(--warning)',
-    });
-  }
-
-  const allMilestones = Object.values(dashboard.milestonesByProject ?? {}).flat();
-
-  for (const m of allMilestones) {
-    if (m.status === 'needs_review') {
-      notifications.push({
-        id: `review-${m.id}`,
-        type: 'review',
-        title: 'Needs review',
-        body: m.title,
-        color: 'var(--primary)',
-      });
-    } else if (m.dueAt) {
-      const due = new Date(m.dueAt).getTime();
-      if (due < now && m.status !== 'passed' && m.status !== 'approved') {
-        notifications.push({
-          id: `overdue-${m.id}`,
-          type: 'overdue',
-          title: 'Overdue',
-          body: `${m.title} was due ${new Date(m.dueAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
-          color: 'var(--danger)',
-        });
-      } else if (
-        due - now <= sevenDays &&
-        due > now &&
-        m.status !== 'passed' &&
-        m.status !== 'approved'
-      ) {
-        notifications.push({
-          id: `deadline-${m.id}`,
-          type: 'deadline',
-          title: 'Upcoming deadline',
-          body: `${m.title} due ${new Date(m.dueAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
-          color: 'var(--warning)',
-        });
-      }
-    }
-  }
-
-  return notifications;
+function colorForType(type: string): string {
+  return TYPE_COLOR[type] ?? 'var(--primary)';
 }
 
 function BellIcon() {
@@ -107,13 +43,104 @@ function BellIcon() {
   );
 }
 
-export default function NotificationsPanel({ user }: { user: ShellSessionUser | null }) {
+function NotificationItem({ n, onClose }: { n: NotificationRecord; onClose: () => void }) {
+  const color = colorForType(n.type);
+  const inner = (
+    <div
+      style={{
+        padding: '11px 16px',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        gap: 10,
+        alignItems: 'flex-start',
+        background: n.read ? 'transparent' : 'rgba(167,139,250,0.04)',
+        transition: 'background 0.12s',
+      }}
+    >
+      <span
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: '50%',
+          background: color,
+          marginTop: 6,
+          flexShrink: 0,
+          opacity: n.read ? 0.35 : 1,
+        }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            marginBottom: 3,
+            opacity: n.read ? 0.55 : 1,
+          }}
+        >
+          {n.title}
+        </div>
+        <div
+          style={{
+            fontSize: 12.5,
+            color: 'var(--text-muted)',
+            lineHeight: 1.45,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {n.body}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (n.link) {
+    return (
+      <a
+        href={n.link}
+        style={{ textDecoration: 'none', display: 'block' }}
+        onClick={onClose}
+        target="_blank"
+        rel="noreferrer"
+      >
+        {inner}
+      </a>
+    );
+  }
+  return inner;
+}
+
+export default function NotificationsPanel() {
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  // Close on click-outside
+  // ── Poll unread count every 60 s ─────────────────────────────────────────
+  const fetchCount = useCallback(async () => {
+    try {
+      const res = await apiFetch('/v1/notifications/count', { auth: true });
+      if (res.ok) {
+        const data = (await res.json()) as { count: number };
+        setUnreadCount(data.count);
+      }
+    } catch {
+      // silently ignore — badge stays at last known value
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchCount();
+    const id = setInterval(() => void fetchCount(), 60_000);
+    return () => clearInterval(id);
+  }, [fetchCount]);
+
+  // ── Close on outside click ────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
     function handler(e: MouseEvent) {
@@ -125,82 +152,129 @@ export default function NotificationsPanel({ user }: { user: ShellSessionUser | 
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Fetch notifications on first open
+  // ── Fetch list + mark all read when panel opens ───────────────────────────
   useEffect(() => {
-    if (!open || loaded) return;
+    if (!open) return;
 
     void (async () => {
       try {
-        const res = await apiFetch('/v1/tracking/dashboard/student', { auth: true });
-        if (!res.ok) return;
-        const payload = (await res.json()) as DashboardPayload;
-        setNotifications(deriveNotifications(payload, user));
+        const res = await apiFetch('/v1/notifications', { auth: true });
+        if (res.ok) {
+          const data = (await res.json()) as { notifications: NotificationRecord[] };
+          setNotifications(data.notifications);
+        }
       } catch {
-        // silently fail
+        // ignore
       } finally {
         setLoaded(true);
       }
-    })();
-  }, [open, loaded, user]);
 
-  const count = notifications.length;
+      // Mark all as read (fire-and-forget)
+      try {
+        await apiFetch('/v1/notifications/read-all', { method: 'POST', auth: true });
+        setUnreadCount(0);
+      } catch {
+        // ignore
+      }
+    })();
+  }, [open]);
+
+  function handleToggle() {
+    setOpen((v) => {
+      if (!v) setLoaded(false); // re-fetch fresh on every open
+      return !v;
+    });
+  }
 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      {/* Bell button */}
+      {/* ── Bell button ── */}
       <button
-        className="iconButton"
         aria-label="Notifications"
         title="Notifications"
-        onClick={() => setOpen((v) => !v)}
-        style={{ position: 'relative' }}
+        onClick={handleToggle}
+        style={{
+          position: 'relative',
+          display: 'grid',
+          placeItems: 'center',
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          border: '1px solid transparent',
+          background: open ? 'rgba(255,255,255,0.07)' : 'transparent',
+          color: open ? 'rgba(250,250,250,0.9)' : 'rgba(161,161,170,0.7)',
+          cursor: 'pointer',
+          transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+        }}
+        onMouseEnter={(e) => {
+          if (!open) {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+            e.currentTarget.style.color = 'rgba(250,250,250,0.85)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!open) {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = 'rgba(161,161,170,0.7)';
+          }
+        }}
       >
         <BellIcon />
-        {count > 0 && (
+        {unreadCount > 0 && (
           <span
             style={{
               position: 'absolute',
-              top: 6,
-              right: 6,
-              width: 8,
-              height: 8,
+              top: 5,
+              right: 5,
+              width: 7,
+              height: 7,
               borderRadius: '50%',
               background: 'var(--danger)',
-              border: '2px solid var(--sidebar-bg)',
+              border: '1.5px solid rgba(10,10,10,0.9)',
               display: 'block',
             }}
           />
         )}
       </button>
 
-      {/* Dropdown panel */}
+      {/* ── Dropdown panel ── */}
       {open && (
         <div
           style={{
             position: 'absolute',
             top: 'calc(100% + 8px)',
             right: 0,
-            width: 320,
-            background: 'var(--surface)',
-            border: '1px solid var(--border-strong)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-lg)',
-            zIndex: 100,
+            width: 340,
+            background: '#111111',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.4)',
+            zIndex: 200,
             overflow: 'hidden',
+            animation: 'dropIn 0.14s ease',
           }}
         >
+          <style>{`
+            @keyframes dropIn {
+              from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+              to   { opacity: 1; transform: translateY(0)    scale(1); }
+            }
+          `}</style>
+
           {/* Header */}
           <div
             style={{
-              padding: '12px 16px',
-              borderBottom: '1px solid var(--border)',
+              padding: '13px 16px 11px',
+              borderBottom: '1px solid rgba(255,255,255,0.07)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
             }}
           >
-            <strong style={{ fontSize: 13, color: 'var(--text)' }}>Notifications</strong>
-            {count > 0 && (
+            <strong style={{ fontSize: 13, fontWeight: 700, color: '#fafafa' }}>
+              Notifications
+            </strong>
+            {notifications.filter((n) => !n.read).length > 0 && (
               <span
                 style={{
                   fontSize: 11,
@@ -211,29 +285,29 @@ export default function NotificationsPanel({ user }: { user: ShellSessionUser | 
                   padding: '2px 7px',
                 }}
               >
-                {count}
+                {notifications.filter((n) => !n.read).length} new
               </span>
             )}
           </div>
 
-          {/* Items */}
-          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+          {/* List */}
+          <div style={{ maxHeight: 360, overflowY: 'auto' }}>
             {!loaded ? (
               <div
                 style={{
-                  padding: '20px 16px',
-                  color: 'var(--text-soft)',
+                  padding: '24px 16px',
+                  color: 'rgba(161,161,170,0.5)',
                   fontSize: 13,
                   textAlign: 'center',
                 }}
               >
                 Loading…
               </div>
-            ) : count === 0 ? (
+            ) : notifications.length === 0 ? (
               <div
                 style={{
-                  padding: '28px 16px',
-                  color: 'var(--text-soft)',
+                  padding: '32px 16px',
+                  color: 'rgba(161,161,170,0.5)',
                   fontSize: 13,
                   textAlign: 'center',
                 }}
@@ -242,53 +316,7 @@ export default function NotificationsPanel({ user }: { user: ShellSessionUser | 
               </div>
             ) : (
               notifications.map((n) => (
-                <div
-                  key={n.id}
-                  style={{
-                    padding: '11px 16px',
-                    borderBottom: '1px solid var(--border)',
-                    display: 'flex',
-                    gap: 10,
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: n.color,
-                      marginTop: 5,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: n.color,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.06em',
-                        marginBottom: 2,
-                      }}
-                    >
-                      {n.title}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: 'var(--text-muted)',
-                        lineHeight: 1.4,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {n.body}
-                    </div>
-                  </div>
-                </div>
+                <NotificationItem key={n.id} n={n} onClose={() => setOpen(false)} />
               ))
             )}
           </div>
