@@ -1,8 +1,8 @@
 .page {
   position: relative;
   min-height: 100vh;
-  padding: 28px 32px 72px;
-  background: #080909;
+  padding: 0 32px 80px;
+  background: #0b0b0c;
   overflow: hidden;
 }
 
@@ -10,21 +10,39 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 18% 12%, rgba(120, 255, 184, 0.08), transparent 24%),
-    radial-gradient(circle at 82% 14%, rgba(93, 173, 255, 0.08), transparent 22%),
-    radial-gradient(circle at 55% 55%, rgba(255, 255, 255, 0.03), transparent 30%);
+    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.04), transparent 28%),
+    radial-gradient(circle at 72% 16%, rgba(255, 255, 255, 0.04), transparent 26%),
+    radial-gradient(circle at 62% 42%, rgba(255, 255, 255, 0.03), transparent 34%);
   pointer-events: none;
 }
 
 .gridOverlay {
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 38px 38px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent 88%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 90%),
+    linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(100% - 1px),
+      rgba(255, 255, 255, 0.04) calc(100% - 1px)
+    );
+  opacity: 0.25;
   pointer-events: none;
+}
+
+.starField {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.star {
+  position: absolute;
+  display: block;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.32);
 }
 
 .authBanner,
@@ -39,7 +57,7 @@
 }
 
 .authBanner {
-  margin-bottom: 16px;
+  margin: 16px auto 0;
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid rgba(245, 158, 11, 0.22);
@@ -53,7 +71,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 8px 0 24px;
+  min-height: 48px;
+  padding: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .brand {
@@ -85,8 +105,8 @@
 }
 
 .navLinks a {
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
   transition: color 0.15s ease;
 }
 
@@ -100,10 +120,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 46px;
+  min-height: 42px;
   padding: 0 18px;
-  border-radius: 14px;
-  font-size: 14px;
+  border-radius: 12px;
+  font-size: 13px;
   font-weight: 700;
   transition:
     transform 0.15s ease,
@@ -114,9 +134,9 @@
 
 .navAction,
 .primaryButton {
-  background: #f6f7f8;
-  color: #0b0c0d;
-  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.05);
+  color: #f5f5f5;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .secondaryButton {
@@ -133,15 +153,32 @@
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 520px);
-  gap: 32px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(460px, 560px);
+  gap: 56px;
   align-items: center;
-  padding: 24px 0 8px;
+  min-height: calc(100vh - 180px);
+  padding: 42px 0 28px;
 }
 
 .heroCopy {
   display: grid;
-  gap: 18px;
+  gap: 22px;
+  max-width: 560px;
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 .eyebrow {
@@ -157,9 +194,9 @@
 
 .hero h1 {
   margin: 0;
-  max-width: 11ch;
-  font-size: clamp(3rem, 6vw, 5.6rem);
-  line-height: 0.93;
+  max-width: 10ch;
+  font-size: clamp(3.4rem, 6.2vw, 5.8rem);
+  line-height: 0.9;
   letter-spacing: -0.06em;
   color: #f7f8f8;
 }
@@ -170,10 +207,10 @@
 
 .heroText {
   margin: 0;
-  max-width: 60ch;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 18px;
-  line-height: 1.72;
+  max-width: 48ch;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 16px;
+  line-height: 1.7;
 }
 
 .heroActions {
@@ -182,23 +219,41 @@
   gap: 12px;
 }
 
-.signalRow {
+.trustRow {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  align-items: center;
+  gap: 14px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
-.signalRow span {
+.trustRow p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.avatarStack {
+  display: flex;
+  align-items: center;
+}
+
+.avatarStack span {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
-  padding: 0 12px;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: -6px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 12px;
-  font-weight: 600;
+  background: #171717;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.avatarStack span:first-child {
+  margin-left: 0;
 }
 
 .errorBox {
@@ -213,43 +268,78 @@
 
 .heroVisual {
   display: grid;
+  justify-items: end;
 }
 
 .blueprintCard {
-  border-radius: 28px;
+  width: min(100%, 580px);
+  border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.32);
+  background: #101011;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 32px 90px rgba(0, 0, 0, 0.42);
   overflow: hidden;
+}
+
+.browserBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 18px 14px;
 }
 
 .windowDots {
   display: flex;
   gap: 8px;
-  padding: 18px 20px 14px;
+}
+
+.windowDots span:nth-child(1) {
+  background: #ff6c64;
+}
+
+.windowDots span:nth-child(2) {
+  background: #ffd34d;
+}
+
+.windowDots span:nth-child(3) {
+  background: #61d95f;
 }
 
 .windowDots span {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
+}
+
+.browserAddress {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 11px;
 }
 
 .blueprintShell {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  min-height: 560px;
+  grid-template-columns: 150px minmax(0, 1fr) 132px;
+  min-height: 340px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .leftRail {
   display: grid;
   align-content: start;
-  gap: 20px;
-  padding: 22px 18px;
+  gap: 18px;
+  padding: 18px 14px;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.015);
 }
 
 .railSection {
@@ -274,6 +364,11 @@
   line-height: 1.45;
 }
 
+.railSection small {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+}
+
 .railList {
   display: grid;
   gap: 8px;
@@ -282,11 +377,11 @@
 .railList span {
   display: flex;
   align-items: center;
-  min-height: 36px;
-  padding: 0 12px;
-  border-radius: 12px;
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 13px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
 }
 
 .activeRailItem {
@@ -298,7 +393,8 @@
   display: grid;
   align-content: start;
   gap: 18px;
-  padding: 22px;
+  padding: 16px 16px 18px;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .workspaceHeader {
@@ -310,26 +406,47 @@
 
 .workspaceHeader h2 {
   margin: 8px 0 0;
-  font-size: 1.55rem;
+  font-size: 1.35rem;
   letter-spacing: -0.03em;
 }
 
 .statusChip {
   display: inline-flex;
   align-items: center;
-  min-height: 30px;
+  min-height: 26px;
   padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.72);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.5);
   font-size: 11px;
   font-weight: 700;
 }
 
-.panelGrid {
+.skeletonRows {
   display: grid;
-  gap: 12px;
+  gap: 8px;
+}
+
+.skeletonRows span {
+  display: block;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.skeletonRows span:nth-child(1) {
+  width: 78%;
+}
+
+.skeletonRows span:nth-child(2) {
+  width: 63%;
+}
+
+.skeletonRows span:nth-child(3) {
+  width: 86%;
+}
+
+.skeletonRows span:nth-child(4) {
+  width: 49%;
 }
 
 .infoPanel,
@@ -345,8 +462,8 @@
 .infoPanel {
   display: grid;
   gap: 6px;
-  padding: 16px;
-  border-radius: 18px;
+  padding: 14px;
+  border-radius: 14px;
 }
 
 .infoPanel strong {
@@ -363,50 +480,47 @@
 .docPanel {
   display: grid;
   gap: 14px;
-  padding: 16px;
-  border-radius: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
-.docHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.contextRail {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px 12px;
+}
+
+.contextLabel {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.44);
+}
+
+.contextList {
+  display: grid;
   gap: 12px;
 }
 
-.docHeader span {
-  color: rgba(255, 255, 255, 0.52);
+.contextList span {
+  color: rgba(255, 255, 255, 0.6);
   font-size: 12px;
 }
 
-.docRows {
-  display: grid;
-  gap: 10px;
-}
-
-.docRows div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.docRows span {
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 13px;
-}
-
 .section {
-  padding-top: 92px;
+  padding-top: 82px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .sectionIntro {
   display: grid;
   gap: 12px;
   max-width: 66ch;
+  margin: 0 auto;
+  text-align: center;
 }
 
 .sectionIntro h2,
@@ -431,21 +545,26 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  margin-top: 22px;
+  margin-top: 28px;
 }
 
 .stepCard {
   display: grid;
-  gap: 12px;
-  padding: 22px;
+  gap: 14px;
+  padding: 26px 24px;
   border-radius: 22px;
+  position: relative;
+  min-height: 220px;
 }
 
 .stepNumber {
-  font-size: 13px;
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  font-size: 24px;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  color: #fff;
+  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, 0.12);
 }
 
 .stepCard h3 {
@@ -462,7 +581,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-  margin-top: 22px;
+  margin-top: 28px;
 }
 
 .compareCard {
@@ -491,7 +610,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-  margin-top: 22px;
+  margin-top: 28px;
 }
 
 .featureCard {
@@ -519,6 +638,7 @@
 @media (max-width: 1080px) {
   .hero {
     grid-template-columns: 1fr;
+    min-height: auto;
   }
 
   .hero h1 {
@@ -534,6 +654,11 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
+  .workspace {
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
   .stepsGrid,
   .compareGrid,
   .featuresGrid {
@@ -543,7 +668,7 @@
 
 @media (max-width: 768px) {
   .page {
-    padding: 20px 16px 48px;
+    padding: 0 16px 48px;
   }
 
   .nav,
@@ -563,6 +688,11 @@
   .workspace {
     padding: 18px;
   }
+
+  .trustRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 560px) {
@@ -574,13 +704,7 @@
     font-size: 16px;
   }
 
-  .workspaceHeader,
-  .docHeader {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .docRows div {
+  .workspaceHeader {
     flex-direction: column;
     align-items: flex-start;
   }
