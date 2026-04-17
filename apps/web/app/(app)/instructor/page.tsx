@@ -130,7 +130,9 @@ export default function InstructorPage() {
       <div className={styles.pageHeader}>
         <div>
           <h1>Instructor</h1>
-          <p className={styles.subtitle}>Manage your courses and review student submissions.</p>
+          <p className={styles.subtitle}>
+            Manage courses, reusable templates, team formation, programs, and review workflows.
+          </p>
         </div>
         <div className={styles.headerActions}>
           <Link href="/instructor/onboarding" className={styles.btnSecondary}>
@@ -157,6 +159,77 @@ export default function InstructorPage() {
           <Link href="/instructor/courses/new" className={styles.btnPrimary}>
             + New Course
           </Link>
+        </div>
+      </div>
+
+      <div className={styles.summaryGrid}>
+        <article className={styles.summaryCard}>
+          <span className={styles.summaryLabel}>Courses</span>
+          <strong>{allCourses.length}</strong>
+          <p>Course workspaces currently managed in the system.</p>
+        </article>
+        <article className={styles.summaryCard}>
+          <span className={styles.summaryLabel}>Templates</span>
+          <strong>{allCourses.length > 0 ? 'Ready' : 'Pending'}</strong>
+          <p>Reusable project blueprints are available from each course workspace.</p>
+        </article>
+        <article className={styles.summaryCard}>
+          <span className={styles.summaryLabel}>Programs</span>
+          <strong>Builder</strong>
+          <p>Academic planning, requirements, tracks, and petitions are managed here too.</p>
+        </article>
+      </div>
+
+      <div className={styles.featureWorkbench}>
+        <div className={styles.workbenchCard}>
+          <span className={styles.summaryLabel}>Templates</span>
+          <h2>Create repeatable project blueprints.</h2>
+          <p className={styles.muted}>
+            Use templates to define milestones, team size, and role slots once, then launch new
+            projects from the same structure.
+          </p>
+          <div className={styles.workbenchActions}>
+            {allCourses[0] ? (
+              <Link
+                href={`/instructor/courses/${allCourses[0].id}/templates`}
+                className={styles.btnPrimary}
+              >
+                Open Templates
+              </Link>
+            ) : (
+              <Link href="/instructor/courses/new" className={styles.btnPrimary}>
+                Create Course First
+              </Link>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.workbenchCard}>
+          <span className={styles.summaryLabel}>Team Formation</span>
+          <h2>Collect applications and lock team rosters.</h2>
+          <p className={styles.muted}>
+            Team project coordination now runs inside the same instructor workspace, from role
+            preference intake to suggested and locked teams.
+          </p>
+          <div className={styles.workbenchActions}>
+            <Link href="/projects" className={styles.btnSecondary}>
+              View Student Side
+            </Link>
+          </div>
+        </div>
+
+        <div className={styles.workbenchCard}>
+          <span className={styles.summaryLabel}>Programs</span>
+          <h2>Build the academic planning layer.</h2>
+          <p className={styles.muted}>
+            Manage program versions, requirement groups, tracks, and petition review in the same
+            system used for course delivery.
+          </p>
+          <div className={styles.workbenchActions}>
+            <Link href="/instructor/programs" className={styles.btnPrimary}>
+              Open Programs
+            </Link>
+          </div>
         </div>
       </div>
 

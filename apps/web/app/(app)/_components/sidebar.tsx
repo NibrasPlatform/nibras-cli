@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import NibrasLogo from '@/app/_components/nibras-logo';
 import { getInitials } from '../../lib/utils';
 import { prefs } from '../../lib/prefs';
-import { appNavItems } from './nav-config';
+import { appNavItems, canAccessNavItem, isNavItemActive } from './nav-config';
 
 type ShellSessionUser = {
   username: string;
@@ -155,19 +155,9 @@ export default function Sidebar({
       {/* Primary nav */}
       <nav className="sidebarNav" aria-label="Primary">
         {appNavItems
-          .filter((item) => {
-            if (item.label === 'Admin') return user?.systemRole === 'admin';
-            if (item.label === 'Instructor') {
-              return (
-                user?.systemRole === 'admin' ||
-                (user?.memberships?.some((m) => m.role === 'instructor' || m.role === 'ta') ??
-                  false)
-              );
-            }
-            return true;
-          })
+          .filter((item) => canAccessNavItem(item, user))
           .map((item) => {
-            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+            const isActive = isNavItemActive(item, pathname);
             return (
               <Link
                 key={item.href}

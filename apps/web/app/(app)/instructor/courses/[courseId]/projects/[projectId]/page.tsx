@@ -125,6 +125,12 @@ export default function ProjectDetailPage({
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <Link
+            href={`/instructor/courses/${courseId}/projects/${projectId}/teams`}
+            className={styles.btnSecondary}
+          >
+            Team Formation
+          </Link>
+          <Link
             href={`/instructor/courses/${courseId}/projects/${projectId}/edit`}
             className={styles.btnSecondary}
           >

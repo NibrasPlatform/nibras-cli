@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { getInitials } from '../../lib/utils';
 import NibrasLogo from '@/app/_components/nibras-logo';
 import NotificationsPanel from './notifications-panel';
+import { appNavItems, canAccessNavItem, isNavItemActive } from './nav-config';
 
 type ShellSessionUser = {
   username: string;
@@ -15,14 +16,8 @@ type ShellSessionUser = {
   githubLinked: boolean;
   githubAppInstalled: boolean;
   systemRole?: string;
+  memberships?: Array<{ courseId: string; role: string; level: number }>;
 };
-
-const NAV_LINKS = [
-  { label: 'Dashboard', href: '/dashboard', adminOnly: false },
-  { label: 'Courses', href: '/instructor', adminOnly: true },
-  { label: 'Projects', href: '/projects', adminOnly: false },
-  { label: 'Settings', href: '/settings', adminOnly: false },
-];
 
 /* ── Dropdown icons ──────────────────────────────────────────────────────── */
 
@@ -419,7 +414,6 @@ export default function TopHeader({
 }) {
   const pathname = usePathname();
   const identity = user?.username || user?.githubLogin || 'Nibras';
-  const isAdmin = user?.systemRole === 'admin';
 
   const githubAvatarUrl =
     user?.githubLogin && user.githubLinked
@@ -474,12 +468,13 @@ export default function TopHeader({
           </div>
 
           <nav style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {NAV_LINKS.filter((link) => !link.adminOnly || isAdmin).map((link) => {
-              const isActive = pathname === link.href || pathname?.startsWith(link.href + '/');
+            {appNavItems.filter((item) => canAccessNavItem(item, user)).map((item) => {
+              const isActive = isNavItemActive(item, pathname);
               return (
                 <Link
-                  key={link.href}
-                  href={link.href}
+                  key={item.href}
+                  href={item.href}
+                  title={item.description}
                   style={{
                     padding: '5px 11px',
                     borderRadius: 7,
@@ -492,10 +487,26 @@ export default function TopHeader({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {link.label}
+                  {item.label}
                 </Link>
               );
             })}
+            <Link
+              href="/settings"
+              style={{
+                padding: '5px 11px',
+                borderRadius: 7,
+                fontSize: 13,
+                fontWeight: pathname === '/settings' ? 600 : 500,
+                color: pathname === '/settings' ? '#fafafa' : 'rgba(161,161,170,0.7)',
+                textDecoration: 'none',
+                background: pathname === '/settings' ? 'rgba(255,255,255,0.07)' : 'transparent',
+                transition: 'background 0.15s, color 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Settings
+            </Link>
           </nav>
         </div>
 
