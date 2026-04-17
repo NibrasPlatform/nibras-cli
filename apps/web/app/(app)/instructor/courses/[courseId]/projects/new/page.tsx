@@ -19,9 +19,9 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
   const [templateId, setTemplateId] = useState('');
   const [rubric, setRubric] = useState<RubricRow[]>([{ criterion: '', maxScore: 10 }]);
   const [resources, setResources] = useState<ResourceRow[]>([]);
-  const { data: templates } = useFetch<Array<{ id: string; title: string; teamSize: number | null }>>(
-    `/v1/tracking/courses/${courseId}/templates`
-  );
+  const { data: templates } = useFetch<
+    Array<{ id: string; title: string; teamSize: number | null }>
+  >(`/v1/tracking/courses/${courseId}/templates`);
   const { submitting, error, submit } = useFormSubmit({
     url: '/v1/tracking/projects',
     onSuccess: () => router.push(`/instructor/courses/${courseId}`),
@@ -118,8 +118,8 @@ export default function NewProjectPage({ params }: { params: Promise<{ courseId:
               ))}
             </select>
             <p className={styles.muted}>
-              Templates carry reusable milestones, rubric structure, team size, and role
-              definitions into new project launches.
+              Templates carry reusable milestones, rubric structure, team size, and role definitions
+              into new project launches.
             </p>
           </div>
         </div>

@@ -66,9 +66,11 @@ export function canAccessNavItem(item: AppNavItem, user: ShellSessionUser | null
 export function isNavItemActive(item: AppNavItem, pathname: string | null): boolean {
   if (!pathname) return false;
   if (pathname === item.href || pathname.startsWith(`${item.href}/`)) return true;
-  return item.matchPrefixes?.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  ) ?? false;
+  return (
+    item.matchPrefixes?.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    ) ?? false
+  );
 }
 
 export const pageTitles: Record<string, { title: string; subtitle: string }> = {

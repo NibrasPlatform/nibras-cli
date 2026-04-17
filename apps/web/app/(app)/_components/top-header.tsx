@@ -468,29 +468,31 @@ export default function TopHeader({
           </div>
 
           <nav style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {appNavItems.filter((item) => canAccessNavItem(item, user)).map((item) => {
-              const isActive = isNavItemActive(item, pathname);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={item.description}
-                  style={{
-                    padding: '5px 11px',
-                    borderRadius: 7,
-                    fontSize: 13,
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? '#fafafa' : 'rgba(161,161,170,0.7)',
-                    textDecoration: 'none',
-                    background: isActive ? 'rgba(255,255,255,0.07)' : 'transparent',
-                    transition: 'background 0.15s, color 0.15s',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+            {appNavItems
+              .filter((item) => canAccessNavItem(item, user))
+              .map((item) => {
+                const isActive = isNavItemActive(item, pathname);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    title={item.description}
+                    style={{
+                      padding: '5px 11px',
+                      borderRadius: 7,
+                      fontSize: 13,
+                      fontWeight: isActive ? 600 : 500,
+                      color: isActive ? '#fafafa' : 'rgba(161,161,170,0.7)',
+                      textDecoration: 'none',
+                      background: isActive ? 'rgba(255,255,255,0.07)' : 'transparent',
+                      transition: 'background 0.15s, color 0.15s',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             <Link
               href="/settings"
               style={{

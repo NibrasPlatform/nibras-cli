@@ -443,7 +443,9 @@ export default function HomePage() {
       <section id="features" className={styles.section}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionEyebrow}>Features</span>
-          <h2 className={styles.sectionTitle}>Everything you need to run a modern academic system</h2>
+          <h2 className={styles.sectionTitle}>
+            Everything you need to run a modern academic system
+          </h2>
           <p className={styles.sectionSub}>
             From templates to team formation to program planning, Nibras turns scattered tools and
             manual work into one clean operating layer.
