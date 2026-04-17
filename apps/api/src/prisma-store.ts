@@ -1,15 +1,27 @@
 import { randomUUID } from 'node:crypto';
 import {
+  AcademicTerm,
+  ApprovalStage as PrismaApprovalStage,
+  ApprovalStatus as PrismaApprovalStatus,
   AssetVisibility,
   CourseRole,
   DeliveryMode,
+  PetitionStatus as PrismaPetitionStatus,
+  PetitionType as PrismaPetitionType,
   ProjectRoleApplicationStatus as PrismaProjectRoleApplicationStatus,
   ProjectTemplateStatus as PrismaProjectTemplateStatus,
   Prisma,
   PrismaClient,
+  ProgramStatus as PrismaProgramStatus,
   ProjectStatus as PrismaProjectStatus,
+  PlannedCourseSourceType as PrismaPlannedCourseSourceType,
+  RequirementDecisionSourceType as PrismaRequirementDecisionSourceType,
+  RequirementGroupCategory as PrismaRequirementGroupCategory,
+  RequirementRuleType as PrismaRequirementRuleType,
   RepoVisibility,
   ReviewStatus,
+  StudentProgramStatus as PrismaStudentProgramStatus,
+  StudentRequirementDecisionStatus as PrismaStudentRequirementDecisionStatus,
   SubmissionStatus,
   SystemRole,
   TeamFormationStatus as PrismaTeamFormationStatus,
@@ -36,8 +48,14 @@ import {
   buildStudentHomeDashboard,
 } from './features/tracking/home-dashboard';
 import {
+  buildDefaultProgramSeed,
+  buildProgramSheet,
+  buildStudentProgramPlan,
+} from './features/programs/domain';
+import {
   ActivityRecord,
   AppStore,
+  CatalogCourseRecord,
   CourseMembershipRecord,
   CourseRecord,
   DashboardHomeRecord,
@@ -51,6 +69,15 @@ import {
   MilestoneRecord,
   NotificationRecord,
   PaginationOpts,
+  PetitionRecord,
+  PlannedCourseSourceType,
+  ProgramApprovalRecord,
+  ProgramRecord,
+  ProgramSheetSnapshotRecord,
+  ProgramSheetViewRecord,
+  ProgramStatus,
+  ProgramVersionDetailRecord,
+  ProgramVersionRecord,
   ProjectRoleApplicationRecord,
   ProjectRolePreferenceRecord,
   ProjectRecord,
@@ -60,14 +87,21 @@ import {
   ProjectTemplateRecord,
   ProjectTemplateRoleRecord,
   ProjectTemplateStatus,
+  RequirementGroupCategory,
+  RequirementGroupRecord,
+  RequirementRuleType,
   RepoRecord,
   ReviewRecord,
   ReviewStatus as StoreReviewStatus,
   SessionRecord,
+  StudentProgramPlanRecord,
+  StudentProgramRecord,
+  StudentRequirementDecisionRecord,
   StudentDashboardRecord,
   StudentHomeDashboardRecord,
   SubmissionRecord,
   SubmissionType,
+  TrackRecord,
   TeamFormationRunRecord,
   TeamMemberRecord,
   TeamProjectRepoRecord,
@@ -473,6 +507,308 @@ function toMembershipRecord(membership: {
     level: membership.level,
     createdAt: membership.createdAt.toISOString(),
     updatedAt: membership.updatedAt.toISOString(),
+  };
+}
+
+function toProgramRecord(program: {
+  id: string;
+  slug: string;
+  title: string;
+  code: string;
+  academicYear: string;
+  totalUnitRequirement: number;
+  status: PrismaProgramStatus;
+  activeVersionId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): ProgramRecord {
+  return {
+    id: program.id,
+    slug: program.slug,
+    title: program.title,
+    code: program.code,
+    academicYear: program.academicYear,
+    totalUnitRequirement: program.totalUnitRequirement,
+    status: program.status as ProgramStatus,
+    activeVersionId: program.activeVersionId,
+    createdAt: program.createdAt.toISOString(),
+    updatedAt: program.updatedAt.toISOString(),
+  };
+}
+
+function toProgramVersionRecord(version: {
+  id: string;
+  programId: string;
+  versionLabel: string;
+  effectiveFrom: Date | null;
+  effectiveTo: Date | null;
+  isActive: boolean;
+  policyText: string;
+  trackSelectionMinYear: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): ProgramVersionRecord {
+  return {
+    id: version.id,
+    programId: version.programId,
+    versionLabel: version.versionLabel,
+    effectiveFrom: version.effectiveFrom?.toISOString() || null,
+    effectiveTo: version.effectiveTo?.toISOString() || null,
+    isActive: version.isActive,
+    policyText: version.policyText,
+    trackSelectionMinYear: version.trackSelectionMinYear,
+    createdAt: version.createdAt.toISOString(),
+    updatedAt: version.updatedAt.toISOString(),
+  };
+}
+
+function toTrackRecord(track: {
+  id: string;
+  programVersionId: string;
+  slug: string;
+  title: string;
+  description: string;
+  selectionYearStart: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): TrackRecord {
+  return {
+    id: track.id,
+    programVersionId: track.programVersionId,
+    slug: track.slug,
+    title: track.title,
+    description: track.description,
+    selectionYearStart: track.selectionYearStart,
+    createdAt: track.createdAt.toISOString(),
+    updatedAt: track.updatedAt.toISOString(),
+  };
+}
+
+function toCatalogCourseRecord(course: {
+  id: string;
+  programId: string;
+  subjectCode: string;
+  catalogNumber: string;
+  title: string;
+  defaultUnits: number;
+  department: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): CatalogCourseRecord {
+  return {
+    id: course.id,
+    programId: course.programId,
+    subjectCode: course.subjectCode,
+    catalogNumber: course.catalogNumber,
+    title: course.title,
+    defaultUnits: course.defaultUnits,
+    department: course.department,
+    createdAt: course.createdAt.toISOString(),
+    updatedAt: course.updatedAt.toISOString(),
+  };
+}
+
+function toRequirementGroupRecord(group: {
+  id: string;
+  programVersionId: string;
+  trackId: string | null;
+  title: string;
+  category: PrismaRequirementGroupCategory;
+  minUnits: number;
+  minCourses: number;
+  notes: string;
+  sortOrder: number;
+  noDoubleCount: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  rules: Array<{
+    id: string;
+    requirementGroupId: string;
+    ruleType: PrismaRequirementRuleType;
+    pickCount: number | null;
+    note: string;
+    sortOrder: number;
+    courses: Array<{
+      id: string;
+      requirementRuleId: string;
+      catalogCourseId: string;
+    }>;
+  }>;
+}): RequirementGroupRecord {
+  return {
+    id: group.id,
+    programVersionId: group.programVersionId,
+    trackId: group.trackId,
+    title: group.title,
+    category: group.category as RequirementGroupCategory,
+    minUnits: group.minUnits,
+    minCourses: group.minCourses,
+    notes: group.notes,
+    sortOrder: group.sortOrder,
+    noDoubleCount: group.noDoubleCount,
+    rules: group.rules.map((rule) => ({
+      id: rule.id,
+      requirementGroupId: rule.requirementGroupId,
+      ruleType: rule.ruleType as RequirementRuleType,
+      pickCount: rule.pickCount,
+      note: rule.note,
+      sortOrder: rule.sortOrder,
+      courses: rule.courses.map((course) => ({
+        id: course.id,
+        requirementRuleId: course.requirementRuleId,
+        catalogCourseId: course.catalogCourseId,
+      })),
+    })),
+    createdAt: group.createdAt.toISOString(),
+    updatedAt: group.updatedAt.toISOString(),
+  };
+}
+
+function toStudentProgramRecord(studentProgram: {
+  id: string;
+  userId: string;
+  programVersionId: string;
+  selectedTrackId: string | null;
+  status: PrismaStudentProgramStatus;
+  isLocked: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): StudentProgramRecord {
+  return {
+    id: studentProgram.id,
+    userId: studentProgram.userId,
+    programVersionId: studentProgram.programVersionId,
+    selectedTrackId: studentProgram.selectedTrackId,
+    status: studentProgram.status as StudentProgramRecord['status'],
+    isLocked: studentProgram.isLocked,
+    createdAt: studentProgram.createdAt.toISOString(),
+    updatedAt: studentProgram.updatedAt.toISOString(),
+  };
+}
+
+function toStudentPlannedCourseRecord(plannedCourse: {
+  id: string;
+  studentProgramId: string;
+  catalogCourseId: string;
+  plannedYear: number;
+  plannedTerm: AcademicTerm;
+  sourceType: PrismaPlannedCourseSourceType;
+  note: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return {
+    id: plannedCourse.id,
+    studentProgramId: plannedCourse.studentProgramId,
+    catalogCourseId: plannedCourse.catalogCourseId,
+    plannedYear: plannedCourse.plannedYear,
+    plannedTerm: plannedCourse.plannedTerm as StudentPlannedCourseRecord['plannedTerm'],
+    sourceType: plannedCourse.sourceType as PlannedCourseSourceType,
+    note: plannedCourse.note,
+    createdAt: plannedCourse.createdAt.toISOString(),
+    updatedAt: plannedCourse.updatedAt.toISOString(),
+  };
+}
+
+function toStudentRequirementDecisionRecord(decision: {
+  id: string;
+  studentProgramId: string;
+  requirementGroupId: string;
+  status: PrismaStudentRequirementDecisionStatus;
+  sourceType: PrismaRequirementDecisionSourceType | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): StudentRequirementDecisionRecord {
+  return {
+    id: decision.id,
+    studentProgramId: decision.studentProgramId,
+    requirementGroupId: decision.requirementGroupId,
+    status: decision.status as StudentRequirementDecisionRecord['status'],
+    sourceType: decision.sourceType as StudentRequirementDecisionRecord['sourceType'],
+    notes: decision.notes,
+    createdAt: decision.createdAt.toISOString(),
+    updatedAt: decision.updatedAt.toISOString(),
+  };
+}
+
+function toPetitionRecord(petition: {
+  id: string;
+  studentProgramId: string;
+  type: PrismaPetitionType;
+  status: PrismaPetitionStatus;
+  justification: string;
+  targetRequirementGroupId: string | null;
+  submittedByUserId: string;
+  reviewerUserId: string | null;
+  reviewerNotes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  courseLinks: Array<{
+    id: string;
+    petitionId: string;
+    originalCatalogCourseId: string | null;
+    substituteCatalogCourseId: string | null;
+  }>;
+}): PetitionRecord {
+  return {
+    id: petition.id,
+    studentProgramId: petition.studentProgramId,
+    type: petition.type as PetitionRecord['type'],
+    status: petition.status as PetitionRecord['status'],
+    justification: petition.justification,
+    targetRequirementGroupId: petition.targetRequirementGroupId,
+    submittedByUserId: petition.submittedByUserId,
+    reviewerUserId: petition.reviewerUserId,
+    reviewerNotes: petition.reviewerNotes,
+    createdAt: petition.createdAt.toISOString(),
+    updatedAt: petition.updatedAt.toISOString(),
+    courseLinks: petition.courseLinks.map((link) => ({
+      id: link.id,
+      petitionId: link.petitionId,
+      originalCatalogCourseId: link.originalCatalogCourseId,
+      substituteCatalogCourseId: link.substituteCatalogCourseId,
+    })),
+  };
+}
+
+function toProgramApprovalRecord(approval: {
+  id: string;
+  studentProgramId: string;
+  stage: PrismaApprovalStage;
+  status: PrismaApprovalStatus;
+  reviewerUserId: string | null;
+  notes: string | null;
+  decidedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): ProgramApprovalRecord {
+  return {
+    id: approval.id,
+    studentProgramId: approval.studentProgramId,
+    stage: approval.stage as ProgramApprovalRecord['stage'],
+    status: approval.status as ProgramApprovalRecord['status'],
+    reviewerUserId: approval.reviewerUserId,
+    notes: approval.notes,
+    decidedAt: approval.decidedAt?.toISOString() || null,
+    createdAt: approval.createdAt.toISOString(),
+    updatedAt: approval.updatedAt.toISOString(),
+  };
+}
+
+function toProgramSheetSnapshotRecord(snapshot: {
+  id: string;
+  studentProgramId: string;
+  versionId: string;
+  renderedPayload: Prisma.JsonValue;
+  generatedAt: Date;
+}): ProgramSheetSnapshotRecord {
+  return {
+    id: snapshot.id,
+    studentProgramId: snapshot.studentProgramId,
+    versionId: snapshot.versionId,
+    renderedPayload: (snapshot.renderedPayload || {}) as Record<string, unknown>,
+    generatedAt: snapshot.generatedAt.toISOString(),
   };
 }
 

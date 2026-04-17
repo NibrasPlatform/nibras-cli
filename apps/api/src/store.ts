@@ -14,6 +14,11 @@ import {
   buildInstructorHomeDashboard,
   buildStudentHomeDashboard,
 } from './features/tracking/home-dashboard';
+import {
+  buildDefaultProgramSeed,
+  buildProgramSheet,
+  buildStudentProgramPlan,
+} from './features/programs/domain';
 
 export type PaginationOpts = { limit?: number; offset?: number };
 
@@ -53,6 +58,33 @@ export type TeamStatus = 'suggested' | 'locked';
 export type SubmissionWorkflowStatus = 'queued' | 'running' | 'passed' | 'failed' | 'needs_review';
 export type SubmissionType = 'github' | 'link' | 'text';
 export type ReviewStatus = 'pending' | 'approved' | 'changes_requested' | 'graded';
+export type ProgramStatus = 'draft' | 'published' | 'archived';
+export type RequirementGroupCategory =
+  | 'foundation'
+  | 'core'
+  | 'depth'
+  | 'elective'
+  | 'capstone'
+  | 'policy';
+export type RequirementRuleType = 'required' | 'choose_n' | 'elective_pool' | 'track_gate';
+export type StudentProgramStatus =
+  | 'enrolled'
+  | 'track_selected'
+  | 'submitted_for_advisor'
+  | 'advisor_approved'
+  | 'department_approved';
+export type PlannedCourseSourceType = 'standard' | 'transfer' | 'petition' | 'manual';
+export type StudentRequirementDecisionStatus = 'pending' | 'satisfied' | 'waived' | 'petition_pending';
+export type RequirementDecisionSourceType =
+  | 'planned_course'
+  | 'transfer_credit'
+  | 'petition'
+  | 'waiver';
+export type PetitionType = 'transfer_credit' | 'substitution' | 'waiver';
+export type PetitionStatus = 'pending_advisor' | 'pending_department' | 'approved' | 'rejected';
+export type ApprovalStage = 'advisor' | 'department';
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type AcademicTerm = 'fall' | 'spring';
 
 export type NotificationRecord = {
   id: string;
@@ -102,6 +134,236 @@ export type CourseMembershipRecord = {
   level: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type ProgramRecord = {
+  id: string;
+  slug: string;
+  title: string;
+  code: string;
+  academicYear: string;
+  totalUnitRequirement: number;
+  status: ProgramStatus;
+  activeVersionId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProgramVersionRecord = {
+  id: string;
+  programId: string;
+  versionLabel: string;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  isActive: boolean;
+  policyText: string;
+  trackSelectionMinYear: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TrackRecord = {
+  id: string;
+  programVersionId: string;
+  slug: string;
+  title: string;
+  description: string;
+  selectionYearStart: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CatalogCourseRecord = {
+  id: string;
+  programId: string;
+  subjectCode: string;
+  catalogNumber: string;
+  title: string;
+  defaultUnits: number;
+  department: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RequirementCourseRecord = {
+  id: string;
+  requirementRuleId: string;
+  catalogCourseId: string;
+};
+
+export type RequirementRuleRecord = {
+  id: string;
+  requirementGroupId: string;
+  ruleType: RequirementRuleType;
+  pickCount: number | null;
+  note: string;
+  sortOrder: number;
+  courses: RequirementCourseRecord[];
+};
+
+export type RequirementGroupRecord = {
+  id: string;
+  programVersionId: string;
+  trackId: string | null;
+  title: string;
+  category: RequirementGroupCategory;
+  minUnits: number;
+  minCourses: number;
+  notes: string;
+  sortOrder: number;
+  noDoubleCount: boolean;
+  rules: RequirementRuleRecord[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type StudentPlannedCourseRecord = {
+  id: string;
+  studentProgramId: string;
+  catalogCourseId: string;
+  plannedYear: number;
+  plannedTerm: AcademicTerm;
+  sourceType: PlannedCourseSourceType;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type StudentRequirementDecisionRecord = {
+  id: string;
+  studentProgramId: string;
+  requirementGroupId: string;
+  status: StudentRequirementDecisionStatus;
+  sourceType: RequirementDecisionSourceType | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PetitionCourseLinkRecord = {
+  id: string;
+  petitionId: string;
+  originalCatalogCourseId: string | null;
+  substituteCatalogCourseId: string | null;
+};
+
+export type PetitionRecord = {
+  id: string;
+  studentProgramId: string;
+  type: PetitionType;
+  status: PetitionStatus;
+  justification: string;
+  targetRequirementGroupId: string | null;
+  submittedByUserId: string;
+  reviewerUserId: string | null;
+  reviewerNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  courseLinks: PetitionCourseLinkRecord[];
+};
+
+export type ProgramApprovalRecord = {
+  id: string;
+  studentProgramId: string;
+  stage: ApprovalStage;
+  status: ApprovalStatus;
+  reviewerUserId: string | null;
+  notes: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProgramSheetSnapshotRecord = {
+  id: string;
+  studentProgramId: string;
+  versionId: string;
+  renderedPayload: Record<string, unknown>;
+  generatedAt: string;
+};
+
+export type StudentProgramRecord = {
+  id: string;
+  userId: string;
+  programVersionId: string;
+  selectedTrackId: string | null;
+  status: StudentProgramStatus;
+  isLocked: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProgramVersionDetailRecord = {
+  program: ProgramRecord;
+  version: ProgramVersionRecord;
+  tracks: TrackRecord[];
+  catalogCourses: CatalogCourseRecord[];
+  requirementGroups: RequirementGroupRecord[];
+};
+
+export type ProgramSheetSectionCourseRecord = {
+  plannedCourseId: string;
+  catalogCourseId: string;
+  subjectCode: string;
+  catalogNumber: string;
+  title: string;
+  units: number;
+  plannedYear: number;
+  plannedTerm: AcademicTerm;
+  sourceType: PlannedCourseSourceType;
+};
+
+export type ProgramSheetSectionRecord = {
+  requirementGroupId: string;
+  title: string;
+  category: RequirementGroupCategory;
+  minUnits: number;
+  minCourses: number;
+  notes: string;
+  matchedCourses: ProgramSheetSectionCourseRecord[];
+  usedUnits: number;
+  usedCourses: number;
+  status: StudentRequirementDecisionStatus;
+};
+
+export type ProgramSheetViewRecord = {
+  studentProgramId: string;
+  student: {
+    id: string;
+    username: string;
+    email: string;
+    yearLevel: number;
+  };
+  program: ProgramRecord;
+  version: ProgramVersionRecord;
+  selectedTrack: TrackRecord | null;
+  status: StudentProgramStatus;
+  isLocked: boolean;
+  canSelectTrack: boolean;
+  generatedAt: string | null;
+  policyText: string;
+  sections: ProgramSheetSectionRecord[];
+  petitions: PetitionRecord[];
+  approvals: ProgramApprovalRecord[];
+};
+
+export type StudentProgramPlanRecord = {
+  id: string;
+  userId: string;
+  program: ProgramRecord;
+  version: ProgramVersionRecord;
+  selectedTrack: TrackRecord | null;
+  availableTracks: TrackRecord[];
+  status: StudentProgramStatus;
+  isLocked: boolean;
+  canSelectTrack: boolean;
+  catalogCourses: CatalogCourseRecord[];
+  requirementGroups: RequirementGroupRecord[];
+  plannedCourses: StudentPlannedCourseRecord[];
+  decisions: StudentRequirementDecisionRecord[];
+  petitions: PetitionRecord[];
+  approvals: ProgramApprovalRecord[];
+  latestSheet: ProgramSheetViewRecord | null;
 };
 
 export type TrackingResourceRecord = {
@@ -603,6 +865,17 @@ export type StoreData = {
   users: UserRecord[];
   githubAccounts: GitHubAccountRecord[];
   courses: CourseRecord[];
+  programs?: ProgramRecord[];
+  programVersions?: ProgramVersionRecord[];
+  tracks?: TrackRecord[];
+  catalogCourses?: CatalogCourseRecord[];
+  requirementGroups?: RequirementGroupRecord[];
+  studentPrograms?: StudentProgramRecord[];
+  studentPlannedCourses?: StudentPlannedCourseRecord[];
+  studentRequirementDecisions?: StudentRequirementDecisionRecord[];
+  petitions?: PetitionRecord[];
+  programApprovals?: ProgramApprovalRecord[];
+  programSheetSnapshots?: ProgramSheetSnapshotRecord[];
   projectTemplates?: ProjectTemplateRecord[];
   projectRoleApplications?: ProjectRoleApplicationRecord[];
   teamFormationRuns?: TeamFormationRunRecord[];
@@ -703,6 +976,176 @@ export interface AppStore {
     payload: { slug: string; title: string; termLabel: string; courseCode: string }
   ): Promise<CourseRecord>;
   deleteTrackingCourse(apiBaseUrl: string, courseId: string): Promise<boolean>;
+  listPrograms(apiBaseUrl: string): Promise<ProgramRecord[]>;
+  createProgram(
+    apiBaseUrl: string,
+    userId: string,
+    payload: {
+      slug: string;
+      title: string;
+      code: string;
+      academicYear: string;
+      totalUnitRequirement: number;
+      status: ProgramStatus;
+    }
+  ): Promise<ProgramRecord>;
+  createProgramVersion(
+    apiBaseUrl: string,
+    userId: string,
+    programId: string,
+    payload: {
+      versionLabel: string;
+      effectiveFrom: string | null;
+      effectiveTo: string | null;
+      isActive: boolean;
+      policyText: string;
+      trackSelectionMinYear: number;
+    }
+  ): Promise<ProgramVersionRecord>;
+  getProgramVersionDetail(
+    apiBaseUrl: string,
+    programId: string,
+    versionId: string
+  ): Promise<ProgramVersionDetailRecord | null>;
+  createCatalogCourse(
+    apiBaseUrl: string,
+    userId: string,
+    programId: string,
+    payload: {
+      subjectCode: string;
+      catalogNumber: string;
+      title: string;
+      defaultUnits: number;
+      department: string;
+    }
+  ): Promise<CatalogCourseRecord>;
+  createRequirementGroup(
+    apiBaseUrl: string,
+    userId: string,
+    programId: string,
+    payload: {
+      programVersionId: string;
+      trackId: string | null;
+      title: string;
+      category: RequirementGroupCategory;
+      minUnits: number;
+      minCourses: number;
+      notes: string;
+      sortOrder: number;
+      noDoubleCount: boolean;
+      rules: Array<{
+        ruleType: RequirementRuleType;
+        pickCount: number | null;
+        note: string;
+        sortOrder: number;
+        courses: Array<{ catalogCourseId: string }>;
+      }>;
+    }
+  ): Promise<RequirementGroupRecord>;
+  updateRequirementGroup(
+    apiBaseUrl: string,
+    userId: string,
+    programId: string,
+    groupId: string,
+    payload: Partial<{
+      trackId: string | null;
+      title: string;
+      category: RequirementGroupCategory;
+      minUnits: number;
+      minCourses: number;
+      notes: string;
+      sortOrder: number;
+      noDoubleCount: boolean;
+      rules: Array<{
+        ruleType: RequirementRuleType;
+        pickCount: number | null;
+        note: string;
+        sortOrder: number;
+        courses: Array<{ catalogCourseId: string }>;
+      }>;
+    }>
+  ): Promise<RequirementGroupRecord | null>;
+  createTrack(
+    apiBaseUrl: string,
+    userId: string,
+    programId: string,
+    payload: {
+      programVersionId: string;
+      slug: string;
+      title: string;
+      description: string;
+      selectionYearStart: number;
+    }
+  ): Promise<TrackRecord>;
+  updateTrack(
+    apiBaseUrl: string,
+    userId: string,
+    programId: string,
+    trackId: string,
+    payload: Partial<{
+      slug: string;
+      title: string;
+      description: string;
+      selectionYearStart: number;
+    }>
+  ): Promise<TrackRecord | null>;
+  enrollInProgram(
+    apiBaseUrl: string,
+    userId: string,
+    programId: string
+  ): Promise<StudentProgramPlanRecord>;
+  getStudentProgramPlan(apiBaseUrl: string, userId: string): Promise<StudentProgramPlanRecord | null>;
+  selectStudentTrack(
+    apiBaseUrl: string,
+    userId: string,
+    trackId: string
+  ): Promise<StudentProgramPlanRecord | null>;
+  updateStudentProgramPlan(
+    apiBaseUrl: string,
+    userId: string,
+    payload: {
+      plannedCourses: Array<{
+        catalogCourseId: string;
+        plannedYear: number;
+        plannedTerm: AcademicTerm;
+        sourceType: PlannedCourseSourceType;
+        note: string | null;
+      }>;
+    }
+  ): Promise<StudentProgramPlanRecord | null>;
+  getStudentProgramSheet(apiBaseUrl: string, userId: string): Promise<ProgramSheetViewRecord | null>;
+  generateStudentProgramSheet(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<ProgramSheetViewRecord | null>;
+  createStudentPetition(
+    apiBaseUrl: string,
+    userId: string,
+    payload: {
+      type: PetitionType;
+      justification: string;
+      targetRequirementGroupId: string | null;
+      originalCatalogCourseId: string | null;
+      substituteCatalogCourseId: string | null;
+    }
+  ): Promise<PetitionRecord | null>;
+  listStudentPetitions(apiBaseUrl: string, userId: string): Promise<PetitionRecord[]>;
+  listProgramPetitions(apiBaseUrl: string, programId: string): Promise<PetitionRecord[]>;
+  updateProgramPetition(
+    apiBaseUrl: string,
+    programId: string,
+    petitionId: string,
+    reviewerUserId: string,
+    payload: { status: PetitionStatus; reviewerNotes: string | null }
+  ): Promise<PetitionRecord | null>;
+  setProgramApproval(
+    apiBaseUrl: string,
+    programId: string,
+    studentProgramId: string,
+    stage: ApprovalStage,
+    reviewerUserId: string,
+    payload: { status: ApprovalStatus; notes: string | null }
+  ): Promise<ProgramApprovalRecord | null>;
   listCourseMembersForInstructor(
     apiBaseUrl: string,
     courseId: string
@@ -1459,6 +1902,180 @@ function seedData(apiBaseUrl: string): StoreData {
   const milestone1Id = 'milestone_exam1_design';
   const milestone2Id = 'milestone_exam1_final';
   const cs106lProjects = listCs106lProjectDefinitions();
+  const programSeed = buildDefaultProgramSeed();
+  const programId = 'program_cs';
+  const programVersionId = 'program_version_cs_2026';
+  const trackIds = new Map<string, string>();
+  const catalogCourseIds = new Map<string, string>();
+
+  for (const track of programSeed.tracks) {
+    trackIds.set(track.slug, `track_${track.slug}`);
+  }
+  for (const course of programSeed.catalogCourses) {
+    catalogCourseIds.set(course.key, `catalog_${course.subjectCode.toLowerCase()}_${course.catalogNumber.toLowerCase()}`);
+  }
+
+  const programs: ProgramRecord[] = [
+    {
+      id: programId,
+      slug: programSeed.program.slug,
+      title: programSeed.program.title,
+      code: programSeed.program.code,
+      academicYear: programSeed.program.academicYear,
+      totalUnitRequirement: programSeed.program.totalUnitRequirement,
+      status: programSeed.program.status,
+      activeVersionId: programVersionId,
+      createdAt,
+      updatedAt: createdAt,
+    },
+  ];
+
+  const programVersions: ProgramVersionRecord[] = [
+    {
+      id: programVersionId,
+      programId,
+      versionLabel: programSeed.version.versionLabel,
+      effectiveFrom: createdAt,
+      effectiveTo: null,
+      isActive: true,
+      policyText: programSeed.version.policyText,
+      trackSelectionMinYear: programSeed.version.trackSelectionMinYear,
+      createdAt,
+      updatedAt: createdAt,
+    },
+  ];
+
+  const tracks: TrackRecord[] = programSeed.tracks.map((track) => ({
+    id: trackIds.get(track.slug) || `track_${track.slug}`,
+    programVersionId,
+    slug: track.slug,
+    title: track.title,
+    description: track.description,
+    selectionYearStart: track.selectionYearStart,
+    createdAt,
+    updatedAt: createdAt,
+  }));
+
+  const catalogCourses: CatalogCourseRecord[] = programSeed.catalogCourses.map((course) => ({
+    id: catalogCourseIds.get(course.key) || `catalog_${course.key.toLowerCase()}`,
+    programId,
+    subjectCode: course.subjectCode,
+    catalogNumber: course.catalogNumber,
+    title: course.title,
+    defaultUnits: course.defaultUnits,
+    department: course.department,
+    createdAt,
+    updatedAt: createdAt,
+  }));
+
+  let requirementRuleCounter = 0;
+  let requirementCourseCounter = 0;
+  const requirementGroups: RequirementGroupRecord[] = [
+    ...programSeed.sharedGroups.map((group, index) => ({
+      id: `requirement_group_shared_${index + 1}`,
+      programVersionId,
+      trackId: null,
+      title: group.title,
+      category: group.category,
+      minUnits: group.minUnits,
+      minCourses: group.minCourses,
+      notes: group.notes,
+      sortOrder: group.sortOrder,
+      noDoubleCount: group.noDoubleCount,
+      rules: group.rules.map((rule) => {
+        const requirementRuleId = `requirement_rule_${++requirementRuleCounter}`;
+        return {
+          id: requirementRuleId,
+          requirementGroupId: `requirement_group_shared_${index + 1}`,
+          ruleType: rule.ruleType,
+          pickCount: rule.pickCount,
+          note: rule.note,
+          sortOrder: rule.sortOrder,
+          courses: rule.courseKeys.map((courseKey) => ({
+            id: `requirement_course_${++requirementCourseCounter}`,
+            requirementRuleId,
+            catalogCourseId: catalogCourseIds.get(courseKey) || `catalog_${courseKey.toLowerCase()}`,
+          })),
+        };
+      }),
+      createdAt,
+      updatedAt: createdAt,
+    })),
+    ...programSeed.tracks.flatMap((track, trackIndex) =>
+      track.groups.map((group, groupIndex) => {
+        const groupId = `requirement_group_track_${trackIndex + 1}_${groupIndex + 1}`;
+        const trackId = trackIds.get(track.slug) || `track_${track.slug}`;
+        return {
+          id: groupId,
+          programVersionId,
+          trackId,
+          title: group.title,
+          category: group.category,
+          minUnits: group.minUnits,
+          minCourses: group.minCourses,
+          notes: group.notes,
+          sortOrder: group.sortOrder,
+          noDoubleCount: group.noDoubleCount,
+          rules: group.rules.map((rule) => {
+            const requirementRuleId = `requirement_rule_${++requirementRuleCounter}`;
+            return {
+              id: requirementRuleId,
+              requirementGroupId: groupId,
+              ruleType: rule.ruleType,
+              pickCount: rule.pickCount,
+              note: rule.note,
+              sortOrder: rule.sortOrder,
+              courses: rule.courseKeys.map((courseKey) => ({
+                id: `requirement_course_${++requirementCourseCounter}`,
+                requirementRuleId,
+                catalogCourseId: catalogCourseIds.get(courseKey) || `catalog_${courseKey.toLowerCase()}`,
+              })),
+            };
+          }),
+          createdAt,
+          updatedAt: createdAt,
+        };
+      })
+    ),
+  ];
+
+  const studentPrograms: StudentProgramRecord[] = [
+    {
+      id: 'student_program_demo',
+      userId: studentId,
+      programVersionId,
+      selectedTrackId: null,
+      status: 'enrolled',
+      isLocked: false,
+      createdAt,
+      updatedAt: createdAt,
+    },
+  ];
+
+  const programApprovals: ProgramApprovalRecord[] = [
+    {
+      id: 'approval_demo_advisor',
+      studentProgramId: 'student_program_demo',
+      stage: 'advisor',
+      status: 'pending',
+      reviewerUserId: null,
+      notes: null,
+      decidedAt: null,
+      createdAt,
+      updatedAt: createdAt,
+    },
+    {
+      id: 'approval_demo_department',
+      studentProgramId: 'student_program_demo',
+      stage: 'department',
+      status: 'pending',
+      reviewerUserId: null,
+      notes: null,
+      decidedAt: null,
+      createdAt,
+      updatedAt: createdAt,
+    },
+  ];
 
   return {
     users: [
@@ -1519,6 +2136,17 @@ function seedData(apiBaseUrl: string): StoreData {
         updatedAt: createdAt,
       },
     ],
+    programs,
+    programVersions,
+    tracks,
+    catalogCourses,
+    requirementGroups,
+    studentPrograms,
+    studentPlannedCourses: [],
+    studentRequirementDecisions: [],
+    petitions: [],
+    programApprovals,
+    programSheetSnapshots: [],
     projectTemplates: [],
     projectRoleApplications: [],
     teamFormationRuns: [],
@@ -1713,6 +2341,39 @@ export class FileStore implements AppStore {
       if (!parsed.githubAccounts) {
         parsed.githubAccounts = [];
       }
+      if (!parsed.programs) {
+        parsed.programs = [];
+      }
+      if (!parsed.programVersions) {
+        parsed.programVersions = [];
+      }
+      if (!parsed.tracks) {
+        parsed.tracks = [];
+      }
+      if (!parsed.catalogCourses) {
+        parsed.catalogCourses = [];
+      }
+      if (!parsed.requirementGroups) {
+        parsed.requirementGroups = [];
+      }
+      if (!parsed.studentPrograms) {
+        parsed.studentPrograms = [];
+      }
+      if (!parsed.studentPlannedCourses) {
+        parsed.studentPlannedCourses = [];
+      }
+      if (!parsed.studentRequirementDecisions) {
+        parsed.studentRequirementDecisions = [];
+      }
+      if (!parsed.petitions) {
+        parsed.petitions = [];
+      }
+      if (!parsed.programApprovals) {
+        parsed.programApprovals = [];
+      }
+      if (!parsed.programSheetSnapshots) {
+        parsed.programSheetSnapshots = [];
+      }
       if (!parsed.projectTemplates) {
         parsed.projectTemplates = [];
       }
@@ -1770,6 +2431,91 @@ export class FileStore implements AppStore {
       this.write(data);
     }
     return submission;
+  }
+
+  private findProgramBundle(
+    data: StoreData,
+    studentProgramId: string
+  ):
+    | {
+        studentProgram: StudentProgramRecord;
+        user: UserRecord;
+        program: ProgramRecord;
+        version: ProgramVersionRecord;
+        tracks: TrackRecord[];
+        selectedTrack: TrackRecord | null;
+        catalogCourses: CatalogCourseRecord[];
+        requirementGroups: RequirementGroupRecord[];
+        plannedCourses: StudentPlannedCourseRecord[];
+        petitions: PetitionRecord[];
+        approvals: ProgramApprovalRecord[];
+        decisions: StudentRequirementDecisionRecord[];
+        latestSheetGeneratedAt: string | null;
+      }
+    | null {
+    const studentProgram = (data.studentPrograms || []).find((entry) => entry.id === studentProgramId);
+    if (!studentProgram) return null;
+    const user = data.users.find((entry) => entry.id === studentProgram.userId);
+    const version = (data.programVersions || []).find(
+      (entry) => entry.id === studentProgram.programVersionId
+    );
+    if (!user || !version) return null;
+    const program = (data.programs || []).find((entry) => entry.id === version.programId);
+    if (!program) return null;
+    const tracks = (data.tracks || []).filter((entry) => entry.programVersionId === version.id);
+    const selectedTrack = tracks.find((entry) => entry.id === studentProgram.selectedTrackId) || null;
+    const catalogCourses = (data.catalogCourses || []).filter((entry) => entry.programId === program.id);
+    const requirementGroups = (data.requirementGroups || []).filter(
+      (entry) => entry.programVersionId === version.id
+    );
+    const plannedCourses = (data.studentPlannedCourses || []).filter(
+      (entry) => entry.studentProgramId === studentProgram.id
+    );
+    const petitions = (data.petitions || []).filter((entry) => entry.studentProgramId === studentProgram.id);
+    const approvals = (data.programApprovals || []).filter(
+      (entry) => entry.studentProgramId === studentProgram.id
+    );
+    const decisions = (data.studentRequirementDecisions || []).filter(
+      (entry) => entry.studentProgramId === studentProgram.id
+    );
+    const snapshots = (data.programSheetSnapshots || [])
+      .filter((entry) => entry.studentProgramId === studentProgram.id)
+      .sort((left, right) => right.generatedAt.localeCompare(left.generatedAt));
+
+    return {
+      studentProgram,
+      user,
+      program,
+      version,
+      tracks,
+      selectedTrack,
+      catalogCourses,
+      requirementGroups,
+      plannedCourses,
+      petitions,
+      approvals,
+      decisions,
+      latestSheetGeneratedAt: snapshots[0]?.generatedAt ?? null,
+    };
+  }
+
+  private syncProgramDecisions(data: StoreData, studentProgramId: string): StudentProgramPlanRecord | null {
+    const bundle = this.findProgramBundle(data, studentProgramId);
+    if (!bundle) return null;
+    const plan = buildStudentProgramPlan(bundle);
+    data.studentRequirementDecisions = [
+      ...(data.studentRequirementDecisions || []).filter(
+        (entry) => entry.studentProgramId !== studentProgramId
+      ),
+      ...plan.decisions,
+    ];
+    this.write(data);
+    return plan;
+  }
+
+  private getActiveProgramVersion(data: StoreData, programId: string): ProgramVersionRecord | null {
+    const versions = (data.programVersions || []).filter((entry) => entry.programId === programId);
+    return versions.find((entry) => entry.isActive) || versions[0] || null;
   }
 
   async createDeviceCode(apiBaseUrl: string): Promise<DeviceCodeRecord> {
@@ -2572,6 +3318,619 @@ export class FileStore implements AppStore {
     data.courseMemberships = data.courseMemberships.filter((m) => m.courseId !== courseId);
     this.write(data);
     return true;
+  }
+
+  async listPrograms(apiBaseUrl: string): Promise<ProgramRecord[]> {
+    const data = this.read(apiBaseUrl);
+    return [...(data.programs || [])].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+  }
+
+  async createProgram(
+    apiBaseUrl: string,
+    _userId: string,
+    payload: {
+      slug: string;
+      title: string;
+      code: string;
+      academicYear: string;
+      totalUnitRequirement: number;
+      status: ProgramStatus;
+    }
+  ): Promise<ProgramRecord> {
+    const data = this.read(apiBaseUrl);
+    const program: ProgramRecord = {
+      id: randomUUID(),
+      slug: payload.slug,
+      title: payload.title,
+      code: payload.code,
+      academicYear: payload.academicYear,
+      totalUnitRequirement: payload.totalUnitRequirement,
+      status: payload.status,
+      activeVersionId: null,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    data.programs = [...(data.programs || []), program];
+    this.write(data);
+    return program;
+  }
+
+  async createProgramVersion(
+    apiBaseUrl: string,
+    _userId: string,
+    programId: string,
+    payload: {
+      versionLabel: string;
+      effectiveFrom: string | null;
+      effectiveTo: string | null;
+      isActive: boolean;
+      policyText: string;
+      trackSelectionMinYear: number;
+    }
+  ): Promise<ProgramVersionRecord> {
+    const data = this.read(apiBaseUrl);
+    const version: ProgramVersionRecord = {
+      id: randomUUID(),
+      programId,
+      versionLabel: payload.versionLabel,
+      effectiveFrom: payload.effectiveFrom,
+      effectiveTo: payload.effectiveTo,
+      isActive: payload.isActive,
+      policyText: payload.policyText,
+      trackSelectionMinYear: payload.trackSelectionMinYear,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    data.programVersions = [...(data.programVersions || []), version];
+    if (payload.isActive) {
+      data.programVersions = data.programVersions.map((entry) =>
+        entry.programId === programId ? { ...entry, isActive: entry.id === version.id } : entry
+      );
+      const program = (data.programs || []).find((entry) => entry.id === programId);
+      if (program) {
+        program.activeVersionId = version.id;
+        program.updatedAt = nowIso();
+      }
+    }
+    this.write(data);
+    return version;
+  }
+
+  async getProgramVersionDetail(
+    apiBaseUrl: string,
+    programId: string,
+    versionId: string
+  ): Promise<ProgramVersionDetailRecord | null> {
+    const data = this.read(apiBaseUrl);
+    const program = (data.programs || []).find((entry) => entry.id === programId);
+    const version = (data.programVersions || []).find(
+      (entry) => entry.id === versionId && entry.programId === programId
+    );
+    if (!program || !version) return null;
+    return {
+      program,
+      version,
+      tracks: (data.tracks || []).filter((entry) => entry.programVersionId === versionId),
+      catalogCourses: (data.catalogCourses || []).filter((entry) => entry.programId === programId),
+      requirementGroups: (data.requirementGroups || []).filter(
+        (entry) => entry.programVersionId === versionId
+      ),
+    };
+  }
+
+  async createCatalogCourse(
+    apiBaseUrl: string,
+    _userId: string,
+    programId: string,
+    payload: {
+      subjectCode: string;
+      catalogNumber: string;
+      title: string;
+      defaultUnits: number;
+      department: string;
+    }
+  ): Promise<CatalogCourseRecord> {
+    const data = this.read(apiBaseUrl);
+    const course: CatalogCourseRecord = {
+      id: randomUUID(),
+      programId,
+      subjectCode: payload.subjectCode,
+      catalogNumber: payload.catalogNumber,
+      title: payload.title,
+      defaultUnits: payload.defaultUnits,
+      department: payload.department,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    data.catalogCourses = [...(data.catalogCourses || []), course];
+    this.write(data);
+    return course;
+  }
+
+  async createRequirementGroup(
+    apiBaseUrl: string,
+    _userId: string,
+    _programId: string,
+    payload: {
+      programVersionId: string;
+      trackId: string | null;
+      title: string;
+      category: RequirementGroupCategory;
+      minUnits: number;
+      minCourses: number;
+      notes: string;
+      sortOrder: number;
+      noDoubleCount: boolean;
+      rules: Array<{
+        ruleType: RequirementRuleType;
+        pickCount: number | null;
+        note: string;
+        sortOrder: number;
+        courses: Array<{ catalogCourseId: string }>;
+      }>;
+    }
+  ): Promise<RequirementGroupRecord> {
+    const data = this.read(apiBaseUrl);
+    const groupId = randomUUID();
+    const group: RequirementGroupRecord = {
+      id: groupId,
+      programVersionId: payload.programVersionId,
+      trackId: payload.trackId,
+      title: payload.title,
+      category: payload.category,
+      minUnits: payload.minUnits,
+      minCourses: payload.minCourses,
+      notes: payload.notes,
+      sortOrder: payload.sortOrder,
+      noDoubleCount: payload.noDoubleCount,
+      rules: payload.rules.map((rule) => {
+        const ruleId = randomUUID();
+        return {
+          id: ruleId,
+          requirementGroupId: groupId,
+          ruleType: rule.ruleType,
+          pickCount: rule.pickCount,
+          note: rule.note,
+          sortOrder: rule.sortOrder,
+          courses: rule.courses.map((course) => ({
+            id: randomUUID(),
+            requirementRuleId: ruleId,
+            catalogCourseId: course.catalogCourseId,
+          })),
+        };
+      }),
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    data.requirementGroups = [...(data.requirementGroups || []), group];
+    this.write(data);
+    return group;
+  }
+
+  async updateRequirementGroup(
+    apiBaseUrl: string,
+    _userId: string,
+    _programId: string,
+    groupId: string,
+    payload: Partial<{
+      trackId: string | null;
+      title: string;
+      category: RequirementGroupCategory;
+      minUnits: number;
+      minCourses: number;
+      notes: string;
+      sortOrder: number;
+      noDoubleCount: boolean;
+      rules: Array<{
+        ruleType: RequirementRuleType;
+        pickCount: number | null;
+        note: string;
+        sortOrder: number;
+        courses: Array<{ catalogCourseId: string }>;
+      }>;
+    }>
+  ): Promise<RequirementGroupRecord | null> {
+    const data = this.read(apiBaseUrl);
+    const group = (data.requirementGroups || []).find((entry) => entry.id === groupId);
+    if (!group) return null;
+    if (payload.trackId !== undefined) group.trackId = payload.trackId;
+    if (payload.title !== undefined) group.title = payload.title;
+    if (payload.category !== undefined) group.category = payload.category;
+    if (payload.minUnits !== undefined) group.minUnits = payload.minUnits;
+    if (payload.minCourses !== undefined) group.minCourses = payload.minCourses;
+    if (payload.notes !== undefined) group.notes = payload.notes;
+    if (payload.sortOrder !== undefined) group.sortOrder = payload.sortOrder;
+    if (payload.noDoubleCount !== undefined) group.noDoubleCount = payload.noDoubleCount;
+    if (payload.rules !== undefined) {
+      group.rules = payload.rules.map((rule) => {
+        const ruleId = randomUUID();
+        return {
+          id: ruleId,
+          requirementGroupId: group.id,
+          ruleType: rule.ruleType,
+          pickCount: rule.pickCount,
+          note: rule.note,
+          sortOrder: rule.sortOrder,
+          courses: rule.courses.map((course) => ({
+            id: randomUUID(),
+            requirementRuleId: ruleId,
+            catalogCourseId: course.catalogCourseId,
+          })),
+        };
+      });
+    }
+    group.updatedAt = nowIso();
+    this.write(data);
+    return group;
+  }
+
+  async createTrack(
+    apiBaseUrl: string,
+    _userId: string,
+    _programId: string,
+    payload: {
+      programVersionId: string;
+      slug: string;
+      title: string;
+      description: string;
+      selectionYearStart: number;
+    }
+  ): Promise<TrackRecord> {
+    const data = this.read(apiBaseUrl);
+    const track: TrackRecord = {
+      id: randomUUID(),
+      programVersionId: payload.programVersionId,
+      slug: payload.slug,
+      title: payload.title,
+      description: payload.description,
+      selectionYearStart: payload.selectionYearStart,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    data.tracks = [...(data.tracks || []), track];
+    this.write(data);
+    return track;
+  }
+
+  async updateTrack(
+    apiBaseUrl: string,
+    _userId: string,
+    _programId: string,
+    trackId: string,
+    payload: Partial<{
+      slug: string;
+      title: string;
+      description: string;
+      selectionYearStart: number;
+    }>
+  ): Promise<TrackRecord | null> {
+    const data = this.read(apiBaseUrl);
+    const track = (data.tracks || []).find((entry) => entry.id === trackId);
+    if (!track) return null;
+    if (payload.slug !== undefined) track.slug = payload.slug;
+    if (payload.title !== undefined) track.title = payload.title;
+    if (payload.description !== undefined) track.description = payload.description;
+    if (payload.selectionYearStart !== undefined) track.selectionYearStart = payload.selectionYearStart;
+    track.updatedAt = nowIso();
+    this.write(data);
+    return track;
+  }
+
+  async enrollInProgram(
+    apiBaseUrl: string,
+    userId: string,
+    programId: string
+  ): Promise<StudentProgramPlanRecord> {
+    const data = this.read(apiBaseUrl);
+    const version = this.getActiveProgramVersion(data, programId);
+    if (!version) {
+      throw new Error('No active program version found.');
+    }
+    let studentProgram = (data.studentPrograms || []).find((entry) => {
+      if (entry.userId !== userId) return false;
+      const studentVersion = (data.programVersions || []).find((versionEntry) => versionEntry.id === entry.programVersionId);
+      return studentVersion?.programId === programId;
+    });
+    if (!studentProgram) {
+      studentProgram = {
+        id: randomUUID(),
+        userId,
+        programVersionId: version.id,
+        selectedTrackId: null,
+        status: 'enrolled',
+        isLocked: false,
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      };
+      data.studentPrograms = [...(data.studentPrograms || []), studentProgram];
+      data.programApprovals = [
+        ...(data.programApprovals || []),
+        {
+          id: randomUUID(),
+          studentProgramId: studentProgram.id,
+          stage: 'advisor',
+          status: 'pending',
+          reviewerUserId: null,
+          notes: null,
+          decidedAt: null,
+          createdAt: nowIso(),
+          updatedAt: nowIso(),
+        },
+        {
+          id: randomUUID(),
+          studentProgramId: studentProgram.id,
+          stage: 'department',
+          status: 'pending',
+          reviewerUserId: null,
+          notes: null,
+          decidedAt: null,
+          createdAt: nowIso(),
+          updatedAt: nowIso(),
+        },
+      ];
+      this.write(data);
+    }
+    const plan = this.syncProgramDecisions(data, studentProgram.id);
+    if (!plan) {
+      throw new Error('Failed to create student program plan.');
+    }
+    return plan;
+  }
+
+  async getStudentProgramPlan(apiBaseUrl: string, userId: string): Promise<StudentProgramPlanRecord | null> {
+    const data = this.read(apiBaseUrl);
+    const studentProgram = (data.studentPrograms || []).find((entry) => entry.userId === userId);
+    if (!studentProgram) return null;
+    return this.syncProgramDecisions(data, studentProgram.id);
+  }
+
+  async selectStudentTrack(
+    apiBaseUrl: string,
+    userId: string,
+    trackId: string
+  ): Promise<StudentProgramPlanRecord | null> {
+    const data = this.read(apiBaseUrl);
+    const studentProgram = (data.studentPrograms || []).find((entry) => entry.userId === userId);
+    const track = (data.tracks || []).find((entry) => entry.id === trackId);
+    const user = data.users.find((entry) => entry.id === userId);
+    if (!studentProgram || !track || !user) return null;
+    const version = (data.programVersions || []).find((entry) => entry.id === studentProgram.programVersionId);
+    if (!version || user.yearLevel < version.trackSelectionMinYear) return null;
+    studentProgram.selectedTrackId = track.id;
+    studentProgram.status = 'track_selected';
+    studentProgram.updatedAt = nowIso();
+    this.write(data);
+    return this.syncProgramDecisions(data, studentProgram.id);
+  }
+
+  async updateStudentProgramPlan(
+    apiBaseUrl: string,
+    userId: string,
+    payload: {
+      plannedCourses: Array<{
+        catalogCourseId: string;
+        plannedYear: number;
+        plannedTerm: AcademicTerm;
+        sourceType: PlannedCourseSourceType;
+        note: string | null;
+      }>;
+    }
+  ): Promise<StudentProgramPlanRecord | null> {
+    const data = this.read(apiBaseUrl);
+    const studentProgram = (data.studentPrograms || []).find((entry) => entry.userId === userId);
+    if (!studentProgram || studentProgram.isLocked) return null;
+    const now = nowIso();
+    data.studentPlannedCourses = [
+      ...(data.studentPlannedCourses || []).filter((entry) => entry.studentProgramId !== studentProgram.id),
+      ...payload.plannedCourses.map((course) => ({
+        id: randomUUID(),
+        studentProgramId: studentProgram.id,
+        catalogCourseId: course.catalogCourseId,
+        plannedYear: course.plannedYear,
+        plannedTerm: course.plannedTerm,
+        sourceType: course.sourceType,
+        note: course.note,
+        createdAt: now,
+        updatedAt: now,
+      })),
+    ];
+    studentProgram.updatedAt = now;
+    this.write(data);
+    return this.syncProgramDecisions(data, studentProgram.id);
+  }
+
+  async getStudentProgramSheet(apiBaseUrl: string, userId: string): Promise<ProgramSheetViewRecord | null> {
+    const data = this.read(apiBaseUrl);
+    const studentProgram = (data.studentPrograms || []).find((entry) => entry.userId === userId);
+    if (!studentProgram) return null;
+    const bundle = this.findProgramBundle(data, studentProgram.id);
+    if (!bundle) return null;
+    return buildProgramSheet(bundle);
+  }
+
+  async generateStudentProgramSheet(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<ProgramSheetViewRecord | null> {
+    const data = this.read(apiBaseUrl);
+    const studentProgram = (data.studentPrograms || []).find((entry) => entry.userId === userId);
+    if (!studentProgram) return null;
+    const plan = this.syncProgramDecisions(data, studentProgram.id);
+    if (!plan) return null;
+    const generatedAt = nowIso();
+    const sheet = buildProgramSheet({
+      studentProgram: {
+        id: plan.id,
+        userId: plan.userId,
+        programVersionId: plan.version.id,
+        selectedTrackId: plan.selectedTrack?.id || null,
+        status: plan.status,
+        isLocked: plan.isLocked,
+        createdAt: studentProgram.createdAt,
+        updatedAt: studentProgram.updatedAt,
+      },
+      user: data.users.find((entry) => entry.id === userId) || {
+        id: userId,
+        username: userId,
+        email: `${userId}@example.com`,
+        githubLogin: userId,
+        githubLinked: false,
+        githubAppInstalled: false,
+        systemRole: 'user',
+        yearLevel: 1,
+      },
+      program: plan.program,
+      version: plan.version,
+      selectedTrack: plan.selectedTrack,
+      requirementGroups: (data.requirementGroups || []).filter(
+        (entry) => entry.programVersionId === plan.version.id
+      ),
+      plannedCourses: plan.plannedCourses,
+      catalogCourses: plan.catalogCourses,
+      petitions: plan.petitions,
+      approvals: plan.approvals,
+      decisions: plan.decisions,
+      generatedAt,
+    });
+    data.programSheetSnapshots = [
+      ...(data.programSheetSnapshots || []),
+      {
+        id: randomUUID(),
+        studentProgramId: studentProgram.id,
+        versionId: plan.version.id,
+        renderedPayload: sheet as unknown as Record<string, unknown>,
+        generatedAt,
+      },
+    ];
+    this.write(data);
+    return sheet;
+  }
+
+  async createStudentPetition(
+    apiBaseUrl: string,
+    userId: string,
+    payload: {
+      type: PetitionType;
+      justification: string;
+      targetRequirementGroupId: string | null;
+      originalCatalogCourseId: string | null;
+      substituteCatalogCourseId: string | null;
+    }
+  ): Promise<PetitionRecord | null> {
+    const data = this.read(apiBaseUrl);
+    const studentProgram = (data.studentPrograms || []).find((entry) => entry.userId === userId);
+    if (!studentProgram) return null;
+    const petition: PetitionRecord = {
+      id: randomUUID(),
+      studentProgramId: studentProgram.id,
+      type: payload.type,
+      status: 'pending_advisor',
+      justification: payload.justification,
+      targetRequirementGroupId: payload.targetRequirementGroupId,
+      submittedByUserId: userId,
+      reviewerUserId: null,
+      reviewerNotes: null,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+      courseLinks:
+        payload.originalCatalogCourseId || payload.substituteCatalogCourseId
+          ? [
+              {
+                id: randomUUID(),
+                petitionId: '',
+                originalCatalogCourseId: payload.originalCatalogCourseId,
+                substituteCatalogCourseId: payload.substituteCatalogCourseId,
+              },
+            ]
+          : [],
+    };
+    petition.courseLinks = petition.courseLinks.map((entry) => ({ ...entry, petitionId: petition.id }));
+    data.petitions = [...(data.petitions || []), petition];
+    this.write(data);
+    return petition;
+  }
+
+  async listStudentPetitions(apiBaseUrl: string, userId: string): Promise<PetitionRecord[]> {
+    const data = this.read(apiBaseUrl);
+    const studentProgram = (data.studentPrograms || []).find((entry) => entry.userId === userId);
+    if (!studentProgram) return [];
+    return (data.petitions || []).filter((entry) => entry.studentProgramId === studentProgram.id);
+  }
+
+  async listProgramPetitions(apiBaseUrl: string, programId: string): Promise<PetitionRecord[]> {
+    const data = this.read(apiBaseUrl);
+    const versionIds = new Set(
+      (data.programVersions || [])
+        .filter((entry) => entry.programId === programId)
+        .map((entry) => entry.id)
+    );
+    const studentProgramIds = new Set(
+      (data.studentPrograms || [])
+        .filter((entry) => versionIds.has(entry.programVersionId))
+        .map((entry) => entry.id)
+    );
+    return (data.petitions || []).filter((entry) => studentProgramIds.has(entry.studentProgramId));
+  }
+
+  async updateProgramPetition(
+    apiBaseUrl: string,
+    _programId: string,
+    petitionId: string,
+    reviewerUserId: string,
+    payload: { status: PetitionStatus; reviewerNotes: string | null }
+  ): Promise<PetitionRecord | null> {
+    const data = this.read(apiBaseUrl);
+    const petition = (data.petitions || []).find((entry) => entry.id === petitionId);
+    if (!petition) return null;
+    petition.status = payload.status;
+    petition.reviewerUserId = reviewerUserId;
+    petition.reviewerNotes = payload.reviewerNotes;
+    petition.updatedAt = nowIso();
+    this.write(data);
+    return petition;
+  }
+
+  async setProgramApproval(
+    apiBaseUrl: string,
+    _programId: string,
+    studentProgramId: string,
+    stage: ApprovalStage,
+    reviewerUserId: string,
+    payload: { status: ApprovalStatus; notes: string | null }
+  ): Promise<ProgramApprovalRecord | null> {
+    const data = this.read(apiBaseUrl);
+    const approval = (data.programApprovals || []).find(
+      (entry) => entry.studentProgramId === studentProgramId && entry.stage === stage
+    );
+    const studentProgram = (data.studentPrograms || []).find((entry) => entry.id === studentProgramId);
+    if (!approval || !studentProgram) return null;
+    if (stage === 'department') {
+      const advisor = (data.programApprovals || []).find(
+        (entry) => entry.studentProgramId === studentProgramId && entry.stage === 'advisor'
+      );
+      if (advisor?.status !== 'approved') {
+        return null;
+      }
+    }
+    approval.status = payload.status;
+    approval.notes = payload.notes;
+    approval.reviewerUserId = reviewerUserId;
+    approval.decidedAt = nowIso();
+    approval.updatedAt = nowIso();
+
+    if (stage === 'advisor' && payload.status === 'approved') {
+      studentProgram.status = 'advisor_approved';
+      studentProgram.isLocked = true;
+    } else if (stage === 'department' && payload.status === 'approved') {
+      studentProgram.status = 'department_approved';
+      studentProgram.isLocked = true;
+    } else if (payload.status === 'rejected') {
+      studentProgram.status = studentProgram.selectedTrackId ? 'track_selected' : 'enrolled';
+      studentProgram.isLocked = false;
+    }
+    studentProgram.updatedAt = nowIso();
+    this.write(data);
+    return approval;
   }
 
   async listTrackingProjects(
