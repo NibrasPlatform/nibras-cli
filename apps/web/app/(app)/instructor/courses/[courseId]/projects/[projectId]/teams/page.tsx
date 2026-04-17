@@ -108,6 +108,10 @@ export default function ProjectTeamsPage({
             <Link href={`/instructor/courses/${courseId}`}>Course</Link> / Team Review
           </p>
           <h1>Team Formation</h1>
+          <p className={styles.subtitle}>
+            Review role applications, generate balanced team suggestions, and lock the final team
+            roster for this project.
+          </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
@@ -133,7 +137,25 @@ export default function ProjectTeamsPage({
       {error && <p className={styles.errorText}>{error}</p>}
 
       {!loading && (
-        <div className={styles.detailGrid}>
+        <>
+          <div className={styles.summaryGrid}>
+            <article className={styles.summaryCard}>
+              <span className={styles.summaryLabel}>Applications</span>
+              <strong>{applications.length}</strong>
+              <p>Students who ranked preferred roles</p>
+            </article>
+            <article className={styles.summaryCard}>
+              <span className={styles.summaryLabel}>Suggested Teams</span>
+              <strong>{run?.result.teams.length ?? 0}</strong>
+              <p>{run ? 'Ready to review before locking' : 'Generate a preview to begin'}</p>
+            </article>
+            <article className={styles.summaryCard}>
+              <span className={styles.summaryLabel}>Locked Teams</span>
+              <strong>{teams.length}</strong>
+              <p>Finalized teams in this project</p>
+            </article>
+          </div>
+
           <div className={styles.panel}>
             <div className={styles.panelHeader}>
               <h2>Applications</h2>
@@ -167,61 +189,72 @@ export default function ProjectTeamsPage({
             )}
           </div>
 
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>
-              <h2>Suggested / Locked Teams</h2>
-              <span className={styles.muted}>{teams.length} locked</span>
+          <div className={styles.detailGrid}>
+            <div className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <h2>Suggested Teams</h2>
+                <span className={styles.muted}>{run?.result.teams.length ?? 0} previewed</span>
+              </div>
+
+              {!run ? (
+                <p className={styles.muted}>Generate teams to preview groupings before locking.</p>
+              ) : (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {run.result.teams.map((team) => (
+                    <div
+                      key={team.name}
+                      className={`${styles.projectRow} ${styles.suggestedTeamRow}`}
+                      style={{ display: 'grid', gap: '6px' }}
+                    >
+                      <strong>{team.name}</strong>
+                      <span className={styles.muted}>
+                        {team.members
+                          .map((member) => `${member.username} · ${member.roleLabel}`)
+                          .join(' | ')}
+                      </span>
+                    </div>
+                  ))}
+                  {run.result.waitlist.length > 0 && (
+                    <p className={styles.muted}>
+                      Waitlist: {run.result.waitlist.map((entry) => entry.username).join(', ')}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
-            {run && (
-              <div style={{ display: 'grid', gap: '12px', marginBottom: '16px' }}>
-                {run.result.teams.map((team) => (
-                  <div
-                    key={team.name}
-                    className={styles.projectRow}
-                    style={{ display: 'grid', gap: '6px' }}
-                  >
-                    <strong>{team.name}</strong>
-                    <span className={styles.muted}>
-                      {team.members
-                        .map((member) => `${member.username} · ${member.roleLabel}`)
-                        .join(' | ')}
-                    </span>
-                  </div>
-                ))}
-                {run.result.waitlist.length > 0 && (
-                  <p className={styles.muted}>
-                    Waitlist: {run.result.waitlist.map((entry) => entry.username).join(', ')}
-                  </p>
-                )}
+            <div className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <h2>Locked Teams</h2>
+                <span className={styles.muted}>{teams.length} locked</span>
               </div>
-            )}
 
-            {!teams.length ? (
-              <p className={styles.muted}>No locked teams yet.</p>
-            ) : (
-              <div className={styles.projectList}>
-                {teams.map((team) => (
-                  <div
-                    key={team.id}
-                    className={styles.projectRow}
-                    style={{ display: 'grid', gap: '6px' }}
-                  >
-                    <strong>{team.name}</strong>
-                    <span className={styles.muted}>
-                      {team.members
-                        .map((member) => `${member.username} · ${member.roleLabel}`)
-                        .join(' | ')}
-                    </span>
-                    {team.repo?.name && (
-                      <span className={styles.muted}>Repo: {team.repo.name}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+              {!teams.length ? (
+                <p className={styles.muted}>No locked teams yet.</p>
+              ) : (
+                <div className={styles.projectList}>
+                  {teams.map((team) => (
+                    <div
+                      key={team.id}
+                      className={`${styles.projectRow} ${styles.lockedTeamRow}`}
+                      style={{ display: 'grid', gap: '6px' }}
+                    >
+                      <strong>{team.name}</strong>
+                      <span className={styles.muted}>
+                        {team.members
+                          .map((member) => `${member.username} · ${member.roleLabel}`)
+                          .join(' | ')}
+                      </span>
+                      {team.repo?.name && (
+                        <span className={styles.muted}>Repo: {team.repo.name}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

@@ -387,6 +387,14 @@ export default function ProjectsDashboard({
   const finalMilestone = activeMilestones.find((m) => m.isFinal) ?? null;
   const teamApplicationRequired =
     activeProject?.deliveryMode === 'team' && activeProject.teamFormationStatus !== 'teams_locked';
+  const teamWorkflowState =
+    activeProject?.deliveryMode !== 'team'
+      ? null
+      : activeProject.teamFormationStatus === 'teams_locked'
+        ? 'locked'
+        : activeApplication
+          ? 'applied'
+          : 'needs_application';
 
   function handleCourseChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const nextCourseId = event.target.value || null;
@@ -782,6 +790,30 @@ export default function ProjectsDashboard({
                       Teams are locked. Your visible team workspace is ready.
                     </p>
                   )}
+                {activeProject?.deliveryMode === 'team' && (
+                  <div className={styles.teamWorkflowCard}>
+                    <div>
+                      <span className={styles.teamWorkflowLabel}>Team workflow</span>
+                      <strong>
+                        {teamWorkflowState === 'locked'
+                          ? 'Teams locked'
+                          : teamWorkflowState === 'applied'
+                            ? 'Application submitted'
+                            : 'Application required'}
+                      </strong>
+                      <p>
+                        {teamWorkflowState === 'locked'
+                          ? 'Your team is finalized. Continue with the shared submission workflow.'
+                          : teamWorkflowState === 'applied'
+                            ? 'Your ranked roles are on file. You can update them until instructors lock formation.'
+                            : 'Rank your preferred roles before the instructor generates and locks teams.'}
+                      </p>
+                    </div>
+                    <span className={styles.teamWorkflowStatus}>
+                      {activeProject.teamFormationStatus.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Milestones panel */}
@@ -826,8 +858,8 @@ export default function ProjectsDashboard({
                   <p className={styles.finalDesc}>
                     {teamApplicationRequired
                       ? activeApplication
-                        ? 'Your application is saved. Update it any time before applications close.'
-                        : 'Rank your preferred roles so the system can place you into a balanced team.'
+                        ? 'Your application is saved. Update your ranked preferences any time before the team roster is locked.'
+                        : 'Start the team workflow by ranking preferred roles and describing how you can contribute.'
                       : (finalMilestone?.description ??
                         'Submit the final repository state and write-up for instructor review.')}
                   </p>

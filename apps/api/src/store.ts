@@ -52,7 +52,11 @@ export type MembershipRole = 'student' | 'instructor' | 'ta';
 export type ProjectStatus = 'draft' | 'published' | 'archived';
 export type DeliveryMode = 'individual' | 'team';
 export type ProjectTemplateStatus = 'draft' | 'active';
-export type TeamFormationStatus = 'not_started' | 'application_open' | 'team_review' | 'teams_locked';
+export type TeamFormationStatus =
+  | 'not_started'
+  | 'application_open'
+  | 'team_review'
+  | 'teams_locked';
 export type ProjectRoleApplicationStatus = 'submitted' | 'withdrawn';
 export type TeamStatus = 'suggested' | 'locked';
 export type SubmissionWorkflowStatus = 'queued' | 'running' | 'passed' | 'failed' | 'needs_review';
@@ -74,7 +78,11 @@ export type StudentProgramStatus =
   | 'advisor_approved'
   | 'department_approved';
 export type PlannedCourseSourceType = 'standard' | 'transfer' | 'petition' | 'manual';
-export type StudentRequirementDecisionStatus = 'pending' | 'satisfied' | 'waived' | 'petition_pending';
+export type StudentRequirementDecisionStatus =
+  | 'pending'
+  | 'satisfied'
+  | 'waived'
+  | 'petition_pending';
 export type RequirementDecisionSourceType =
   | 'planned_course'
   | 'transfer_credit'
@@ -1094,7 +1102,10 @@ export interface AppStore {
     userId: string,
     programId: string
   ): Promise<StudentProgramPlanRecord>;
-  getStudentProgramPlan(apiBaseUrl: string, userId: string): Promise<StudentProgramPlanRecord | null>;
+  getStudentProgramPlan(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<StudentProgramPlanRecord | null>;
   selectStudentTrack(
     apiBaseUrl: string,
     userId: string,
@@ -1113,7 +1124,10 @@ export interface AppStore {
       }>;
     }
   ): Promise<StudentProgramPlanRecord | null>;
-  getStudentProgramSheet(apiBaseUrl: string, userId: string): Promise<ProgramSheetViewRecord | null>;
+  getStudentProgramSheet(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<ProgramSheetViewRecord | null>;
   generateStudentProgramSheet(
     apiBaseUrl: string,
     userId: string
@@ -1235,7 +1249,10 @@ export interface AppStore {
       resources: TrackingResourceRecord[];
     }>
   ): Promise<ProjectRecord | null>;
-  listCourseProjectTemplates(apiBaseUrl: string, courseId: string): Promise<ProjectTemplateRecord[]>;
+  listCourseProjectTemplates(
+    apiBaseUrl: string,
+    courseId: string
+  ): Promise<ProjectTemplateRecord[]>;
   createCourseProjectTemplate(
     apiBaseUrl: string,
     userId: string,
@@ -1253,7 +1270,10 @@ export interface AppStore {
       milestones: Array<Omit<ProjectTemplateMilestoneRecord, 'id'>>;
     }
   ): Promise<ProjectTemplateRecord>;
-  getProjectTemplateById(apiBaseUrl: string, templateId: string): Promise<ProjectTemplateRecord | null>;
+  getProjectTemplateById(
+    apiBaseUrl: string,
+    templateId: string
+  ): Promise<ProjectTemplateRecord | null>;
   updateProjectTemplate(
     apiBaseUrl: string,
     userId: string,
@@ -1617,7 +1637,10 @@ export function projectWithTeamContext(
   };
 }
 
-export function teamMemberUserIdsForSubmission(data: StoreData, submission: SubmissionRecord): string[] {
+export function teamMemberUserIdsForSubmission(
+  data: StoreData,
+  submission: SubmissionRecord
+): string[] {
   if (submission.teamMemberUserIds.length > 0) {
     return submission.teamMemberUserIds;
   }
@@ -1688,7 +1711,10 @@ export function generateTeamFormationResult(args: {
     warnings.push('Template role counts do not equal the configured team size.');
   }
 
-  const teamCount = Math.min(maxTeams, Math.max(1, Math.floor(activeApplications.length / teamSize)));
+  const teamCount = Math.min(
+    maxTeams,
+    Math.max(1, Math.floor(activeApplications.length / teamSize))
+  );
   const teams: TeamFormationSuggestionRecord[] = Array.from({ length: teamCount }, (_, index) => ({
     name: `Team ${index + 1}`,
     members: [],
@@ -1730,7 +1756,10 @@ export function generateTeamFormationResult(args: {
       const selected = candidateApplications[0];
       const eligibleTeams = teams
         .map((team, index) => ({ team, index }))
-        .filter(({ team }) => team.members.length < teamSize && !team.members.some((m) => m.roleKey === role.key))
+        .filter(
+          ({ team }) =>
+            team.members.length < teamSize && !team.members.some((m) => m.roleKey === role.key)
+        )
         .sort((left, right) => {
           const avgDelta = averageLevelForTeam(left.team) - averageLevelForTeam(right.team);
           if (avgDelta !== 0) return avgDelta;
@@ -1757,7 +1786,8 @@ export function generateTeamFormationResult(args: {
       (role) =>
         !teams.every(
           (team) =>
-            team.members.length >= teamSize || team.members.some((member) => member.roleKey === role.roleKey)
+            team.members.length >= teamSize ||
+            team.members.some((member) => member.roleKey === role.roleKey)
         )
     );
     const preferredRole =
@@ -1912,7 +1942,10 @@ function seedData(apiBaseUrl: string): StoreData {
     trackIds.set(track.slug, `track_${track.slug}`);
   }
   for (const course of programSeed.catalogCourses) {
-    catalogCourseIds.set(course.key, `catalog_${course.subjectCode.toLowerCase()}_${course.catalogNumber.toLowerCase()}`);
+    catalogCourseIds.set(
+      course.key,
+      `catalog_${course.subjectCode.toLowerCase()}_${course.catalogNumber.toLowerCase()}`
+    );
   }
 
   const programs: ProgramRecord[] = [
@@ -1994,7 +2027,8 @@ function seedData(apiBaseUrl: string): StoreData {
           courses: rule.courseKeys.map((courseKey) => ({
             id: `requirement_course_${++requirementCourseCounter}`,
             requirementRuleId,
-            catalogCourseId: catalogCourseIds.get(courseKey) || `catalog_${courseKey.toLowerCase()}`,
+            catalogCourseId:
+              catalogCourseIds.get(courseKey) || `catalog_${courseKey.toLowerCase()}`,
           })),
         };
       }),
@@ -2028,7 +2062,8 @@ function seedData(apiBaseUrl: string): StoreData {
               courses: rule.courseKeys.map((courseKey) => ({
                 id: `requirement_course_${++requirementCourseCounter}`,
                 requirementRuleId,
-                catalogCourseId: catalogCourseIds.get(courseKey) || `catalog_${courseKey.toLowerCase()}`,
+                catalogCourseId:
+                  catalogCourseIds.get(courseKey) || `catalog_${courseKey.toLowerCase()}`,
               })),
             };
           }),
@@ -2436,24 +2471,24 @@ export class FileStore implements AppStore {
   private findProgramBundle(
     data: StoreData,
     studentProgramId: string
-  ):
-    | {
-        studentProgram: StudentProgramRecord;
-        user: UserRecord;
-        program: ProgramRecord;
-        version: ProgramVersionRecord;
-        tracks: TrackRecord[];
-        selectedTrack: TrackRecord | null;
-        catalogCourses: CatalogCourseRecord[];
-        requirementGroups: RequirementGroupRecord[];
-        plannedCourses: StudentPlannedCourseRecord[];
-        petitions: PetitionRecord[];
-        approvals: ProgramApprovalRecord[];
-        decisions: StudentRequirementDecisionRecord[];
-        latestSheetGeneratedAt: string | null;
-      }
-    | null {
-    const studentProgram = (data.studentPrograms || []).find((entry) => entry.id === studentProgramId);
+  ): {
+    studentProgram: StudentProgramRecord;
+    user: UserRecord;
+    program: ProgramRecord;
+    version: ProgramVersionRecord;
+    tracks: TrackRecord[];
+    selectedTrack: TrackRecord | null;
+    catalogCourses: CatalogCourseRecord[];
+    requirementGroups: RequirementGroupRecord[];
+    plannedCourses: StudentPlannedCourseRecord[];
+    petitions: PetitionRecord[];
+    approvals: ProgramApprovalRecord[];
+    decisions: StudentRequirementDecisionRecord[];
+    latestSheetGeneratedAt: string | null;
+  } | null {
+    const studentProgram = (data.studentPrograms || []).find(
+      (entry) => entry.id === studentProgramId
+    );
     if (!studentProgram) return null;
     const user = data.users.find((entry) => entry.id === studentProgram.userId);
     const version = (data.programVersions || []).find(
@@ -2463,15 +2498,20 @@ export class FileStore implements AppStore {
     const program = (data.programs || []).find((entry) => entry.id === version.programId);
     if (!program) return null;
     const tracks = (data.tracks || []).filter((entry) => entry.programVersionId === version.id);
-    const selectedTrack = tracks.find((entry) => entry.id === studentProgram.selectedTrackId) || null;
-    const catalogCourses = (data.catalogCourses || []).filter((entry) => entry.programId === program.id);
+    const selectedTrack =
+      tracks.find((entry) => entry.id === studentProgram.selectedTrackId) || null;
+    const catalogCourses = (data.catalogCourses || []).filter(
+      (entry) => entry.programId === program.id
+    );
     const requirementGroups = (data.requirementGroups || []).filter(
       (entry) => entry.programVersionId === version.id
     );
     const plannedCourses = (data.studentPlannedCourses || []).filter(
       (entry) => entry.studentProgramId === studentProgram.id
     );
-    const petitions = (data.petitions || []).filter((entry) => entry.studentProgramId === studentProgram.id);
+    const petitions = (data.petitions || []).filter(
+      (entry) => entry.studentProgramId === studentProgram.id
+    );
     const approvals = (data.programApprovals || []).filter(
       (entry) => entry.studentProgramId === studentProgram.id
     );
@@ -2499,7 +2539,10 @@ export class FileStore implements AppStore {
     };
   }
 
-  private syncProgramDecisions(data: StoreData, studentProgramId: string): StudentProgramPlanRecord | null {
+  private syncProgramDecisions(
+    data: StoreData,
+    studentProgramId: string
+  ): StudentProgramPlanRecord | null {
     const bundle = this.findProgramBundle(data, studentProgramId);
     if (!bundle) return null;
     const plan = buildStudentProgramPlan(bundle);
@@ -3322,7 +3365,9 @@ export class FileStore implements AppStore {
 
   async listPrograms(apiBaseUrl: string): Promise<ProgramRecord[]> {
     const data = this.read(apiBaseUrl);
-    return [...(data.programs || [])].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+    return [...(data.programs || [])].sort((left, right) =>
+      left.createdAt.localeCompare(right.createdAt)
+    );
   }
 
   async createProgram(
@@ -3610,7 +3655,8 @@ export class FileStore implements AppStore {
     if (payload.slug !== undefined) track.slug = payload.slug;
     if (payload.title !== undefined) track.title = payload.title;
     if (payload.description !== undefined) track.description = payload.description;
-    if (payload.selectionYearStart !== undefined) track.selectionYearStart = payload.selectionYearStart;
+    if (payload.selectionYearStart !== undefined)
+      track.selectionYearStart = payload.selectionYearStart;
     track.updatedAt = nowIso();
     this.write(data);
     return track;
@@ -3628,7 +3674,9 @@ export class FileStore implements AppStore {
     }
     let studentProgram = (data.studentPrograms || []).find((entry) => {
       if (entry.userId !== userId) return false;
-      const studentVersion = (data.programVersions || []).find((versionEntry) => versionEntry.id === entry.programVersionId);
+      const studentVersion = (data.programVersions || []).find(
+        (versionEntry) => versionEntry.id === entry.programVersionId
+      );
       return studentVersion?.programId === programId;
     });
     if (!studentProgram) {
@@ -3677,7 +3725,10 @@ export class FileStore implements AppStore {
     return plan;
   }
 
-  async getStudentProgramPlan(apiBaseUrl: string, userId: string): Promise<StudentProgramPlanRecord | null> {
+  async getStudentProgramPlan(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<StudentProgramPlanRecord | null> {
     const data = this.read(apiBaseUrl);
     const studentProgram = (data.studentPrograms || []).find((entry) => entry.userId === userId);
     if (!studentProgram) return null;
@@ -3694,7 +3745,9 @@ export class FileStore implements AppStore {
     const track = (data.tracks || []).find((entry) => entry.id === trackId);
     const user = data.users.find((entry) => entry.id === userId);
     if (!studentProgram || !track || !user) return null;
-    const version = (data.programVersions || []).find((entry) => entry.id === studentProgram.programVersionId);
+    const version = (data.programVersions || []).find(
+      (entry) => entry.id === studentProgram.programVersionId
+    );
     if (!version || user.yearLevel < version.trackSelectionMinYear) return null;
     studentProgram.selectedTrackId = track.id;
     studentProgram.status = 'track_selected';
@@ -3721,7 +3774,9 @@ export class FileStore implements AppStore {
     if (!studentProgram || studentProgram.isLocked) return null;
     const now = nowIso();
     data.studentPlannedCourses = [
-      ...(data.studentPlannedCourses || []).filter((entry) => entry.studentProgramId !== studentProgram.id),
+      ...(data.studentPlannedCourses || []).filter(
+        (entry) => entry.studentProgramId !== studentProgram.id
+      ),
       ...payload.plannedCourses.map((course) => ({
         id: randomUUID(),
         studentProgramId: studentProgram.id,
@@ -3739,7 +3794,10 @@ export class FileStore implements AppStore {
     return this.syncProgramDecisions(data, studentProgram.id);
   }
 
-  async getStudentProgramSheet(apiBaseUrl: string, userId: string): Promise<ProgramSheetViewRecord | null> {
+  async getStudentProgramSheet(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<ProgramSheetViewRecord | null> {
     const data = this.read(apiBaseUrl);
     const studentProgram = (data.studentPrograms || []).find((entry) => entry.userId === userId);
     if (!studentProgram) return null;
@@ -3844,7 +3902,10 @@ export class FileStore implements AppStore {
             ]
           : [],
     };
-    petition.courseLinks = petition.courseLinks.map((entry) => ({ ...entry, petitionId: petition.id }));
+    petition.courseLinks = petition.courseLinks.map((entry) => ({
+      ...entry,
+      petitionId: petition.id,
+    }));
     data.petitions = [...(data.petitions || []), petition];
     this.write(data);
     return petition;
@@ -3902,7 +3963,9 @@ export class FileStore implements AppStore {
     const approval = (data.programApprovals || []).find(
       (entry) => entry.studentProgramId === studentProgramId && entry.stage === stage
     );
-    const studentProgram = (data.studentPrograms || []).find((entry) => entry.id === studentProgramId);
+    const studentProgram = (data.studentPrograms || []).find(
+      (entry) => entry.id === studentProgramId
+    );
     if (!approval || !studentProgram) return null;
     if (stage === 'department') {
       const advisor = (data.programApprovals || []).find(
@@ -4375,7 +4438,9 @@ export class FileStore implements AppStore {
     const applications = (data.projectRoleApplications || []).filter(
       (entry) => entry.projectId === projectId && entry.status === 'submitted'
     );
-    const courseMemberships = data.courseMemberships.filter((entry) => entry.courseId === project.courseId);
+    const courseMemberships = data.courseMemberships.filter(
+      (entry) => entry.courseId === project.courseId
+    );
     const result = generateTeamFormationResult({
       applications,
       template,
@@ -4486,7 +4551,9 @@ export class FileStore implements AppStore {
     }>
   ): Promise<TeamRecord | null> {
     const data = this.read(apiBaseUrl);
-    const team = (data.teams || []).find((entry) => entry.id === teamId && entry.projectId === projectId);
+    const team = (data.teams || []).find(
+      (entry) => entry.id === teamId && entry.projectId === projectId
+    );
     if (!team) {
       return null;
     }

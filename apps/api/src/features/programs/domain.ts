@@ -99,7 +99,7 @@ function slugifyTrack(title: string): string {
 }
 
 export function buildDefaultProgramSeed(): ProgramSeedBlueprint {
-  const catalogCourses = [
+  const catalogCourses: ProgramSeedBlueprint['catalogCourses'] = [
     ['CS101', 'CS', '101', 'Programming Fundamentals', 4, 'Computer Science'],
     ['CS102', 'CS', '102', 'Data Structures', 4, 'Computer Science'],
     ['CS103', 'CS', '103', 'Discrete Mathematics', 3, 'Computer Science'],
@@ -141,12 +141,12 @@ export function buildDefaultProgramSeed(): ProgramSeedBlueprint {
     ['CS382', 'CS', '382', 'Interdisciplinary Computing', 3, 'Computer Science'],
     ['CS383', 'CS', '383', 'Independent Study Design', 3, 'Computer Science'],
   ].map(([key, subjectCode, catalogNumber, title, defaultUnits, department]) => ({
-    key,
-    subjectCode,
-    catalogNumber,
-    title,
-    defaultUnits,
-    department,
+    key: String(key),
+    subjectCode: String(subjectCode),
+    catalogNumber: String(catalogNumber),
+    title: String(title),
+    defaultUnits: Number(defaultUnits),
+    department: String(department),
   }));
 
   const sharedGroups: ProgramSeedBlueprint['sharedGroups'] = [
@@ -372,7 +372,8 @@ export function evaluateRequirementGroups(args: {
 }): EvaluationResult {
   const groups = sortGroups(
     args.requirementGroups.filter(
-      (group) => !group.trackId || group.trackId === args.selectedTrack?.id || group.category === 'policy'
+      (group) =>
+        !group.trackId || group.trackId === args.selectedTrack?.id || group.category === 'policy'
     )
   );
   const courseInstances = buildCourseInstances({
@@ -422,7 +423,9 @@ export function evaluateRequirementGroups(args: {
 
       if (rule.ruleType === 'required') {
         for (const course of rule.courses) {
-          const match = candidates.find((candidate) => candidate.catalogCourseId === course.catalogCourseId);
+          const match = candidates.find(
+            (candidate) => candidate.catalogCourseId === course.catalogCourseId
+          );
           if (match) {
             matchedCourses.push({
               plannedCourseId: match.plannedCourseId,
@@ -441,7 +444,7 @@ export function evaluateRequirementGroups(args: {
           }
         }
       } else if (rule.ruleType === 'choose_n' || rule.ruleType === 'elective_pool') {
-        const needed = rule.pickCount ?? group.minCourses || 1;
+        const needed = rule.pickCount ?? group.minCourses ?? 1;
         const chosen = candidates.slice(0, needed);
         for (const match of chosen) {
           matchedCourses.push({
@@ -505,7 +508,7 @@ export function evaluateRequirementGroups(args: {
       notes: existing?.notes ?? null,
       createdAt: existing?.createdAt || now,
       updatedAt: now,
-    });
+    };
   });
 
   return { sections, decisions };

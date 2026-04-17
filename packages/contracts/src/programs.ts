@@ -22,12 +22,7 @@ export const StudentProgramStatusSchema = z.enum([
   'advisor_approved',
   'department_approved',
 ]);
-export const PlannedCourseSourceTypeSchema = z.enum([
-  'standard',
-  'transfer',
-  'petition',
-  'manual',
-]);
+export const PlannedCourseSourceTypeSchema = z.enum(['standard', 'transfer', 'petition', 'manual']);
 export const StudentRequirementDecisionStatusSchema = z.enum([
   'pending',
   'satisfied',
@@ -316,9 +311,8 @@ export const CreateRequirementGroupRequestSchema = z.object({
   rules: z.array(RequirementRuleInputSchema).default([]),
 });
 
-export const UpdateRequirementGroupRequestSchema = CreateRequirementGroupRequestSchema.partial().omit(
-  { programVersionId: true }
-);
+export const UpdateRequirementGroupRequestSchema =
+  CreateRequirementGroupRequestSchema.partial().omit({ programVersionId: true });
 
 export const CreateTrackRequestSchema = z.object({
   programVersionId: z.string().min(1),

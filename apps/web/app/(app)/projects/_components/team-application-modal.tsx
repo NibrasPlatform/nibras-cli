@@ -94,9 +94,11 @@ export default function TeamApplicationModal({
         <div className={styles.header}>
           <div>
             <h2 id="team-apply-title" className={styles.title}>
-              Apply for Team Roles
+              Team role application
             </h2>
-            <p className={styles.sub}>{project.title}</p>
+            <p className={styles.sub}>
+              {project.title} · rank your preferred roles before team formation locks.
+            </p>
           </div>
           <button type="button" className={styles.close} onClick={onClose} aria-label="Close">
             ×
@@ -104,6 +106,15 @@ export default function TeamApplicationModal({
         </div>
 
         <div className={styles.grid}>
+          <div className={styles.workflowCard}>
+            <strong>How this works</strong>
+            <ol className={styles.workflowList}>
+              <li>Rank the roles you want most.</li>
+              <li>Explain your skills and availability constraints.</li>
+              <li>Instructors review applications, generate teams, then lock the final roster.</li>
+            </ol>
+          </div>
+
           <div className={styles.field}>
             <label htmlFor="role-statement">Motivation / skills</label>
             <textarea
@@ -149,7 +160,8 @@ export default function TeamApplicationModal({
               ))}
             </div>
             <p className={styles.hint}>
-              The system fills required role slots first, then balances teams by level.
+              Preferences guide team generation. Required role coverage is filled first, then the
+              system balances teams by student level.
             </p>
           </div>
 

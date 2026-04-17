@@ -96,6 +96,7 @@ import {
   SessionRecord,
   StudentProgramPlanRecord,
   StudentProgramRecord,
+  StudentPlannedCourseRecord,
   StudentRequirementDecisionRecord,
   StudentDashboardRecord,
   StudentHomeDashboardRecord,
@@ -341,7 +342,9 @@ function toProjectRoleApplicationRecord(application: {
     statement: application.statement,
     availabilityNote: application.availabilityNote,
     status:
-      application.status === PrismaProjectRoleApplicationStatus.withdrawn ? 'withdrawn' : 'submitted',
+      application.status === PrismaProjectRoleApplicationStatus.withdrawn
+        ? 'withdrawn'
+        : 'submitted',
     submittedAt: application.submittedAt ? application.submittedAt.toISOString() : null,
     updatedAt: application.updatedAt.toISOString(),
     preferences: application.preferences
@@ -1475,6 +1478,214 @@ export class PrismaStore implements AppStore {
         },
       });
     }
+
+    const programSeed = buildDefaultProgramSeed();
+    const seededProgram = await this.prisma.program.upsert({
+      where: { slug: programSeed.program.slug },
+      update: {
+        title: programSeed.program.title,
+        code: programSeed.program.code,
+        academicYear: programSeed.program.academicYear,
+        totalUnitRequirement: programSeed.program.totalUnitRequirement,
+        status: programSeed.program.status as PrismaProgramStatus,
+      },
+      create: {
+        slug: programSeed.program.slug,
+        title: programSeed.program.title,
+        code: programSeed.program.code,
+        academicYear: programSeed.program.academicYear,
+        totalUnitRequirement: programSeed.program.totalUnitRequirement,
+        status: programSeed.program.status as PrismaProgramStatus,
+      },
+    });
+
+    const seededVersion = await this.prisma.programVersion
+      .create({
+        data: {
+          programId: seededProgram.id,
+          versionLabel: programSeed.version.versionLabel,
+          effectiveFrom: new Date(),
+          isActive: false,
+          policyText: programSeed.version.policyText,
+          trackSelectionMinYear: programSeed.version.trackSelectionMinYear,
+        },
+      })
+      .catch(async () => {
+        const existing = await this.prisma.programVersion.findFirstOrThrow({
+          where: {
+            programId: seededProgram.id,
+            versionLabel: programSeed.version.versionLabel,
+          },
+        });
+        await this.prisma.programVersion.update({
+          where: { id: existing.id },
+          data: {
+            policyText: programSeed.version.policyText,
+            trackSelectionMinYear: programSeed.version.trackSelectionMinYear,
+            isActive: programSeed.version.isActive,
+          },
+        });
+        return existing;
+      });
+
+    await this.prisma.program.update({
+      where: { id: seededProgram.id },
+      data: { activeVersionId: seededVersion.id },
+    });
+
+    const catalogByKey = new Map<string, string>();
+    for (const courseSeed of programSeed.catalogCourses) {
+      const course = await this.prisma.catalogCourse.upsert({
+        where: {
+          programId_subjectCode_catalogNumber: {
+            programId: seededProgram.id,
+            subjectCode: courseSeed.subjectCode,
+            catalogNumber: courseSeed.catalogNumber,
+          },
+        },
+        update: {
+          title: courseSeed.title,
+          defaultUnits: courseSeed.defaultUnits,
+          department: courseSeed.department,
+        },
+        create: {
+          programId: seededProgram.id,
+          subjectCode: courseSeed.subjectCode,
+          catalogNumber: courseSeed.catalogNumber,
+          title: courseSeed.title,
+          defaultUnits: courseSeed.defaultUnits,
+          department: courseSeed.department,
+        },
+      });
+      catalogByKey.set(courseSeed.key, course.id);
+    }
+
+    const trackIdBySlug = new Map<string, string>();
+    for (const trackSeed of programSeed.tracks) {
+      const track = await this.prisma.track.upsert({
+        where: {
+          programVersionId_slug: {
+            programVersionId: seededVersion.id,
+            slug: trackSeed.slug,
+          },
+        },
+        update: {
+          title: trackSeed.title,
+          description: trackSeed.description,
+          selectionYearStart: trackSeed.selectionYearStart,
+        },
+        create: {
+          programVersionId: seededVersion.id,
+          slug: trackSeed.slug,
+          title: trackSeed.title,
+          description: trackSeed.description,
+          selectionYearStart: trackSeed.selectionYearStart,
+        },
+      });
+      trackIdBySlug.set(track.slug, track.id);
+    }
+
+    const allGroups = [
+      ...programSeed.sharedGroups.map((group) => ({ ...group, trackId: null as string | null })),
+      ...programSeed.tracks.flatMap((track) =>
+        track.groups.map((group) => ({
+          ...group,
+          trackId: trackIdBySlug.get(track.slug) || null,
+        }))
+      ),
+    ];
+
+    for (const groupSeed of allGroups) {
+      const requirementGroup = await this.prisma.requirementGroup
+        .create({
+          data: {
+            programVersionId: seededVersion.id,
+            trackId: groupSeed.trackId,
+            title: groupSeed.title,
+            category: groupSeed.category as PrismaRequirementGroupCategory,
+            minUnits: groupSeed.minUnits,
+            minCourses: groupSeed.minCourses,
+            notes: groupSeed.notes,
+            sortOrder: groupSeed.sortOrder,
+            noDoubleCount: groupSeed.noDoubleCount,
+          },
+        })
+        .catch(async () => {
+          const existing = await this.prisma.requirementGroup.findFirstOrThrow({
+            where: {
+              programVersionId: seededVersion.id,
+              trackId: groupSeed.trackId,
+              title: groupSeed.title,
+            },
+          });
+          await this.prisma.requirementGroup.update({
+            where: { id: existing.id },
+            data: {
+              category: groupSeed.category as PrismaRequirementGroupCategory,
+              minUnits: groupSeed.minUnits,
+              minCourses: groupSeed.minCourses,
+              notes: groupSeed.notes,
+              sortOrder: groupSeed.sortOrder,
+              noDoubleCount: groupSeed.noDoubleCount,
+            },
+          });
+          await this.prisma.requirementRule.deleteMany({
+            where: { requirementGroupId: existing.id },
+          });
+          return existing;
+        });
+
+      for (const ruleSeed of groupSeed.rules) {
+        const rule = await this.prisma.requirementRule.create({
+          data: {
+            requirementGroupId: requirementGroup.id,
+            ruleType: ruleSeed.ruleType as PrismaRequirementRuleType,
+            pickCount: ruleSeed.pickCount,
+            note: ruleSeed.note,
+            sortOrder: ruleSeed.sortOrder,
+          },
+        });
+        await this.prisma.requirementCourse.createMany({
+          data: ruleSeed.courseKeys
+            .map((courseKey) => catalogByKey.get(courseKey))
+            .filter(Boolean)
+            .map((catalogCourseId) => ({
+              requirementRuleId: rule.id,
+              catalogCourseId: catalogCourseId as string,
+            })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    const studentProgram = await this.prisma.studentProgram.findFirst({
+      where: { userId: user.id, programVersionId: seededVersion.id },
+    });
+    if (!studentProgram) {
+      const createdStudentProgram = await this.prisma.studentProgram.create({
+        data: {
+          userId: user.id,
+          programVersionId: seededVersion.id,
+          status: PrismaStudentProgramStatus.enrolled,
+          isLocked: false,
+        },
+      });
+      await this.prisma.programApproval.createMany({
+        data: [
+          {
+            studentProgramId: createdStudentProgram.id,
+            stage: PrismaApprovalStage.advisor,
+            status: PrismaApprovalStatus.pending,
+          },
+          {
+            studentProgramId: createdStudentProgram.id,
+            stage: PrismaApprovalStage.department,
+            status: PrismaApprovalStatus.pending,
+          },
+        ],
+        skipDuplicates: true,
+      });
+    }
     this.seeded = true;
   }
 
@@ -1501,6 +1712,103 @@ export class PrismaStore implements AppStore {
         })
       )
     );
+  }
+
+  private async getProgramBundle(studentProgramId: string): Promise<{
+    studentProgram: StudentProgramRecord;
+    user: UserRecord;
+    program: ProgramRecord;
+    version: ProgramVersionRecord;
+    tracks: TrackRecord[];
+    selectedTrack: TrackRecord | null;
+    catalogCourses: CatalogCourseRecord[];
+    requirementGroups: RequirementGroupRecord[];
+    plannedCourses: StudentPlannedCourseRecord[];
+    petitions: PetitionRecord[];
+    approvals: ProgramApprovalRecord[];
+    decisions: StudentRequirementDecisionRecord[];
+    latestSheetGeneratedAt: string | null;
+  } | null> {
+    const studentProgram = await this.prisma.studentProgram.findUnique({
+      where: { id: studentProgramId },
+      include: {
+        user: { include: { githubAccount: true } },
+        programVersion: {
+          include: {
+            program: true,
+            tracks: true,
+            requirementGroups: {
+              include: {
+                rules: {
+                  include: { courses: true },
+                  orderBy: { sortOrder: 'asc' },
+                },
+              },
+              orderBy: { sortOrder: 'asc' },
+            },
+          },
+        },
+        selectedTrack: true,
+        plannedCourses: true,
+        decisions: true,
+        petitions: {
+          include: { courseLinks: true },
+          orderBy: { createdAt: 'desc' },
+        },
+        approvals: true,
+        sheetSnapshots: {
+          orderBy: { generatedAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+    if (!studentProgram) return null;
+    const catalogCourses = await this.prisma.catalogCourse.findMany({
+      where: { programId: studentProgram.programVersion.programId },
+      orderBy: [{ subjectCode: 'asc' }, { catalogNumber: 'asc' }],
+    });
+    return {
+      studentProgram: toStudentProgramRecord(studentProgram),
+      user: toUserRecord(studentProgram.user),
+      program: toProgramRecord(studentProgram.programVersion.program),
+      version: toProgramVersionRecord(studentProgram.programVersion),
+      tracks: studentProgram.programVersion.tracks.map(toTrackRecord),
+      selectedTrack: studentProgram.selectedTrack
+        ? toTrackRecord(studentProgram.selectedTrack)
+        : null,
+      catalogCourses: catalogCourses.map(toCatalogCourseRecord),
+      requirementGroups:
+        studentProgram.programVersion.requirementGroups.map(toRequirementGroupRecord),
+      plannedCourses: studentProgram.plannedCourses.map(toStudentPlannedCourseRecord),
+      petitions: studentProgram.petitions.map(toPetitionRecord),
+      approvals: studentProgram.approvals.map(toProgramApprovalRecord),
+      decisions: studentProgram.decisions.map(toStudentRequirementDecisionRecord),
+      latestSheetGeneratedAt: studentProgram.sheetSnapshots[0]?.generatedAt.toISOString() || null,
+    };
+  }
+
+  private async syncProgramDecisions(
+    studentProgramId: string
+  ): Promise<StudentProgramPlanRecord | null> {
+    const bundle = await this.getProgramBundle(studentProgramId);
+    if (!bundle) return null;
+    const plan = buildStudentProgramPlan(bundle);
+    await this.prisma.$transaction([
+      this.prisma.studentRequirementDecision.deleteMany({ where: { studentProgramId } }),
+      ...plan.decisions.map((decision) =>
+        this.prisma.studentRequirementDecision.create({
+          data: {
+            studentProgramId,
+            requirementGroupId: decision.requirementGroupId,
+            status: decision.status as PrismaStudentRequirementDecisionStatus,
+            sourceType: decision.sourceType as PrismaRequirementDecisionSourceType | undefined,
+            notes: decision.notes,
+          },
+        })
+      ),
+    ]);
+    const refreshed = await this.getProgramBundle(studentProgramId);
+    return refreshed ? buildStudentProgramPlan(refreshed) : plan;
   }
 
   async createSessionForUser(userId: string): Promise<SessionRecord> {
@@ -2541,6 +2849,582 @@ export class PrismaStore implements AppStore {
     return deleted !== null;
   }
 
+  async listPrograms(apiBaseUrl: string): Promise<ProgramRecord[]> {
+    await this.seed(apiBaseUrl);
+    const programs = await this.prisma.program.findMany({ orderBy: { createdAt: 'asc' } });
+    return programs.map(toProgramRecord);
+  }
+
+  async createProgram(
+    apiBaseUrl: string,
+    _userId: string,
+    payload: {
+      slug: string;
+      title: string;
+      code: string;
+      academicYear: string;
+      totalUnitRequirement: number;
+      status: ProgramStatus;
+    }
+  ): Promise<ProgramRecord> {
+    await this.seed(apiBaseUrl);
+    const program = await this.prisma.program.create({
+      data: {
+        slug: payload.slug,
+        title: payload.title,
+        code: payload.code,
+        academicYear: payload.academicYear,
+        totalUnitRequirement: payload.totalUnitRequirement,
+        status: payload.status as PrismaProgramStatus,
+      },
+    });
+    return toProgramRecord(program);
+  }
+
+  async createProgramVersion(
+    apiBaseUrl: string,
+    _userId: string,
+    programId: string,
+    payload: {
+      versionLabel: string;
+      effectiveFrom: string | null;
+      effectiveTo: string | null;
+      isActive: boolean;
+      policyText: string;
+      trackSelectionMinYear: number;
+    }
+  ): Promise<ProgramVersionRecord> {
+    await this.seed(apiBaseUrl);
+    const version = await this.prisma.$transaction(async (tx) => {
+      if (payload.isActive) {
+        await tx.programVersion.updateMany({
+          where: { programId },
+          data: { isActive: false },
+        });
+      }
+      const created = await tx.programVersion.create({
+        data: {
+          programId,
+          versionLabel: payload.versionLabel,
+          effectiveFrom: payload.effectiveFrom ? new Date(payload.effectiveFrom) : null,
+          effectiveTo: payload.effectiveTo ? new Date(payload.effectiveTo) : null,
+          isActive: payload.isActive,
+          policyText: payload.policyText,
+          trackSelectionMinYear: payload.trackSelectionMinYear,
+        },
+      });
+      if (payload.isActive) {
+        await tx.program.update({
+          where: { id: programId },
+          data: { activeVersionId: created.id },
+        });
+      }
+      return created;
+    });
+    return toProgramVersionRecord(version);
+  }
+
+  async getProgramVersionDetail(
+    apiBaseUrl: string,
+    programId: string,
+    versionId: string
+  ): Promise<ProgramVersionDetailRecord | null> {
+    await this.seed(apiBaseUrl);
+    const version = await this.prisma.programVersion.findFirst({
+      where: { id: versionId, programId },
+      include: {
+        program: true,
+        tracks: true,
+        requirementGroups: {
+          include: {
+            rules: { include: { courses: true }, orderBy: { sortOrder: 'asc' } },
+          },
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    });
+    if (!version) return null;
+    const catalogCourses = await this.prisma.catalogCourse.findMany({
+      where: { programId },
+      orderBy: [{ subjectCode: 'asc' }, { catalogNumber: 'asc' }],
+    });
+    return {
+      program: toProgramRecord(version.program),
+      version: toProgramVersionRecord(version),
+      tracks: version.tracks.map(toTrackRecord),
+      catalogCourses: catalogCourses.map(toCatalogCourseRecord),
+      requirementGroups: version.requirementGroups.map(toRequirementGroupRecord),
+    };
+  }
+
+  async createCatalogCourse(
+    apiBaseUrl: string,
+    _userId: string,
+    programId: string,
+    payload: {
+      subjectCode: string;
+      catalogNumber: string;
+      title: string;
+      defaultUnits: number;
+      department: string;
+    }
+  ): Promise<CatalogCourseRecord> {
+    await this.seed(apiBaseUrl);
+    const course = await this.prisma.catalogCourse.create({
+      data: {
+        programId,
+        subjectCode: payload.subjectCode,
+        catalogNumber: payload.catalogNumber,
+        title: payload.title,
+        defaultUnits: payload.defaultUnits,
+        department: payload.department,
+      },
+    });
+    return toCatalogCourseRecord(course);
+  }
+
+  async createRequirementGroup(
+    apiBaseUrl: string,
+    _userId: string,
+    _programId: string,
+    payload: {
+      programVersionId: string;
+      trackId: string | null;
+      title: string;
+      category: RequirementGroupCategory;
+      minUnits: number;
+      minCourses: number;
+      notes: string;
+      sortOrder: number;
+      noDoubleCount: boolean;
+      rules: Array<{
+        ruleType: RequirementRuleType;
+        pickCount: number | null;
+        note: string;
+        sortOrder: number;
+        courses: Array<{ catalogCourseId: string }>;
+      }>;
+    }
+  ): Promise<RequirementGroupRecord> {
+    await this.seed(apiBaseUrl);
+    const group = await this.prisma.requirementGroup.create({
+      data: {
+        programVersionId: payload.programVersionId,
+        trackId: payload.trackId,
+        title: payload.title,
+        category: payload.category as PrismaRequirementGroupCategory,
+        minUnits: payload.minUnits,
+        minCourses: payload.minCourses,
+        notes: payload.notes,
+        sortOrder: payload.sortOrder,
+        noDoubleCount: payload.noDoubleCount,
+        rules: {
+          create: payload.rules.map((rule) => ({
+            ruleType: rule.ruleType as PrismaRequirementRuleType,
+            pickCount: rule.pickCount,
+            note: rule.note,
+            sortOrder: rule.sortOrder,
+            courses: {
+              create: rule.courses.map((course) => ({
+                catalogCourseId: course.catalogCourseId,
+              })),
+            },
+          })),
+        },
+      },
+      include: {
+        rules: { include: { courses: true }, orderBy: { sortOrder: 'asc' } },
+      },
+    });
+    return toRequirementGroupRecord(group);
+  }
+
+  async updateRequirementGroup(
+    apiBaseUrl: string,
+    _userId: string,
+    _programId: string,
+    groupId: string,
+    payload: Partial<{
+      trackId: string | null;
+      title: string;
+      category: RequirementGroupCategory;
+      minUnits: number;
+      minCourses: number;
+      notes: string;
+      sortOrder: number;
+      noDoubleCount: boolean;
+      rules: Array<{
+        ruleType: RequirementRuleType;
+        pickCount: number | null;
+        note: string;
+        sortOrder: number;
+        courses: Array<{ catalogCourseId: string }>;
+      }>;
+    }>
+  ): Promise<RequirementGroupRecord | null> {
+    await this.seed(apiBaseUrl);
+    const existing = await this.prisma.requirementGroup.findUnique({ where: { id: groupId } });
+    if (!existing) return null;
+    if (payload.rules !== undefined) {
+      await this.prisma.requirementRule.deleteMany({ where: { requirementGroupId: groupId } });
+    }
+    const updated = await this.prisma.requirementGroup.update({
+      where: { id: groupId },
+      data: {
+        trackId: payload.trackId,
+        title: payload.title,
+        category: payload.category as PrismaRequirementGroupCategory | undefined,
+        minUnits: payload.minUnits,
+        minCourses: payload.minCourses,
+        notes: payload.notes,
+        sortOrder: payload.sortOrder,
+        noDoubleCount: payload.noDoubleCount,
+        rules:
+          payload.rules !== undefined
+            ? {
+                create: payload.rules.map((rule) => ({
+                  ruleType: rule.ruleType as PrismaRequirementRuleType,
+                  pickCount: rule.pickCount,
+                  note: rule.note,
+                  sortOrder: rule.sortOrder,
+                  courses: {
+                    create: rule.courses.map((course) => ({
+                      catalogCourseId: course.catalogCourseId,
+                    })),
+                  },
+                })),
+              }
+            : undefined,
+      },
+      include: {
+        rules: { include: { courses: true }, orderBy: { sortOrder: 'asc' } },
+      },
+    });
+    return toRequirementGroupRecord(updated);
+  }
+
+  async createTrack(
+    apiBaseUrl: string,
+    _userId: string,
+    _programId: string,
+    payload: {
+      programVersionId: string;
+      slug: string;
+      title: string;
+      description: string;
+      selectionYearStart: number;
+    }
+  ): Promise<TrackRecord> {
+    await this.seed(apiBaseUrl);
+    const track = await this.prisma.track.create({
+      data: {
+        programVersionId: payload.programVersionId,
+        slug: payload.slug,
+        title: payload.title,
+        description: payload.description,
+        selectionYearStart: payload.selectionYearStart,
+      },
+    });
+    return toTrackRecord(track);
+  }
+
+  async updateTrack(
+    apiBaseUrl: string,
+    _userId: string,
+    _programId: string,
+    trackId: string,
+    payload: Partial<{
+      slug: string;
+      title: string;
+      description: string;
+      selectionYearStart: number;
+    }>
+  ): Promise<TrackRecord | null> {
+    await this.seed(apiBaseUrl);
+    const existing = await this.prisma.track.findUnique({ where: { id: trackId } });
+    if (!existing) return null;
+    const track = await this.prisma.track.update({
+      where: { id: trackId },
+      data: payload,
+    });
+    return toTrackRecord(track);
+  }
+
+  async enrollInProgram(
+    apiBaseUrl: string,
+    userId: string,
+    programId: string
+  ): Promise<StudentProgramPlanRecord> {
+    await this.seed(apiBaseUrl);
+    const version =
+      (await this.prisma.programVersion.findFirst({
+        where: { programId, isActive: true },
+        orderBy: { createdAt: 'desc' },
+      })) ||
+      (await this.prisma.programVersion.findFirstOrThrow({
+        where: { programId },
+        orderBy: { createdAt: 'desc' },
+      }));
+
+    let studentProgram = await this.prisma.studentProgram.findFirst({
+      where: { userId, programVersion: { programId } },
+    });
+    if (!studentProgram) {
+      studentProgram = await this.prisma.studentProgram.create({
+        data: {
+          userId,
+          programVersionId: version.id,
+          status: PrismaStudentProgramStatus.enrolled,
+          isLocked: false,
+          approvals: {
+            create: [
+              { stage: PrismaApprovalStage.advisor, status: PrismaApprovalStatus.pending },
+              { stage: PrismaApprovalStage.department, status: PrismaApprovalStatus.pending },
+            ],
+          },
+        },
+      });
+    }
+    const plan = await this.syncProgramDecisions(studentProgram.id);
+    if (!plan) throw new Error('Failed to build student program plan.');
+    return plan;
+  }
+
+  async getStudentProgramPlan(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<StudentProgramPlanRecord | null> {
+    await this.seed(apiBaseUrl);
+    const studentProgram = await this.prisma.studentProgram.findFirst({ where: { userId } });
+    if (!studentProgram) return null;
+    return this.syncProgramDecisions(studentProgram.id);
+  }
+
+  async selectStudentTrack(
+    apiBaseUrl: string,
+    userId: string,
+    trackId: string
+  ): Promise<StudentProgramPlanRecord | null> {
+    await this.seed(apiBaseUrl);
+    const studentProgram = await this.prisma.studentProgram.findFirst({
+      where: { userId },
+      include: { programVersion: true, user: true },
+    });
+    const track = await this.prisma.track.findUnique({ where: { id: trackId } });
+    if (!studentProgram || !track) return null;
+    if (studentProgram.user.yearLevel < studentProgram.programVersion.trackSelectionMinYear) {
+      return null;
+    }
+    await this.prisma.studentProgram.update({
+      where: { id: studentProgram.id },
+      data: {
+        selectedTrackId: track.id,
+        status: PrismaStudentProgramStatus.track_selected,
+      },
+    });
+    return this.syncProgramDecisions(studentProgram.id);
+  }
+
+  async updateStudentProgramPlan(
+    apiBaseUrl: string,
+    userId: string,
+    payload: {
+      plannedCourses: Array<{
+        catalogCourseId: string;
+        plannedYear: number;
+        plannedTerm: AcademicTerm;
+        sourceType: PlannedCourseSourceType;
+        note: string | null;
+      }>;
+    }
+  ): Promise<StudentProgramPlanRecord | null> {
+    await this.seed(apiBaseUrl);
+    const studentProgram = await this.prisma.studentProgram.findFirst({ where: { userId } });
+    if (!studentProgram || studentProgram.isLocked) return null;
+    await this.prisma.$transaction([
+      this.prisma.studentPlannedCourse.deleteMany({
+        where: { studentProgramId: studentProgram.id },
+      }),
+      ...payload.plannedCourses.map((course) =>
+        this.prisma.studentPlannedCourse.create({
+          data: {
+            studentProgramId: studentProgram.id,
+            catalogCourseId: course.catalogCourseId,
+            plannedYear: course.plannedYear,
+            plannedTerm: course.plannedTerm,
+            sourceType: course.sourceType as PrismaPlannedCourseSourceType,
+            note: course.note,
+          },
+        })
+      ),
+    ]);
+    return this.syncProgramDecisions(studentProgram.id);
+  }
+
+  async getStudentProgramSheet(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<ProgramSheetViewRecord | null> {
+    await this.seed(apiBaseUrl);
+    const studentProgram = await this.prisma.studentProgram.findFirst({ where: { userId } });
+    if (!studentProgram) return null;
+    const bundle = await this.getProgramBundle(studentProgram.id);
+    return bundle ? buildProgramSheet(bundle) : null;
+  }
+
+  async generateStudentProgramSheet(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<ProgramSheetViewRecord | null> {
+    await this.seed(apiBaseUrl);
+    const studentProgram = await this.prisma.studentProgram.findFirst({ where: { userId } });
+    if (!studentProgram) return null;
+    const plan = await this.syncProgramDecisions(studentProgram.id);
+    if (!plan) return null;
+    const bundle = await this.getProgramBundle(studentProgram.id);
+    if (!bundle) return null;
+    const generatedAt = new Date().toISOString();
+    const sheet = buildProgramSheet({ ...bundle, generatedAt });
+    await this.prisma.programSheetSnapshot.create({
+      data: {
+        studentProgramId: studentProgram.id,
+        versionId: bundle.version.id,
+        renderedPayload: sheet as unknown as Prisma.InputJsonValue,
+        generatedAt: new Date(generatedAt),
+      },
+    });
+    return sheet;
+  }
+
+  async createStudentPetition(
+    apiBaseUrl: string,
+    userId: string,
+    payload: {
+      type: PetitionRecord['type'];
+      justification: string;
+      targetRequirementGroupId: string | null;
+      originalCatalogCourseId: string | null;
+      substituteCatalogCourseId: string | null;
+    }
+  ): Promise<PetitionRecord | null> {
+    await this.seed(apiBaseUrl);
+    const studentProgram = await this.prisma.studentProgram.findFirst({ where: { userId } });
+    if (!studentProgram) return null;
+    const petition = await this.prisma.petition.create({
+      data: {
+        studentProgramId: studentProgram.id,
+        type: payload.type as PrismaPetitionType,
+        status: PrismaPetitionStatus.pending_advisor,
+        justification: payload.justification,
+        targetRequirementGroupId: payload.targetRequirementGroupId,
+        submittedByUserId: userId,
+        courseLinks:
+          payload.originalCatalogCourseId || payload.substituteCatalogCourseId
+            ? {
+                create: [
+                  {
+                    originalCatalogCourseId: payload.originalCatalogCourseId,
+                    substituteCatalogCourseId: payload.substituteCatalogCourseId,
+                  },
+                ],
+              }
+            : undefined,
+      },
+      include: { courseLinks: true },
+    });
+    return toPetitionRecord(petition);
+  }
+
+  async listStudentPetitions(apiBaseUrl: string, userId: string): Promise<PetitionRecord[]> {
+    await this.seed(apiBaseUrl);
+    const studentProgram = await this.prisma.studentProgram.findFirst({ where: { userId } });
+    if (!studentProgram) return [];
+    const petitions = await this.prisma.petition.findMany({
+      where: { studentProgramId: studentProgram.id },
+      include: { courseLinks: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return petitions.map(toPetitionRecord);
+  }
+
+  async listProgramPetitions(apiBaseUrl: string, programId: string): Promise<PetitionRecord[]> {
+    await this.seed(apiBaseUrl);
+    const petitions = await this.prisma.petition.findMany({
+      where: { studentProgram: { programVersion: { programId } } },
+      include: { courseLinks: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return petitions.map(toPetitionRecord);
+  }
+
+  async updateProgramPetition(
+    apiBaseUrl: string,
+    _programId: string,
+    petitionId: string,
+    reviewerUserId: string,
+    payload: { status: PetitionRecord['status']; reviewerNotes: string | null }
+  ): Promise<PetitionRecord | null> {
+    await this.seed(apiBaseUrl);
+    const existing = await this.prisma.petition.findUnique({ where: { id: petitionId } });
+    if (!existing) return null;
+    const petition = await this.prisma.petition.update({
+      where: { id: petitionId },
+      data: {
+        status: payload.status as PrismaPetitionStatus,
+        reviewerUserId,
+        reviewerNotes: payload.reviewerNotes,
+      },
+      include: { courseLinks: true },
+    });
+    return toPetitionRecord(petition);
+  }
+
+  async setProgramApproval(
+    apiBaseUrl: string,
+    _programId: string,
+    studentProgramId: string,
+    stage: ProgramApprovalRecord['stage'],
+    reviewerUserId: string,
+    payload: { status: ProgramApprovalRecord['status']; notes: string | null }
+  ): Promise<ProgramApprovalRecord | null> {
+    await this.seed(apiBaseUrl);
+    if (stage === 'department') {
+      const advisor = await this.prisma.programApproval.findUnique({
+        where: { studentProgramId_stage: { studentProgramId, stage: PrismaApprovalStage.advisor } },
+      });
+      if (!advisor || advisor.status !== PrismaApprovalStatus.approved) {
+        return null;
+      }
+    }
+    const approval = await this.prisma.programApproval
+      .update({
+        where: {
+          studentProgramId_stage: { studentProgramId, stage: stage as PrismaApprovalStage },
+        },
+        data: {
+          status: payload.status as PrismaApprovalStatus,
+          reviewerUserId,
+          notes: payload.notes,
+          decidedAt: new Date(),
+        },
+      })
+      .catch(() => null);
+    if (!approval) return null;
+    await this.prisma.studentProgram.update({
+      where: { id: studentProgramId },
+      data: {
+        status:
+          payload.status === 'rejected'
+            ? PrismaStudentProgramStatus.track_selected
+            : stage === 'advisor'
+              ? PrismaStudentProgramStatus.advisor_approved
+              : PrismaStudentProgramStatus.department_approved,
+        isLocked: payload.status === 'approved',
+      },
+    });
+    return toProgramApprovalRecord(approval);
+  }
+
   async listCourseMembersForInstructor(
     apiBaseUrl: string,
     courseId: string
@@ -3223,62 +4107,64 @@ export class PrismaStore implements AppStore {
     }>
   ): Promise<ProjectTemplateRecord | null> {
     await this.seed(apiBaseUrl);
-    const updated = await this.prisma.$transaction(async (tx) => {
-      if (payload.roles !== undefined) {
-        await tx.projectTemplateRole.deleteMany({ where: { templateId } });
-      }
-      if (payload.milestones !== undefined) {
-        await tx.projectTemplateMilestone.deleteMany({ where: { templateId } });
-      }
-      return tx.projectTemplate.update({
-        where: { id: templateId },
-        data: {
-          slug: payload.slug,
-          title: payload.title,
-          description: payload.description,
-          deliveryMode: payload.deliveryMode
-            ? payload.deliveryMode === 'team'
-              ? DeliveryMode.team
-              : DeliveryMode.individual
-            : undefined,
-          teamSize: payload.teamSize,
-          status: payload.status
-            ? payload.status === 'draft'
-              ? PrismaProjectTemplateStatus.draft
-              : PrismaProjectTemplateStatus.active
-            : undefined,
-          rubricJson: payload.rubric,
-          resourcesJson: payload.resources,
-          roles:
-            payload.roles !== undefined
-              ? {
-                  create: payload.roles.map((role, index) => ({
-                    key: role.key,
-                    label: role.label,
-                    count: role.count,
-                    sortOrder: role.sortOrder ?? index,
-                  })),
-                }
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
+        if (payload.roles !== undefined) {
+          await tx.projectTemplateRole.deleteMany({ where: { templateId } });
+        }
+        if (payload.milestones !== undefined) {
+          await tx.projectTemplateMilestone.deleteMany({ where: { templateId } });
+        }
+        return tx.projectTemplate.update({
+          where: { id: templateId },
+          data: {
+            slug: payload.slug,
+            title: payload.title,
+            description: payload.description,
+            deliveryMode: payload.deliveryMode
+              ? payload.deliveryMode === 'team'
+                ? DeliveryMode.team
+                : DeliveryMode.individual
               : undefined,
-          milestones:
-            payload.milestones !== undefined
-              ? {
-                  create: payload.milestones.map((milestone, index) => ({
-                    title: milestone.title,
-                    description: milestone.description,
-                    order: milestone.order ?? index,
-                    dueAt: milestone.dueAt ? new Date(milestone.dueAt) : null,
-                    isFinal: milestone.isFinal,
-                  })),
-                }
+            teamSize: payload.teamSize,
+            status: payload.status
+              ? payload.status === 'draft'
+                ? PrismaProjectTemplateStatus.draft
+                : PrismaProjectTemplateStatus.active
               : undefined,
-        },
-        include: {
-          roles: { orderBy: { sortOrder: 'asc' } },
-          milestones: { orderBy: { order: 'asc' } },
-        },
-      });
-    }).catch(() => null);
+            rubricJson: payload.rubric,
+            resourcesJson: payload.resources,
+            roles:
+              payload.roles !== undefined
+                ? {
+                    create: payload.roles.map((role, index) => ({
+                      key: role.key,
+                      label: role.label,
+                      count: role.count,
+                      sortOrder: role.sortOrder ?? index,
+                    })),
+                  }
+                : undefined,
+            milestones:
+              payload.milestones !== undefined
+                ? {
+                    create: payload.milestones.map((milestone, index) => ({
+                      title: milestone.title,
+                      description: milestone.description,
+                      order: milestone.order ?? index,
+                      dueAt: milestone.dueAt ? new Date(milestone.dueAt) : null,
+                      isFinal: milestone.isFinal,
+                    })),
+                  }
+                : undefined,
+          },
+          include: {
+            roles: { orderBy: { sortOrder: 'asc' } },
+            milestones: { orderBy: { order: 'asc' } },
+          },
+        });
+      })
+      .catch(() => null);
     if (!updated) {
       return null;
     }
@@ -3522,32 +4408,34 @@ export class PrismaStore implements AppStore {
     }>
   ): Promise<TeamRecord | null> {
     await this.seed(apiBaseUrl);
-    const updated = await this.prisma.$transaction(async (tx) => {
-      if (payload.members !== undefined) {
-        await tx.teamMember.deleteMany({ where: { teamId } });
-      }
-      return tx.team.update({
-        where: { id: teamId, projectId },
-        data: {
-          name: payload.name,
-          members:
-            payload.members !== undefined
-              ? {
-                  create: payload.members.map((member) => ({
-                    userId: member.userId,
-                    roleKey: member.roleKey,
-                    roleLabel: member.roleLabel,
-                    status: 'active',
-                  })),
-                }
-              : undefined,
-        },
-        include: {
-          members: { include: { user: true }, orderBy: { createdAt: 'asc' } },
-          repo: true,
-        },
-      });
-    }).catch(() => null);
+    const updated = await this.prisma
+      .$transaction(async (tx) => {
+        if (payload.members !== undefined) {
+          await tx.teamMember.deleteMany({ where: { teamId } });
+        }
+        return tx.team.update({
+          where: { id: teamId, projectId },
+          data: {
+            name: payload.name,
+            members:
+              payload.members !== undefined
+                ? {
+                    create: payload.members.map((member) => ({
+                      userId: member.userId,
+                      roleKey: member.roleKey,
+                      roleLabel: member.roleLabel,
+                      status: 'active',
+                    })),
+                  }
+                : undefined,
+          },
+          include: {
+            members: { include: { user: true }, orderBy: { createdAt: 'asc' } },
+            repo: true,
+          },
+        });
+      })
+      .catch(() => null);
     if (!updated) {
       return null;
     }
@@ -3753,7 +4641,12 @@ export class PrismaStore implements AppStore {
     let milestone = await this.prisma.milestone.findUniqueOrThrow({
       where: { id: milestoneId },
       include: {
-        project: { include: { releases: latestReleaseInclude, teams: { include: { repo: true, members: true } } } },
+        project: {
+          include: {
+            releases: latestReleaseInclude,
+            teams: { include: { repo: true, members: true } },
+          },
+        },
       },
     });
     // Auto-create a default release if the project has none yet.
@@ -3777,7 +4670,10 @@ export class PrismaStore implements AppStore {
         where: { id: milestoneId },
         include: {
           project: {
-            include: { releases: latestReleaseInclude, teams: { include: { repo: true, members: true } } },
+            include: {
+              releases: latestReleaseInclude,
+              teams: { include: { repo: true, members: true } },
+            },
           },
         },
       });
@@ -3803,7 +4699,10 @@ export class PrismaStore implements AppStore {
         milestone.project.teams.find((entry) =>
           entry.members.some((member) => member.userId === userId && member.status === 'active')
         ) || null;
-      if (!team || milestone.project.teamFormationStatus !== PrismaTeamFormationStatus.teams_locked) {
+      if (
+        !team ||
+        milestone.project.teamFormationStatus !== PrismaTeamFormationStatus.teams_locked
+      ) {
         throw new Error('Teams must be locked before team submissions are accepted.');
       }
       if (!team.repo) {
@@ -3864,11 +4763,16 @@ export class PrismaStore implements AppStore {
         repoUrl:
           payload.repoUrl ||
           payload.submissionValue ||
-          (team?.repo?.cloneUrl || null) ||
+          team?.repo?.cloneUrl ||
+          null ||
           repo?.cloneUrl ||
           '',
         branch:
-          payload.branch || team?.repo?.defaultBranch || teamRepo?.defaultBranch || repo?.defaultBranch || 'main',
+          payload.branch ||
+          team?.repo?.defaultBranch ||
+          teamRepo?.defaultBranch ||
+          repo?.defaultBranch ||
+          'main',
         status:
           payload.submissionType === 'github'
             ? SubmissionStatus.running
@@ -4222,35 +5126,33 @@ export class PrismaStore implements AppStore {
         },
         include: { project: true, team: { include: { members: true } } },
       });
-      const submissionRecords = submissions
-        .map(toSubmissionRecord)
-        .filter((entry) =>
-          submissionBelongsToUser(
-            {
-              users: [],
-              githubAccounts: [],
-              courses: [],
-              projectTemplates: [],
-              projectRoleApplications: [],
-              teamFormationRuns: [],
-              teams: teamData.teams,
-              courseMemberships: [],
-              courseInvites: [],
-              deviceCodes: [],
-              sessions: [],
-              webSessions: [],
-              submissions: [],
-              verificationLogs: [],
-              projects: [],
-              milestones: [],
-              reviews: [],
-              githubDeliveries: [],
-              activity: [],
-            },
-            entry,
-            userId
-          )
-        );
+      const submissionRecords = submissions.map(toSubmissionRecord).filter((entry) =>
+        submissionBelongsToUser(
+          {
+            users: [],
+            githubAccounts: [],
+            courses: [],
+            projectTemplates: [],
+            projectRoleApplications: [],
+            teamFormationRuns: [],
+            teams: teamData.teams,
+            courseMemberships: [],
+            courseInvites: [],
+            deviceCodes: [],
+            sessions: [],
+            webSessions: [],
+            submissions: [],
+            verificationLogs: [],
+            projects: [],
+            milestones: [],
+            reviews: [],
+            githubDeliveries: [],
+            activity: [],
+          },
+          entry,
+          userId
+        )
+      );
       milestonesByProject[project.id] = milestones;
       statsByProject[project.id] = projectStats(milestones, submissionRecords, reviewRecords);
     }
