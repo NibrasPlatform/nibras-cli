@@ -191,39 +191,21 @@ async function main() {
 
     heading('3. Students Apply For Roles');
     const applications = await Promise.all([
-      api(
-        app,
-        'POST',
-        `/v1/tracking/projects/${project.id}/applications`,
-        'student-demo-token',
-        {
-          statement: 'I can handle the API and database layer.',
-          availabilityNote: 'Available evenings.',
-          preferences: [{ templateRoleId: template.roles[0].id, rank: 1 }],
-        }
-      ),
-      api(
-        app,
-        'POST',
-        `/v1/tracking/projects/${project.id}/applications`,
-        'student-sara-token',
-        {
-          statement: 'I can own the frontend and polish the UI.',
-          availabilityNote: 'Available afternoons.',
-          preferences: [{ templateRoleId: template.roles[1].id, rank: 1 }],
-        }
-      ),
-      api(
-        app,
-        'POST',
-        `/v1/tracking/projects/${project.id}/applications`,
-        'student-omar-token',
-        {
-          statement: 'I can coordinate the team and keep milestones on track.',
-          availabilityNote: 'Available mornings.',
-          preferences: [{ templateRoleId: template.roles[2].id, rank: 1 }],
-        }
-      ),
+      api(app, 'POST', `/v1/tracking/projects/${project.id}/applications`, 'student-demo-token', {
+        statement: 'I can handle the API and database layer.',
+        availabilityNote: 'Available evenings.',
+        preferences: [{ templateRoleId: template.roles[0].id, rank: 1 }],
+      }),
+      api(app, 'POST', `/v1/tracking/projects/${project.id}/applications`, 'student-sara-token', {
+        statement: 'I can own the frontend and polish the UI.',
+        availabilityNote: 'Available afternoons.',
+        preferences: [{ templateRoleId: template.roles[1].id, rank: 1 }],
+      }),
+      api(app, 'POST', `/v1/tracking/projects/${project.id}/applications`, 'student-omar-token', {
+        statement: 'I can coordinate the team and keep milestones on track.',
+        availabilityNote: 'Available mornings.',
+        preferences: [{ templateRoleId: template.roles[2].id, rank: 1 }],
+      }),
     ]);
     printJson(
       'Applications',

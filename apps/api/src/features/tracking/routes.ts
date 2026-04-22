@@ -310,7 +310,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       if (!auth) return;
       const params = request.params as { templateId: string };
       if (!validateId(params.templateId, reply, 'templateId')) return;
-      const template = await store.getProjectTemplateById(requestBaseUrl(request), params.templateId);
+      const template = await store.getProjectTemplateById(
+        requestBaseUrl(request),
+        params.templateId
+      );
       if (!template) {
         reply.code(404).send(Errors.notFound('Project template'));
         return;
@@ -331,7 +334,10 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       if (!auth) return;
       const params = request.params as { templateId: string };
       if (!validateId(params.templateId, reply, 'templateId')) return;
-      const existing = await store.getProjectTemplateById(requestBaseUrl(request), params.templateId);
+      const existing = await store.getProjectTemplateById(
+        requestBaseUrl(request),
+        params.templateId
+      );
       if (!existing) {
         reply.code(404).send(Errors.notFound('Project template'));
         return;
@@ -625,7 +631,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
 
   app.post(
     '/v1/tracking/projects/:projectId/applications',
-    { schema: { tags: ['tracking'], summary: 'Create or update a role application for a project' } },
+    {
+      schema: { tags: ['tracking'], summary: 'Create or update a role application for a project' },
+    },
     async (request, reply) => {
       const auth = await requireUser(request, reply, store);
       if (!auth) return;
@@ -650,7 +658,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
         return;
       }
       if (project.applicationCloseAt && new Date(project.applicationCloseAt) < now) {
-        reply.code(422).send(Errors.validation('Applications for this project are already closed.'));
+        reply
+          .code(422)
+          .send(Errors.validation('Applications for this project are already closed.'));
         return;
       }
       const payload = CreateProjectRoleApplicationRequestSchema.parse(request.body);
@@ -666,7 +676,11 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       } catch (error) {
         reply
           .code(422)
-          .send(Errors.validation(error instanceof Error ? error.message : 'Failed to save application.'));
+          .send(
+            Errors.validation(
+              error instanceof Error ? error.message : 'Failed to save application.'
+            )
+          );
       }
     }
   );
@@ -681,7 +695,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       if (!validateId(params.projectId, reply, 'projectId')) return;
       const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
       if (!project || !project.courseId || !canViewCourse(auth, project.courseId)) {
-        reply.code(project ? 403 : 404).send(project ? Errors.forbidden() : Errors.notFound('Project'));
+        reply
+          .code(project ? 403 : 404)
+          .send(project ? Errors.forbidden() : Errors.notFound('Project'));
         return;
       }
       const application = await store.getProjectRoleApplicationForUser(
@@ -703,7 +719,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       if (!validateId(params.projectId, reply, 'projectId')) return;
       const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
       if (!project || !canManageProject(auth, project)) {
-        reply.code(project ? 403 : 404).send(project ? Errors.forbidden() : Errors.notFound('Project'));
+        reply
+          .code(project ? 403 : 404)
+          .send(project ? Errors.forbidden() : Errors.notFound('Project'));
         return;
       }
       const applications = await store.listProjectRoleApplications(
@@ -724,7 +742,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       if (!validateId(params.projectId, reply, 'projectId')) return;
       const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
       if (!project || !canManageProject(auth, project)) {
-        reply.code(project ? 403 : 404).send(project ? Errors.forbidden() : Errors.notFound('Project'));
+        reply
+          .code(project ? 403 : 404)
+          .send(project ? Errors.forbidden() : Errors.notFound('Project'));
         return;
       }
       const payload = GenerateTeamFormationRequestSchema.parse(request.body ?? {});
@@ -739,7 +759,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       } catch (error) {
         reply
           .code(422)
-          .send(Errors.validation(error instanceof Error ? error.message : 'Failed to generate teams.'));
+          .send(
+            Errors.validation(error instanceof Error ? error.message : 'Failed to generate teams.')
+          );
       }
     }
   );
@@ -754,7 +776,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       if (!validateId(params.projectId, reply, 'projectId')) return;
       const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
       if (!project || !canManageProject(auth, project)) {
-        reply.code(project ? 403 : 404).send(project ? Errors.forbidden() : Errors.notFound('Project'));
+        reply
+          .code(project ? 403 : 404)
+          .send(project ? Errors.forbidden() : Errors.notFound('Project'));
         return;
       }
       const payload = LockTeamFormationRequestSchema.parse(request.body ?? {});
@@ -769,7 +793,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       } catch (error) {
         reply
           .code(422)
-          .send(Errors.validation(error instanceof Error ? error.message : 'Failed to lock teams.'));
+          .send(
+            Errors.validation(error instanceof Error ? error.message : 'Failed to lock teams.')
+          );
       }
     }
   );
@@ -784,7 +810,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       if (!validateId(params.projectId, reply, 'projectId')) return;
       const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
       if (!project || !project.courseId || !canViewCourse(auth, project.courseId)) {
-        reply.code(project ? 403 : 404).send(project ? Errors.forbidden() : Errors.notFound('Project'));
+        reply
+          .code(project ? 403 : 404)
+          .send(project ? Errors.forbidden() : Errors.notFound('Project'));
         return;
       }
       const teams = await store.listProjectTeams(requestBaseUrl(request), params.projectId);
@@ -806,7 +834,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
       if (!validateId(params.teamId, reply, 'teamId')) return;
       const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
       if (!project || !canManageProject(auth, project)) {
-        reply.code(project ? 403 : 404).send(project ? Errors.forbidden() : Errors.notFound('Project'));
+        reply
+          .code(project ? 403 : 404)
+          .send(project ? Errors.forbidden() : Errors.notFound('Project'));
         return;
       }
       const payload = UpdateTeamRequestSchema.parse(request.body);
@@ -905,9 +935,11 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
         }
       }
       if (project.deliveryMode === 'team' && project.teamFormationStatus !== 'teams_locked') {
-        reply.code(422).send(
-          Errors.validation('Teams must be locked before team projects can accept submissions.')
-        );
+        reply
+          .code(422)
+          .send(
+            Errors.validation('Teams must be locked before team projects can accept submissions.')
+          );
         return;
       }
       const payload = CreateTrackingSubmissionRequestSchema.parse(request.body);
@@ -927,7 +959,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
             : /locked/i.test(message) || /accept submissions/i.test(message)
               ? 422
               : 422;
-        reply.code(statusCode).send(statusCode === 403 ? Errors.forbidden() : Errors.validation(message));
+        reply
+          .code(statusCode)
+          .send(statusCode === 403 ? Errors.forbidden() : Errors.validation(message));
         return;
       }
       reply.code(201);

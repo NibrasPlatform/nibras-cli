@@ -1,9 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  getVisibleNavGroups,
-  isNavItemActive,
-} from '../apps/web/app/(app)/_components/nav-config';
+import { getVisibleNavGroups, isNavItemActive } from '../apps/web/app/(app)/_components/nav-config';
 import {
   plannerSections,
   programSections,
@@ -80,12 +77,10 @@ test('hash-based instructor shortcut is active on instructor anchors', () => {
 });
 
 test('planner and program section configs expose the expected tabs', () => {
-  assert.deepEqual(plannerSections.map((item) => item.label), [
-    'Overview',
-    'Track',
-    'Petitions',
-    'Sheet',
-  ]);
+  assert.deepEqual(
+    plannerSections.map((item) => item.label),
+    ['Overview', 'Track', 'Petitions', 'Sheet']
+  );
 
   assert.deepEqual(
     programSections('program-123').map((item) => item.href),
