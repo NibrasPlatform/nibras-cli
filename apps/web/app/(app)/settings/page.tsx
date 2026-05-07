@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '../../lib/session';
-import { prefs } from '../../lib/prefs';
+import { prefs, PREF_EVENTS } from '../../lib/prefs';
 import { useSession } from '../_components/session-context';
 import { getLevelLabel, MAX_LEVEL } from '../../lib/levels';
 import styles from './page.module.css';
@@ -305,6 +305,7 @@ export default function SettingsPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [compact, setCompact] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [installUrl, setInstallUrl] = useState<string | null>(null);
   const [installUrlLoading, setInstallUrlLoading] = useState(false);
   const [manualInstallId, setManualInstallId] = useState('');
@@ -318,8 +319,20 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
-    setCompact(prefs.getCompact());
+    function syncPreferences() {
+      setCompact(prefs.getCompact());
+      setSidebarCollapsed(prefs.getSidebarCollapsed());
+    }
+
+    syncPreferences();
+    window.addEventListener(PREF_EVENTS.compactChanged, syncPreferences);
+    window.addEventListener(PREF_EVENTS.sidebarCollapsedChanged, syncPreferences);
     void fetchInstallUrl();
+
+    return () => {
+      window.removeEventListener(PREF_EVENTS.compactChanged, syncPreferences);
+      window.removeEventListener(PREF_EVENTS.sidebarCollapsedChanged, syncPreferences);
+    };
   }, []);
 
   async function fetchInstallUrl() {
@@ -368,7 +381,11 @@ export default function SettingsPage() {
   function handleCompactChange(val: boolean) {
     setCompact(val);
     prefs.setCompact(val);
-    window.dispatchEvent(new Event('nibras:compact-changed'));
+  }
+
+  function handleSidebarCollapsedChange(val: boolean) {
+    setSidebarCollapsed(val);
+    prefs.setSidebarCollapsed(val);
   }
 
   async function handleDeleteAccount() {
@@ -648,18 +665,43 @@ export default function SettingsPage() {
           {/* ── Preferences tab ── */}
           {activeTab === 'preferences' && (
             <section className={styles.contentSection}>
-              <h2 className={styles.sectionHeading}>Preferences</h2>
-              <p className={styles.sectionSub}>Customise how Nibras looks and feels for you.</p>
+              <h2 className={styles.sectionHeading}>Appearance &amp; Layout</h2>
+              <p className={styles.sectionSub}>
+                Manage the interface settings stored on this device, including spacing and
+                navigation layout.
+              </p>
 
               <div className={styles.prefRow}>
                 <div className={styles.prefInfo}>
                   <label htmlFor="compact-toggle" className={styles.prefLabel}>
                     Compact mode
                   </label>
-                  <p className={styles.prefDesc}>Reduce spacing for a denser layout</p>
+                  <p className={styles.prefDesc}>
+                    Reduce spacing across navigation, headers, and content for a denser workspace.
+                  </p>
                 </div>
                 <Toggle id="compact-toggle" checked={compact} onChange={handleCompactChange} />
               </div>
+
+              <div className={styles.prefRow}>
+                <div className={styles.prefInfo}>
+                  <label htmlFor="sidebar-collapsed-toggle" className={styles.prefLabel}>
+                    Collapsed sidebar
+                  </label>
+                  <p className={styles.prefDesc}>
+                    Keep sidebar navigation collapsed by default in layouts that use it.
+                  </p>
+                </div>
+                <Toggle
+                  id="sidebar-collapsed-toggle"
+                  checked={sidebarCollapsed}
+                  onChange={handleSidebarCollapsedChange}
+                />
+              </div>
+
+              <p className={styles.prefNote}>
+                These settings are stored in your browser on this device.
+              </p>
             </section>
           )}
 

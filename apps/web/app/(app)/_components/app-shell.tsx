@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/session';
-import { prefs } from '../../lib/prefs';
+import { prefs, PREF_EVENTS } from '../../lib/prefs';
 import { SessionProvider } from './session-context';
 import TopHeader from './top-header';
 import styles from './app-shell.module.css';
@@ -42,8 +42,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       applyCompact();
     }
 
-    window.addEventListener('nibras:compact-changed', onCompactChanged);
-    return () => window.removeEventListener('nibras:compact-changed', onCompactChanged);
+    window.addEventListener(PREF_EVENTS.compactChanged, onCompactChanged);
+    return () => window.removeEventListener(PREF_EVENTS.compactChanged, onCompactChanged);
   }, []);
 
   useEffect(() => {

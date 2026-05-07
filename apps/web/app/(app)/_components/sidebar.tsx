@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import NibrasLogo from '@/app/_components/nibras-logo';
 import { getInitials } from '../../lib/utils';
-import { prefs } from '../../lib/prefs';
+import { prefs, PREF_EVENTS } from '../../lib/prefs';
 import { appNavItems, canAccessNavItem, isNavItemActive } from './nav-config';
 
 type ShellSessionUser = {
@@ -109,7 +109,13 @@ export default function Sidebar({
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    if (prefs.getSidebarCollapsed()) setCollapsed(true);
+    function syncCollapsed() {
+      setCollapsed(prefs.getSidebarCollapsed());
+    }
+
+    syncCollapsed();
+    window.addEventListener(PREF_EVENTS.sidebarCollapsedChanged, syncCollapsed);
+    return () => window.removeEventListener(PREF_EVENTS.sidebarCollapsedChanged, syncCollapsed);
   }, []);
 
   function toggleCollapse() {
