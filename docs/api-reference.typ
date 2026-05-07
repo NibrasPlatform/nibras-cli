@@ -183,9 +183,12 @@
   #text(font: sans, size: 9pt, weight: "bold", fill: accent, tracking: 0.22em,
     upper("Nibras Platform"))
   #v(0.4em)
-  #text(font: sans, size: 36pt, weight: "bold", fill: ink, leading: 0.9em)[
-    REST API\
-    Reference
+  #block[
+    #set par(leading: 0.9em)
+    #text(font: sans, size: 36pt, weight: "bold", fill: ink)[
+      REST API\
+      Reference
+    ]
   ]
   #v(1.2em)
   #line(length: 60pt, stroke: 2pt + accent)
