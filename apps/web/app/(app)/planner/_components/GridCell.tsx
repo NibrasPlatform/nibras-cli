@@ -65,7 +65,7 @@ function CourseChip({ course, catalogCourse, isLocked, onRemove }: CourseChipPro
 }
 
 type GridCellProps = {
-  year: 1 | 2 | 3 | 4;
+  year: number;
   term: 'fall' | 'spring';
   courses: DraftPlannedCourse[];
   catalogCourses: CatalogCourse[];

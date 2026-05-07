@@ -861,8 +861,7 @@ export default function SubmissionDetailPage({
                         alignItems: 'center',
                         gap: 12,
                         padding: '10px 0',
-                        borderBottom:
-                          idx < commits.length - 1 ? '1px solid var(--border)' : 'none',
+                        borderBottom: idx < commits.length - 1 ? '1px solid var(--border)' : 'none',
                       }}
                     >
                       {/* Git icon */}
@@ -899,7 +898,14 @@ export default function SubmissionDetailPage({
 
                       {/* SHA + branch */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            flexWrap: 'wrap',
+                          }}
+                        >
                           <code
                             className={styles.mono}
                             style={{
