@@ -250,7 +250,7 @@ export default function PlannerPage() {
             }}
           >
             <div>
-              <h2 style={{ margin: 0 }}>4-Year Degree Plan</h2>
+              <h2 style={{ margin: 0 }}>{plan.version.durationYears}-Year Degree Plan</h2>
               <p className={styles.muted} style={{ margin: '2px 0 0' }}>
                 {plan.program.code} · {plan.program.title}
                 {plan.selectedTrack ? ` · ${plan.selectedTrack.title}` : ''}
@@ -299,6 +299,7 @@ export default function PlannerPage() {
               draftCourses={draftCourses}
               catalogCourses={plan.catalogCourses}
               isLocked={plan.isLocked}
+              durationYears={plan.version.durationYears}
               onRemove={removeCourse}
             />
           </div>

@@ -166,6 +166,7 @@ export type ProgramVersionRecord = {
   isActive: boolean;
   policyText: string;
   trackSelectionMinYear: number;
+  durationYears: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -1008,6 +1009,7 @@ export interface AppStore {
       isActive: boolean;
       policyText: string;
       trackSelectionMinYear: number;
+      durationYears: number;
     }
   ): Promise<ProgramVersionRecord>;
   getProgramVersionDetail(
@@ -1122,7 +1124,8 @@ export interface AppStore {
         sourceType: PlannedCourseSourceType;
         note: string | null;
       }>;
-    }
+    },
+    options?: { bypassLock?: boolean }
   ): Promise<StudentProgramPlanRecord | null>;
   getStudentProgramSheet(
     apiBaseUrl: string,
@@ -1977,6 +1980,7 @@ function seedData(apiBaseUrl: string): StoreData {
       isActive: true,
       policyText: programSeed.version.policyText,
       trackSelectionMinYear: programSeed.version.trackSelectionMinYear,
+      durationYears: programSeed.version.durationYears,
       createdAt,
       updatedAt: createdAt,
     },
@@ -3415,6 +3419,7 @@ export class FileStore implements AppStore {
       isActive: boolean;
       policyText: string;
       trackSelectionMinYear: number;
+      durationYears: number;
     }
   ): Promise<ProgramVersionRecord> {
     const data = this.read(apiBaseUrl);
@@ -3427,6 +3432,7 @@ export class FileStore implements AppStore {
       isActive: payload.isActive,
       policyText: payload.policyText,
       trackSelectionMinYear: payload.trackSelectionMinYear,
+      durationYears: payload.durationYears,
       createdAt: nowIso(),
       updatedAt: nowIso(),
     };
@@ -3771,11 +3777,20 @@ export class FileStore implements AppStore {
         sourceType: PlannedCourseSourceType;
         note: string | null;
       }>;
-    }
+    },
+    options?: { bypassLock?: boolean }
   ): Promise<StudentProgramPlanRecord | null> {
     const data = this.read(apiBaseUrl);
     const studentProgram = (data.studentPrograms || []).find((entry) => entry.userId === userId);
-    if (!studentProgram || studentProgram.isLocked) return null;
+    if (!studentProgram || (studentProgram.isLocked && !options?.bypassLock)) return null;
+    // Defense-in-depth: reject duplicate catalogCourseId entries
+    const seen = new Set<string>();
+    for (const course of payload.plannedCourses) {
+      if (seen.has(course.catalogCourseId)) {
+        throw new Error(`Duplicate course in plan: ${course.catalogCourseId}`);
+      }
+      seen.add(course.catalogCourseId);
+    }
     const now = nowIso();
     data.studentPlannedCourses = [
       ...(data.studentPlannedCourses || []).filter(

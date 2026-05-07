@@ -14,10 +14,9 @@ type PlannerGridProps = {
   draftCourses: DraftPlannedCourse[];
   catalogCourses: CatalogCourse[];
   isLocked: boolean;
+  durationYears: number;
   onRemove: (catalogCourseId: string) => void;
 };
-
-const YEARS = [1, 2, 3, 4] as const;
 
 function getCellCourses(
   draftCourses: DraftPlannedCourse[],
@@ -43,11 +42,17 @@ export default function PlannerGrid({
   draftCourses,
   catalogCourses,
   isLocked,
+  durationYears,
   onRemove,
 }: PlannerGridProps) {
+  const YEARS = Array.from({ length: durationYears }, (_, i) => i + 1);
+  const gridStyle = {
+    gridTemplateColumns: `56px repeat(${durationYears}, minmax(160px, 1fr))`,
+  };
+
   return (
     <div className={styles.gridWrapper}>
-      <div className={styles.grid}>
+      <div className={styles.grid} style={gridStyle}>
         {/* ── Header row: blank + Year 1…4 ── */}
         <div /> {/* blank top-left corner */}
         {YEARS.map((year) => (

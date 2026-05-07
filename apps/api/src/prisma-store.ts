@@ -548,6 +548,7 @@ function toProgramVersionRecord(version: {
   isActive: boolean;
   policyText: string;
   trackSelectionMinYear: number;
+  durationYears: number;
   createdAt: Date;
   updatedAt: Date;
 }): ProgramVersionRecord {
@@ -560,6 +561,7 @@ function toProgramVersionRecord(version: {
     isActive: version.isActive,
     policyText: version.policyText,
     trackSelectionMinYear: version.trackSelectionMinYear,
+    durationYears: version.durationYears,
     createdAt: version.createdAt.toISOString(),
     updatedAt: version.updatedAt.toISOString(),
   };
@@ -2892,6 +2894,7 @@ export class PrismaStore implements AppStore {
       isActive: boolean;
       policyText: string;
       trackSelectionMinYear: number;
+      durationYears: number;
     }
   ): Promise<ProgramVersionRecord> {
     await this.seed(apiBaseUrl);
@@ -2911,6 +2914,7 @@ export class PrismaStore implements AppStore {
           isActive: payload.isActive,
           policyText: payload.policyText,
           trackSelectionMinYear: payload.trackSelectionMinYear,
+          durationYears: payload.durationYears,
         },
       });
       if (payload.isActive) {
@@ -3236,11 +3240,34 @@ export class PrismaStore implements AppStore {
         sourceType: PlannedCourseSourceType;
         note: string | null;
       }>;
-    }
+    },
+    options?: { bypassLock?: boolean }
   ): Promise<StudentProgramPlanRecord | null> {
     await this.seed(apiBaseUrl);
     const studentProgram = await this.prisma.studentProgram.findFirst({ where: { userId } });
-    if (!studentProgram || studentProgram.isLocked) return null;
+    if (!studentProgram || (studentProgram.isLocked && !options?.bypassLock)) return null;
+    // Defense-in-depth: reject duplicate catalogCourseId entries
+    const seen = new Set<string>();
+    for (const course of payload.plannedCourses) {
+      if (seen.has(course.catalogCourseId)) {
+        throw new Error(`Duplicate course in plan: ${course.catalogCourseId}`);
+      }
+      seen.add(course.catalogCourseId);
+    }
+    // Validate plannedYear does not exceed durationYears for this program version
+    const version = await this.prisma.programVersion.findUnique({
+      where: { id: studentProgram.programVersionId },
+      select: { durationYears: true },
+    });
+    if (version) {
+      for (const course of payload.plannedCourses) {
+        if (course.plannedYear > version.durationYears) {
+          throw new Error(
+            `plannedYear ${course.plannedYear} exceeds program duration (${version.durationYears} years).`
+          );
+        }
+      }
+    }
     await this.prisma.$transaction([
       this.prisma.studentPlannedCourse.deleteMany({
         where: { studentProgramId: studentProgram.id },

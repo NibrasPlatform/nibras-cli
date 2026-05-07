@@ -13,6 +13,16 @@ import styles from '../submissions.module.css';
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 
+type GithubDelivery = {
+  id: string;
+  submissionId: string;
+  repoUrl: string;
+  eventType: string;
+  ref: string;
+  commitSha: string;
+  receivedAt: string;
+};
+
 type Submission = {
   id: string;
   projectId: string;
@@ -555,6 +565,7 @@ export default function SubmissionDetailPage({
 
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [review, setReview] = useState<Review | null>(null);
+  const [commits, setCommits] = useState<GithubDelivery[]>([]);
   const [githubStatus, setGitHubStatus] = useState<GitHubStatus>({
     available: false,
     githubLinked: false,
@@ -584,9 +595,10 @@ export default function SubmissionDetailPage({
       const subData = (await subRes.json()) as Submission;
       setSubmission(subData);
 
-      const [reviewResult, ghResult] = await Promise.allSettled([
+      const [reviewResult, ghResult, commitsResult] = await Promise.allSettled([
         apiFetch(`/v1/tracking/submissions/${submissionId}/review`, { auth: true }),
         loadGitHubStatus(),
+        apiFetch(`/v1/tracking/submissions/${submissionId}/commits`, { auth: true }),
       ]);
 
       if (reviewResult.status === 'fulfilled' && reviewResult.value.ok) {
@@ -596,6 +608,11 @@ export default function SubmissionDetailPage({
 
       if (ghResult.status === 'fulfilled') {
         setGitHubStatus(ghResult.value);
+      }
+
+      if (commitsResult.status === 'fulfilled' && commitsResult.value.ok) {
+        const deliveries = (await commitsResult.value.json()) as GithubDelivery[];
+        setCommits(Array.isArray(deliveries) ? deliveries : []);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -812,6 +829,133 @@ export default function SubmissionDetailPage({
                 </span>
               </div>
               <pre className={styles.codeBlock}>{submission.summary}</pre>
+            </div>
+          )}
+
+          {/* Push history (GitHub deliveries) */}
+          {submission.submissionType === 'github' && commits.length > 0 && (
+            <div className={styles.panel}>
+              <div className={styles.panelHead}>
+                <h2 className={styles.panelTitle}>Push History</h2>
+                <span className={styles.muted} style={{ fontSize: 12 }}>
+                  {commits.length} {commits.length === 1 ? 'push' : 'pushes'} recorded
+                </span>
+              </div>
+              <div style={{ display: 'grid', gap: 0 }}>
+                {commits.map((delivery, idx) => {
+                  const branchName = delivery.ref.replace(/^refs\/heads\//, '');
+                  const receivedDate = new Date(delivery.receivedAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  });
+                  const receivedTime = new Date(delivery.receivedAt).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  });
+                  return (
+                    <div
+                      key={delivery.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '10px 0',
+                        borderBottom:
+                          idx < commits.length - 1 ? '1px solid var(--border)' : 'none',
+                      }}
+                    >
+                      {/* Git icon */}
+                      <span
+                        style={{
+                          display: 'inline-grid',
+                          placeItems: 'center',
+                          width: 28,
+                          height: 28,
+                          borderRadius: 7,
+                          background: 'rgba(34,197,94,0.08)',
+                          border: '1px solid rgba(34,197,94,0.18)',
+                          color: '#4ade80',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <circle cx="12" cy="18" r="3" />
+                          <circle cx="6" cy="6" r="3" />
+                          <circle cx="18" cy="6" r="3" />
+                          <path d="M18 9a9 9 0 0 1-9 9M6 9a9 9 0 0 0 3 6.7" />
+                        </svg>
+                      </span>
+
+                      {/* SHA + branch */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <code
+                            className={styles.mono}
+                            style={{
+                              background: 'rgba(0,0,0,0.25)',
+                              padding: '2px 7px',
+                              borderRadius: 5,
+                              fontSize: 12,
+                              color: '#a78bfa',
+                            }}
+                          >
+                            {delivery.commitSha.slice(0, 7)}
+                          </code>
+                          <span
+                            style={{
+                              fontSize: 11.5,
+                              color: 'rgba(161,161,170,0.55)',
+                              fontFamily: 'var(--font-mono, monospace)',
+                            }}
+                          >
+                            {branchName}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              letterSpacing: '0.05em',
+                              textTransform: 'uppercase',
+                              padding: '2px 8px',
+                              borderRadius: 999,
+                              background: 'rgba(255,255,255,0.05)',
+                              border: '1px solid rgba(255,255,255,0.08)',
+                              color: 'rgba(161,161,170,0.55)',
+                            }}
+                          >
+                            {delivery.eventType}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Date */}
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          color: 'var(--text-muted)',
+                          whiteSpace: 'nowrap',
+                          textAlign: 'right',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <div>{receivedDate}</div>
+                        <div style={{ opacity: 0.6 }}>{receivedTime}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 

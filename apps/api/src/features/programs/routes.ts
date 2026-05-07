@@ -384,10 +384,12 @@ export function registerProgramRoutes(app: FastifyInstance, store: AppStore): vo
       const auth = await requireUser(request, reply, store);
       if (!auth) return;
       const payload = UpdateStudentPlanRequestSchema.parse(request.body);
+      const isAdmin = auth.user.systemRole === 'admin';
       const plan = await store.updateStudentProgramPlan(
         requestBaseUrl(request),
         auth.user.id,
-        payload
+        payload,
+        { bypassLock: isAdmin }
       );
       if (!plan) {
         reply.code(409).send(apiError('CONFLICT', 'Plan is locked or missing.'));

@@ -23,6 +23,35 @@ type StudentSubmission = {
   localTestExitCode: number | null;
 };
 
+type MilestoneStat = {
+  milestoneId: string;
+  milestoneTitle: string;
+  dueAt: string | null;
+  submissionCount: number;
+  latestStatus: string | null;
+  latestSubmittedAt: string | null;
+};
+
+type ProjectStat = {
+  projectId: string;
+  projectTitle: string;
+  totalMilestones: number;
+  submittedMilestones: number;
+  passedMilestones: number;
+  milestones: MilestoneStat[];
+};
+
+type CourseStat = {
+  courseId: string;
+  courseTitle: string;
+  projects: ProjectStat[];
+};
+
+type StudentAnalytics = {
+  userId: string;
+  analytics: CourseStat[];
+};
+
 const STATUS_LABELS: Record<string, string> = {
   queued: 'Queued',
   running: 'Running',
@@ -41,6 +70,7 @@ function getStatusClass(status: string): string {
 
 export default function SubmissionsPage() {
   const { data, loading, error } = useFetch<StudentSubmission[]>('/v1/me/submissions');
+  const { data: analyticsData } = useFetch<StudentAnalytics>('/v1/tracking/analytics/student');
   const [statusFilter, setStatusFilter] = useState('all');
 
   const submissions = Array.isArray(data) ? data : [];
@@ -53,6 +83,9 @@ export default function SubmissionsPage() {
   const pendingCount = submissions.filter(
     (submission) => submission.status === 'queued' || submission.status === 'running'
   ).length;
+
+  const courseStats = analyticsData?.analytics ?? [];
+  const totalCourses = courseStats.length;
 
   return (
     <main className={styles.page}>
@@ -82,7 +115,7 @@ export default function SubmissionsPage() {
         </select>
       </div>
 
-      <div className={styles.summaryGrid}>
+      <div className={styles.summaryCards}>
         <article className={styles.summaryCard}>
           <span className={styles.summaryLabel}>Total</span>
           <strong>{submissions.length}</strong>
@@ -104,6 +137,53 @@ export default function SubmissionsPage() {
           <p>Queued or currently running verification.</p>
         </article>
       </div>
+
+      {/* ── Analytics section ── */}
+      {courseStats.length > 0 && (
+        <div className={styles.analyticsSection}>
+          <div className={styles.analyticsSectionHead}>
+            <p className={styles.analyticsSectionTitle}>Progress by Course</p>
+            <span className={styles.analyticsOverview}>
+              {submissions.length} submission{submissions.length !== 1 ? 's' : ''} across{' '}
+              {totalCourses} course{totalCourses !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className={styles.courseGrid}>
+            {courseStats.map((course) => {
+              const totalMilestones = course.projects.reduce(
+                (sum, p) => sum + p.totalMilestones,
+                0
+              );
+              const passedMilestones = course.projects.reduce(
+                (sum, p) => sum + p.passedMilestones,
+                0
+              );
+              const submittedMilestones = course.projects.reduce(
+                (sum, p) => sum + p.submittedMilestones,
+                0
+              );
+              const pct = totalMilestones > 0 ? (passedMilestones / totalMilestones) * 100 : 0;
+              return (
+                <div key={course.courseId} className={styles.courseRow}>
+                  <div className={styles.courseRowHead}>
+                    <span className={styles.courseTitle}>{course.courseTitle}</span>
+                    <span className={styles.courseStat}>
+                      {passedMilestones} passed · {submittedMilestones} submitted ·{' '}
+                      {totalMilestones} total
+                    </span>
+                  </div>
+                  <div className={styles.miniBar} title={`${Math.round(pct)}% passed`}>
+                    <div
+                      className={styles.miniBarFill}
+                      style={{ width: `${Math.min(pct, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {loading && (
         <div className={styles.panel}>

@@ -264,6 +264,7 @@ model ProgramVersion {
   isActive               Boolean           @default(false)
   policyText             String            @default("")
   trackSelectionMinYear  Int               @default(2)
+  durationYears          Int               @default(4)
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
   program                Program           @relation(fields: [programId], references: [id], onDelete: Cascade)

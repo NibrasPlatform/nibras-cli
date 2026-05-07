@@ -68,6 +68,7 @@ export const ProgramVersionSummarySchema = z.object({
   isActive: z.boolean(),
   policyText: z.string().default(''),
   trackSelectionMinYear: z.number().int().min(1).max(4).default(2),
+  durationYears: z.number().int().min(1).default(4),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -139,7 +140,7 @@ export const StudentPlannedCourseSchema = z.object({
   id: z.string().min(1),
   studentProgramId: z.string().min(1),
   catalogCourseId: z.string().min(1),
-  plannedYear: z.number().int().min(1).max(4),
+  plannedYear: z.number().int().min(1),
   plannedTerm: AcademicTermSchema,
   sourceType: PlannedCourseSourceTypeSchema,
   note: z.string().nullable().default(null),
@@ -199,7 +200,7 @@ export const ProgramSheetSectionCourseSchema = z.object({
   catalogNumber: z.string().min(1),
   title: z.string().min(1),
   units: z.number().int().positive(),
-  plannedYear: z.number().int().min(1).max(4),
+  plannedYear: z.number().int().min(1),
   plannedTerm: AcademicTermSchema,
   sourceType: PlannedCourseSourceTypeSchema,
 });
@@ -276,6 +277,7 @@ export const CreateProgramVersionRequestSchema = z.object({
   isActive: z.boolean().default(false),
   policyText: z.string().default(''),
   trackSelectionMinYear: z.number().int().min(1).max(4).default(2),
+  durationYears: z.number().int().min(1).default(4),
 });
 
 export const CreateCatalogCourseRequestSchema = z.object({
@@ -333,17 +335,24 @@ export const SelectTrackRequestSchema = z.object({
   trackId: z.string().min(1),
 });
 
-export const UpdateStudentPlanRequestSchema = z.object({
-  plannedCourses: z.array(
-    z.object({
-      catalogCourseId: z.string().min(1),
-      plannedYear: z.number().int().min(1).max(4),
-      plannedTerm: AcademicTermSchema,
-      sourceType: PlannedCourseSourceTypeSchema.default('standard'),
-      note: z.string().nullable().default(null),
-    })
-  ),
-});
+export const UpdateStudentPlanRequestSchema = z
+  .object({
+    plannedCourses: z.array(
+      z.object({
+        catalogCourseId: z.string().min(1),
+        plannedYear: z.number().int().min(1),
+        plannedTerm: AcademicTermSchema,
+        sourceType: PlannedCourseSourceTypeSchema.default('standard'),
+        note: z.string().nullable().default(null),
+      })
+    ),
+  })
+  .refine(
+    (data) =>
+      new Set(data.plannedCourses.map((c) => c.catalogCourseId)).size ===
+      data.plannedCourses.length,
+    { message: 'Each course may only appear once in the plan.', path: ['plannedCourses'] }
+  );
 
 export const CreatePetitionRequestSchema = z.object({
   type: PetitionTypeSchema,

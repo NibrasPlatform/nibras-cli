@@ -41,6 +41,7 @@ export type ProgramSeedBlueprint = {
     versionLabel: string;
     policyText: string;
     trackSelectionMinYear: number;
+    durationYears: number;
     isActive: boolean;
   };
   catalogCourses: Array<{
@@ -277,6 +278,7 @@ export function buildDefaultProgramSeed(): ProgramSeedBlueprint {
       policyText:
         'Students complete the common Year 1 foundation, select one track from Year 2 onward, and must maintain advisor then department approval for exceptions.',
       trackSelectionMinYear: 2,
+      durationYears: 4,
       isActive: true,
     },
     catalogCourses,
