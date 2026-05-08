@@ -13,7 +13,7 @@
 
 /* ── Modal shell ─────────────────────────────────────────────────────────── */
 .modal {
-  width: min(660px, 100%);
+  width: min(620px, 100%);
   max-height: calc(100vh - 40px);
   overflow-y: auto;
   background: var(--surface);
@@ -28,7 +28,7 @@
 
 @keyframes modalIn {
   from {
-    transform: translateY(10px) scale(0.97);
+    transform: translateY(12px) scale(0.97);
     opacity: 0;
   }
   to {
@@ -47,7 +47,7 @@
 
 .headerText {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .title {
@@ -60,8 +60,8 @@
 
 .subtitle {
   margin: 0;
-  font-size: 13px;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: var(--text-soft);
 }
 
 .closeBtn {
@@ -86,36 +86,115 @@
   color: var(--text);
 }
 
-/* ── How-it-works card ───────────────────────────────────────────────────── */
-.howItWorks {
-  display: grid;
+/* ── Step indicator ──────────────────────────────────────────────────────── */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 16px 0 4px;
+  border-top: 1px solid var(--border);
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  background: rgba(34, 197, 94, 0.06);
+  flex: 1;
 }
 
-.howItWorksTitle {
-  font-size: 13px;
+.stepItem:last-child {
+  flex: 0 0 auto;
+}
+
+.stepCircle {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
   font-weight: 700;
-  color: var(--text);
-  margin: 0;
+  transition: background var(--transition-base), border-color var(--transition-base),
+    color var(--transition-base);
 }
 
-.howItWorksList {
-  margin: 0;
-  padding-left: 18px;
-  color: var(--text-muted);
-  font-size: 13px;
+.stepCircleActive {
+  background: var(--primary);
+  border: 2px solid var(--primary);
+  color: #08130c;
+}
+
+.stepCircleDone {
+  background: rgba(34, 197, 94, 0.2);
+  border: 2px solid rgba(34, 197, 94, 0.4);
+  color: var(--primary-strong);
+}
+
+.stepCircleIdle {
+  background: var(--surface-strong);
+  border: 2px solid var(--border);
+  color: var(--text-soft);
+}
+
+.stepLabel {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color var(--transition-fast);
+}
+
+.stepLabelActive {
+  color: var(--text);
+}
+
+.stepLabelIdle {
+  color: var(--text-soft);
+}
+
+.stepLine {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--border);
+  margin: 0 4px;
+  transition: background var(--transition-base);
+}
+
+.stepLineDone {
+  background: rgba(34, 197, 94, 0.4);
+}
+
+/* ── Step body ───────────────────────────────────────────────────────────── */
+.stepBody {
   display: grid;
-  gap: 4px;
+  gap: 16px;
+  animation: fadeStep 0.15s ease;
+}
+
+@keyframes fadeStep {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.stepHint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
 }
 
 /* ── Form fields ─────────────────────────────────────────────────────────── */
 .field {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .label {
@@ -124,9 +203,14 @@
   color: var(--text);
 }
 
+.optional {
+  font-weight: 400;
+  color: var(--text-soft);
+}
+
 .textarea {
   width: 100%;
-  min-height: 88px;
+  min-height: 96px;
   resize: vertical;
   padding: 10px 12px;
   border-radius: 10px;
@@ -145,6 +229,13 @@
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
+.charCount {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-soft);
+  text-align: right;
+}
+
 /* ── Role preference rows ────────────────────────────────────────────────── */
 .prefList {
   display: grid;
@@ -153,7 +244,7 @@
 
 .prefRow {
   display: grid;
-  grid-template-columns: 86px 1fr;
+  grid-template-columns: 80px 1fr;
   gap: 10px;
   align-items: center;
 }
@@ -186,10 +277,78 @@
 }
 
 .prefHint {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 12px;
   color: var(--text-soft);
   line-height: 1.55;
+}
+
+/* ── Review step ─────────────────────────────────────────────────────────── */
+.reviewSection {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+}
+
+.reviewSectionLabel {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.reviewPrefList {
+  display: grid;
+  gap: 6px;
+}
+
+.reviewPrefRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reviewPrefRank {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary-strong);
+  min-width: 24px;
+}
+
+.reviewPrefRole {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.reviewEmpty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-soft);
+  font-style: italic;
+}
+
+.reviewText {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.reviewNote {
+  font-size: 12px;
+  color: var(--text-soft);
+  line-height: 1.6;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.15);
 }
 
 /* ── Error ───────────────────────────────────────────────────────────────── */
@@ -206,13 +365,14 @@
 /* ── Actions ─────────────────────────────────────────────────────────────── */
 .actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 10px;
   padding-top: 4px;
   border-top: 1px solid var(--border);
 }
 
-.cancelBtn {
+.cancelBtn,
+.backBtn {
   padding: 8px 16px;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -224,9 +384,27 @@
   transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
-.cancelBtn:hover:not(:disabled) {
+.cancelBtn:hover:not(:disabled),
+.backBtn:hover:not(:disabled) {
   border-color: var(--border-strong);
   background: var(--surface-strong);
+}
+
+.nextBtn {
+  padding: 8px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--primary-strong);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.nextBtn:hover {
+  background: rgba(34, 197, 94, 0.18);
+  border-color: rgba(34, 197, 94, 0.5);
 }
 
 .submitBtn {
@@ -249,7 +427,8 @@
 }
 
 .submitBtn:disabled,
-.cancelBtn:disabled {
+.cancelBtn:disabled,
+.backBtn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
