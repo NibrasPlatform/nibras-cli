@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../lib/session';
 import { prefs, PREF_EVENTS } from '../../lib/prefs';
 import { SessionProvider } from './session-context';
+import Sidebar from './sidebar';
 import TopHeader from './top-header';
 import styles from './app-shell.module.css';
 
@@ -82,6 +83,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider value={{ user: session, loading }}>
       <div ref={shellRef} className={styles.appShell}>
+        <div className={styles.sidebarColumn}>
+          <Sidebar user={session} loading={loading} />
+        </div>
         <div className={styles.mainArea}>
           <TopHeader user={session} loading={loading} />
           <div className={styles.pageBody}>

@@ -689,7 +689,7 @@ export default function SettingsPage() {
                     Collapsed sidebar
                   </label>
                   <p className={styles.prefDesc}>
-                    Keep sidebar navigation collapsed by default in layouts that use it.
+                    Start with the sidebar collapsed to save horizontal space.
                   </p>
                 </div>
                 <Toggle

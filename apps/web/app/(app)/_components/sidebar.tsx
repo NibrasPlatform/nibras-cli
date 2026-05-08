@@ -128,7 +128,8 @@ export default function Sidebar({
     <aside
       className="sidebar"
       style={{
-        width: collapsed ? 64 : undefined,
+        width: collapsed ? 72 : 248,
+        minWidth: collapsed ? 72 : 248,
         transition: 'width 0.2s ease',
         overflow: collapsed ? 'visible' : undefined,
       }}
