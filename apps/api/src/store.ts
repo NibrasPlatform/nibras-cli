@@ -52,6 +52,8 @@ export type MembershipRole = 'student' | 'instructor' | 'ta';
 export type ProjectStatus = 'draft' | 'published' | 'archived';
 export type DeliveryMode = 'individual' | 'team';
 export type ProjectTemplateStatus = 'draft' | 'active';
+export type ProjectTemplateDifficulty = 'beginner' | 'intermediate' | 'advanced';
+export type ProjectInterestStatus = 'pending' | 'approved' | 'rejected';
 export type TeamFormationStatus =
   | 'not_started'
   | 'application_open'
@@ -412,10 +414,29 @@ export type ProjectTemplateRecord = {
   deliveryMode: DeliveryMode;
   teamSize: number | null;
   status: ProjectTemplateStatus;
+  difficulty: ProjectTemplateDifficulty | null;
+  tags: string[];
+  estimatedDuration: string | null;
   rubric: TrackingRubricItemRecord[];
   resources: TrackingResourceRecord[];
   roles: ProjectTemplateRoleRecord[];
   milestones: ProjectTemplateMilestoneRecord[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CatalogTemplateRecord = ProjectTemplateRecord & {
+  courseName: string;
+  courseCode: string;
+};
+
+export type ProjectInterestRecord = {
+  id: string;
+  projectId: string;
+  userId: string;
+  userName: string;
+  message: string;
+  status: ProjectInterestStatus;
   createdAt: string;
   updatedAt: string;
 };
@@ -1267,6 +1288,9 @@ export interface AppStore {
       deliveryMode: DeliveryMode;
       teamSize: number | null;
       status: ProjectTemplateStatus;
+      difficulty: ProjectTemplateDifficulty | null;
+      tags: string[];
+      estimatedDuration: string | null;
       rubric: TrackingRubricItemRecord[];
       resources: TrackingResourceRecord[];
       roles: Array<Omit<ProjectTemplateRoleRecord, 'id'>>;
@@ -1288,12 +1312,40 @@ export interface AppStore {
       deliveryMode: DeliveryMode;
       teamSize: number | null;
       status: ProjectTemplateStatus;
+      difficulty: ProjectTemplateDifficulty | null;
+      tags: string[];
+      estimatedDuration: string | null;
       rubric: TrackingRubricItemRecord[];
       resources: TrackingResourceRecord[];
       roles: Array<Omit<ProjectTemplateRoleRecord, 'id'>>;
       milestones: Array<Omit<ProjectTemplateMilestoneRecord, 'id'>>;
     }>
   ): Promise<ProjectTemplateRecord | null>;
+  listPublicTemplates(
+    apiBaseUrl: string,
+    filters: { difficulty?: string; tags?: string[]; deliveryMode?: string }
+  ): Promise<CatalogTemplateRecord[]>;
+  createProjectInterest(
+    apiBaseUrl: string,
+    userId: string,
+    projectId: string,
+    payload: { message: string }
+  ): Promise<ProjectInterestRecord>;
+  getProjectInterestByUser(
+    apiBaseUrl: string,
+    userId: string,
+    projectId: string
+  ): Promise<ProjectInterestRecord | null>;
+  listProjectInterests(
+    apiBaseUrl: string,
+    projectId: string
+  ): Promise<ProjectInterestRecord[]>;
+  updateProjectInterest(
+    apiBaseUrl: string,
+    executorId: string,
+    interestId: string,
+    status: ProjectInterestStatus
+  ): Promise<ProjectInterestRecord | null>;
   createProjectRoleApplication(
     apiBaseUrl: string,
     userId: string,
@@ -1591,6 +1643,9 @@ export function resolveProjectTemplateRecord(
       deliveryMode: 'team',
       teamSize: project.teamSize,
       status: 'active',
+      difficulty: null,
+      tags: [],
+      estimatedDuration: null,
       rubric: [],
       resources: [],
       roles: project.teamRoles || [],
@@ -4225,6 +4280,9 @@ export class FileStore implements AppStore {
       deliveryMode: DeliveryMode;
       teamSize: number | null;
       status: ProjectTemplateStatus;
+      difficulty: ProjectTemplateDifficulty | null;
+      tags: string[];
+      estimatedDuration: string | null;
       rubric: TrackingRubricItemRecord[];
       resources: TrackingResourceRecord[];
       roles: Array<Omit<ProjectTemplateRoleRecord, 'id'>>;
@@ -4241,6 +4299,9 @@ export class FileStore implements AppStore {
       deliveryMode: payload.deliveryMode,
       teamSize: payload.teamSize,
       status: payload.status,
+      difficulty: payload.difficulty ?? null,
+      tags: payload.tags ?? [],
+      estimatedDuration: payload.estimatedDuration ?? null,
       rubric: payload.rubric,
       resources: payload.resources,
       roles: payload.roles.map((role, index) => ({
@@ -4297,6 +4358,9 @@ export class FileStore implements AppStore {
       deliveryMode: DeliveryMode;
       teamSize: number | null;
       status: ProjectTemplateStatus;
+      difficulty: ProjectTemplateDifficulty | null;
+      tags: string[];
+      estimatedDuration: string | null;
       rubric: TrackingRubricItemRecord[];
       resources: TrackingResourceRecord[];
       roles: Array<Omit<ProjectTemplateRoleRecord, 'id'>>;
@@ -4314,6 +4378,9 @@ export class FileStore implements AppStore {
     if (payload.deliveryMode !== undefined) template.deliveryMode = payload.deliveryMode;
     if (payload.teamSize !== undefined) template.teamSize = payload.teamSize;
     if (payload.status !== undefined) template.status = payload.status;
+    if ('difficulty' in payload) template.difficulty = payload.difficulty ?? null;
+    if ('tags' in payload) template.tags = payload.tags ?? [];
+    if ('estimatedDuration' in payload) template.estimatedDuration = payload.estimatedDuration ?? null;
     if (payload.rubric !== undefined) template.rubric = payload.rubric;
     if (payload.resources !== undefined) template.resources = payload.resources;
     if (payload.roles !== undefined) {
@@ -4349,6 +4416,83 @@ export class FileStore implements AppStore {
     );
     this.write(data);
     return template;
+  }
+
+  async listPublicTemplates(
+    apiBaseUrl: string,
+    filters: { difficulty?: string; tags?: string[]; deliveryMode?: string }
+  ): Promise<CatalogTemplateRecord[]> {
+    const data = this.read(apiBaseUrl);
+    return (data.projectTemplates ?? [])
+      .filter((t) => t.status === 'active')
+      .filter((t) => !filters.difficulty || t.difficulty === filters.difficulty)
+      .filter((t) => !filters.deliveryMode || t.deliveryMode === filters.deliveryMode)
+      .filter(
+        (t) =>
+          !filters.tags?.length ||
+          filters.tags.every((tag) => (t.tags ?? []).includes(tag))
+      )
+      .map((t) => {
+        const course = data.courses.find((c) => c.id === t.courseId);
+        return {
+          ...t,
+          courseName: course?.title ?? '',
+          courseCode: course?.courseCode ?? '',
+        };
+      });
+  }
+
+  async createProjectInterest(
+    apiBaseUrl: string,
+    userId: string,
+    projectId: string,
+    payload: { message: string }
+  ): Promise<ProjectInterestRecord> {
+    const now = nowIso();
+    return {
+      id: randomUUID(),
+      projectId,
+      userId,
+      userName: userId,
+      message: payload.message,
+      status: 'pending',
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  async getProjectInterestByUser(
+    _apiBaseUrl: string,
+    _userId: string,
+    _projectId: string
+  ): Promise<ProjectInterestRecord | null> {
+    return null;
+  }
+
+  async listProjectInterests(
+    _apiBaseUrl: string,
+    _projectId: string
+  ): Promise<ProjectInterestRecord[]> {
+    return [];
+  }
+
+  async updateProjectInterest(
+    _apiBaseUrl: string,
+    _executorId: string,
+    interestId: string,
+    status: ProjectInterestStatus
+  ): Promise<ProjectInterestRecord | null> {
+    const now = nowIso();
+    return {
+      id: interestId,
+      projectId: '',
+      userId: '',
+      userName: '',
+      message: '',
+      status,
+      createdAt: now,
+      updatedAt: now,
+    };
   }
 
   async createProjectRoleApplication(

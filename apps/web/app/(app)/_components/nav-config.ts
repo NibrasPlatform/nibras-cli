@@ -30,6 +30,12 @@ export const appNavItems: AppNavItem[] = [
     matchPrefixes: ['/submissions'],
   },
   {
+    href: '/catalog',
+    label: 'Catalog',
+    description: 'Browse project templates and apply across all courses.',
+    visibility: 'all',
+  },
+  {
     href: '/planner',
     label: 'Planner',
     description: 'Plan your academic path, track petitions, and generate a sheet.',
@@ -85,6 +91,10 @@ export const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/submissions': {
     title: 'Submissions',
     subtitle: 'Review your submission history, statuses, and detailed feedback.',
+  },
+  '/catalog': {
+    title: 'Project Catalog',
+    subtitle: 'Discover projects, browse templates, and apply.',
   },
   '/planner': {
     title: 'Planner',

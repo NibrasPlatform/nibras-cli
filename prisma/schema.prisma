@@ -43,6 +43,18 @@ enum ProjectTemplateStatus {
   active
 }
 
+enum ProjectTemplateDifficulty {
+  beginner
+  intermediate
+  advanced
+}
+
+enum ProjectInterestStatus {
+  pending
+  approved
+  rejected
+}
+
 enum TeamFormationStatus {
   not_started
   application_open
@@ -185,6 +197,7 @@ model User {
   reviews           Review[]
   notifications     Notification[]
   projectRoleApplications ProjectRoleApplication[]
+  projectInterests  ProjectInterest[]
   teamMembers       TeamMember[]
   createdTeamFormationRuns TeamFormationRun[]
   studentPrograms   StudentProgram[]
@@ -564,6 +577,7 @@ model Project {
   teamFormationRuns TeamFormationRun[]
   teams            Team[]
   auditLogs        AuditLog[]
+  interests        ProjectInterest[]
 }
 
 model ProjectTemplate {
@@ -575,6 +589,9 @@ model ProjectTemplate {
   deliveryMode DeliveryMode       @default(team)
   teamSize    Int?
   status      ProjectTemplateStatus @default(active)
+  difficulty  ProjectTemplateDifficulty?
+  tags        String[]
+  estimatedDuration String?
   rubricJson  Json?
   resourcesJson Json?
   createdAt   DateTime            @default(now())
@@ -609,6 +626,20 @@ model ProjectTemplateMilestone {
   template    ProjectTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@unique([templateId, order])
+}
+
+model ProjectInterest {
+  id        String                @id @default(cuid())
+  projectId String
+  userId    String
+  message   String                @default("")
+  status    ProjectInterestStatus @default(pending)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  project   Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
 }
 
 model ProjectRoleApplication {

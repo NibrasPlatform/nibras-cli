@@ -10,6 +10,8 @@ import {
   PetitionType as PrismaPetitionType,
   ProjectRoleApplicationStatus as PrismaProjectRoleApplicationStatus,
   ProjectTemplateStatus as PrismaProjectTemplateStatus,
+  ProjectTemplateDifficulty as PrismaProjectTemplateDifficulty,
+  ProjectInterestStatus as PrismaProjectInterestStatus,
   Prisma,
   PrismaClient,
   ProgramStatus as PrismaProgramStatus,
@@ -83,6 +85,10 @@ import {
   ProjectRecord,
   ProjectStarterRecord,
   ProjectStatus,
+  CatalogTemplateRecord,
+  ProjectInterestRecord,
+  ProjectInterestStatus,
+  ProjectTemplateDifficulty,
   ProjectTemplateMilestoneRecord,
   ProjectTemplateRecord,
   ProjectTemplateRoleRecord,
@@ -264,6 +270,15 @@ function toProjectTemplateMilestoneRecord(milestone: {
   };
 }
 
+function toProjectTemplateDifficulty(
+  d: PrismaProjectTemplateDifficulty | null
+): ProjectTemplateDifficulty | null {
+  if (d === PrismaProjectTemplateDifficulty.beginner) return 'beginner';
+  if (d === PrismaProjectTemplateDifficulty.intermediate) return 'intermediate';
+  if (d === PrismaProjectTemplateDifficulty.advanced) return 'advanced';
+  return null;
+}
+
 function toProjectTemplateRecord(template: {
   id: string;
   courseId: string;
@@ -273,6 +288,9 @@ function toProjectTemplateRecord(template: {
   deliveryMode: DeliveryMode;
   teamSize: number | null;
   status: PrismaProjectTemplateStatus;
+  difficulty: PrismaProjectTemplateDifficulty | null;
+  tags: string[];
+  estimatedDuration: string | null;
   rubricJson: unknown;
   resourcesJson: unknown;
   createdAt: Date;
@@ -302,6 +320,9 @@ function toProjectTemplateRecord(template: {
     deliveryMode: template.deliveryMode === DeliveryMode.team ? 'team' : 'individual',
     teamSize: template.teamSize,
     status: template.status === PrismaProjectTemplateStatus.draft ? 'draft' : 'active',
+    difficulty: toProjectTemplateDifficulty(template.difficulty),
+    tags: template.tags ?? [],
+    estimatedDuration: template.estimatedDuration ?? null,
     rubric: Array.isArray(template.rubricJson)
       ? (template.rubricJson as TrackingRubricItemRecord[])
       : [],
@@ -318,6 +339,45 @@ function toProjectTemplateRecord(template: {
       .map(toProjectTemplateMilestoneRecord),
     createdAt: template.createdAt.toISOString(),
     updatedAt: template.updatedAt.toISOString(),
+  };
+}
+
+function toCatalogTemplateRecord(
+  template: Parameters<typeof toProjectTemplateRecord>[0] & {
+    course: { title: string; courseCode: string };
+  }
+): CatalogTemplateRecord {
+  return {
+    ...toProjectTemplateRecord(template),
+    courseName: template.course.title,
+    courseCode: template.course.courseCode,
+  };
+}
+
+function toProjectInterestRecord(interest: {
+  id: string;
+  projectId: string;
+  userId: string;
+  message: string;
+  status: PrismaProjectInterestStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  user: { username: string };
+}): ProjectInterestRecord {
+  return {
+    id: interest.id,
+    projectId: interest.projectId,
+    userId: interest.userId,
+    userName: interest.user.username,
+    message: interest.message,
+    status:
+      interest.status === PrismaProjectInterestStatus.approved
+        ? 'approved'
+        : interest.status === PrismaProjectInterestStatus.rejected
+          ? 'rejected'
+          : 'pending',
+    createdAt: interest.createdAt.toISOString(),
+    updatedAt: interest.updatedAt.toISOString(),
   };
 }
 
@@ -4045,6 +4105,9 @@ export class PrismaStore implements AppStore {
       deliveryMode: DeliveryMode;
       teamSize: number | null;
       status: ProjectTemplateStatus;
+      difficulty: ProjectTemplateDifficulty | null;
+      tags: string[];
+      estimatedDuration: string | null;
       rubric: TrackingRubricItemRecord[];
       resources: TrackingResourceRecord[];
       roles: Array<Omit<ProjectTemplateRoleRecord, 'id'>>;
@@ -4064,6 +4127,11 @@ export class PrismaStore implements AppStore {
           payload.status === 'draft'
             ? PrismaProjectTemplateStatus.draft
             : PrismaProjectTemplateStatus.active,
+        difficulty: payload.difficulty
+          ? (payload.difficulty as PrismaProjectTemplateDifficulty)
+          : null,
+        tags: payload.tags ?? [],
+        estimatedDuration: payload.estimatedDuration ?? null,
         rubricJson: payload.rubric,
         resourcesJson: payload.resources,
         roles: {
@@ -4127,6 +4195,9 @@ export class PrismaStore implements AppStore {
       deliveryMode: DeliveryMode;
       teamSize: number | null;
       status: ProjectTemplateStatus;
+      difficulty: ProjectTemplateDifficulty | null;
+      tags: string[];
+      estimatedDuration: string | null;
       rubric: TrackingRubricItemRecord[];
       resources: TrackingResourceRecord[];
       roles: Array<Omit<ProjectTemplateRoleRecord, 'id'>>;
@@ -4159,6 +4230,15 @@ export class PrismaStore implements AppStore {
                 ? PrismaProjectTemplateStatus.draft
                 : PrismaProjectTemplateStatus.active
               : undefined,
+            difficulty:
+              'difficulty' in payload
+                ? payload.difficulty
+                  ? (payload.difficulty as PrismaProjectTemplateDifficulty)
+                  : null
+                : undefined,
+            tags: 'tags' in payload ? (payload.tags ?? []) : undefined,
+            estimatedDuration:
+              'estimatedDuration' in payload ? (payload.estimatedDuration ?? null) : undefined,
             rubricJson: payload.rubric,
             resourcesJson: payload.resources,
             roles:
@@ -4205,6 +4285,123 @@ export class PrismaStore implements AppStore {
       },
     });
     return toProjectTemplateRecord(updated);
+  }
+
+  async listPublicTemplates(
+    apiBaseUrl: string,
+    filters: { difficulty?: string; tags?: string[]; deliveryMode?: string }
+  ): Promise<CatalogTemplateRecord[]> {
+    await this.seed(apiBaseUrl);
+    const templates = await this.prisma.projectTemplate.findMany({
+      where: {
+        status: PrismaProjectTemplateStatus.active,
+        ...(filters.difficulty && {
+          difficulty: filters.difficulty as PrismaProjectTemplateDifficulty,
+        }),
+        ...(filters.deliveryMode && {
+          deliveryMode:
+            filters.deliveryMode === 'team' ? DeliveryMode.team : DeliveryMode.individual,
+        }),
+        ...(filters.tags && filters.tags.length > 0 && { tags: { hasEvery: filters.tags } }),
+      },
+      include: {
+        course: true,
+        roles: { orderBy: { sortOrder: 'asc' } },
+        milestones: { orderBy: { order: 'asc' } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return templates.map((t) => toCatalogTemplateRecord(t));
+  }
+
+  async createProjectInterest(
+    apiBaseUrl: string,
+    userId: string,
+    projectId: string,
+    payload: { message: string }
+  ): Promise<ProjectInterestRecord> {
+    await this.seed(apiBaseUrl);
+    const created = await this.prisma.projectInterest.create({
+      data: { projectId, userId, message: payload.message },
+      include: {
+        user: true,
+        project: {
+          include: { course: { include: { memberships: { where: { role: CourseRole.instructor } } } } },
+        },
+      },
+    });
+    // Notify course instructor(s)
+    const instructors = created.project.course?.memberships ?? [];
+    await Promise.all(
+      instructors.map((m) =>
+        this.createNotification(apiBaseUrl, m.userId, {
+          type: 'interest',
+          title: 'New project interest',
+          body: `${created.user.username} expressed interest in "${created.project.name}".`,
+          link: `/instructor/courses/${created.project.courseId}/projects/${projectId}/interests`,
+        })
+      )
+    );
+    return toProjectInterestRecord(created);
+  }
+
+  async getProjectInterestByUser(
+    apiBaseUrl: string,
+    userId: string,
+    projectId: string
+  ): Promise<ProjectInterestRecord | null> {
+    await this.seed(apiBaseUrl);
+    const interest = await this.prisma.projectInterest.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+      include: { user: true },
+    });
+    return interest ? toProjectInterestRecord(interest) : null;
+  }
+
+  async listProjectInterests(
+    apiBaseUrl: string,
+    projectId: string
+  ): Promise<ProjectInterestRecord[]> {
+    await this.seed(apiBaseUrl);
+    const interests = await this.prisma.projectInterest.findMany({
+      where: { projectId },
+      include: { user: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return interests.map(toProjectInterestRecord);
+  }
+
+  async updateProjectInterest(
+    apiBaseUrl: string,
+    executorId: string,
+    interestId: string,
+    status: ProjectInterestStatus
+  ): Promise<ProjectInterestRecord | null> {
+    await this.seed(apiBaseUrl);
+    const updated = await this.prisma.projectInterest
+      .update({
+        where: { id: interestId },
+        data: {
+          status:
+            status === 'approved'
+              ? PrismaProjectInterestStatus.approved
+              : status === 'rejected'
+                ? PrismaProjectInterestStatus.rejected
+                : PrismaProjectInterestStatus.pending,
+        },
+        include: { user: true },
+      })
+      .catch(() => null);
+    if (!updated) return null;
+    // Notify the student
+    const label = status === 'approved' ? 'approved' : 'rejected';
+    await this.createNotification(apiBaseUrl, updated.userId, {
+      type: 'interest_update',
+      title: `Interest ${label}`,
+      body: `Your project interest has been ${label}.`,
+      link: `/projects`,
+    });
+    return toProjectInterestRecord(updated);
   }
 
   async createProjectRoleApplication(

@@ -1,7 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import {
   AddCourseMemberRequestSchema,
+  CatalogTemplateSchema,
   CourseMemberSchema,
+  CreateProjectInterestRequestSchema,
   CreateProjectRoleApplicationRequestSchema,
   CreateProjectTemplateRequestSchema,
   CreateMilestoneRequestSchema,
@@ -11,6 +13,7 @@ import {
   CreateTrackingSubmissionRequestSchema,
   GenerateTeamFormationRequestSchema,
   LockTeamFormationRequestSchema,
+  ProjectInterestSchema,
   ProjectRoleApplicationSchema,
   ProjectTemplateSchema,
   ReviewQueueResponseSchema,
@@ -22,6 +25,7 @@ import {
   TrackingProjectSummarySchema,
   TrackingReviewSchema,
   TrackingSubmissionSchema,
+  UpdateProjectInterestRequestSchema,
   UpdateProjectTemplateRequestSchema,
   UpdateTeamRequestSchema,
   UpdateMilestoneRequestSchema,
@@ -358,6 +362,140 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
         return;
       }
       return ProjectTemplateSchema.parse(updated);
+    }
+  );
+
+  // ── Public template catalog ──────────────────────────────────────────────
+  app.get(
+    '/v1/tracking/catalog',
+    { schema: { tags: ['tracking'], summary: 'Browse all active project templates (catalog)' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const query = request.query as {
+        difficulty?: string;
+        deliveryMode?: string;
+        tags?: string;
+      };
+      const tags = query.tags
+        ? query.tags
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [];
+      const templates = await store.listPublicTemplates(requestBaseUrl(request), {
+        difficulty: query.difficulty,
+        deliveryMode: query.deliveryMode,
+        tags,
+      });
+      return templates.map((entry) => CatalogTemplateSchema.parse(entry));
+    }
+  );
+
+  // ── Project interests ─────────────────────────────────────────────────────
+  app.post(
+    '/v1/tracking/projects/:projectId/interests',
+    { schema: { tags: ['tracking'], summary: 'Express interest in a project' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { projectId: string };
+      if (!validateId(params.projectId, reply, 'projectId')) return;
+      const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
+      if (!project) {
+        reply.code(404).send(Errors.notFound('Project'));
+        return;
+      }
+      if (project.status !== 'published') {
+        reply.code(400).send(Errors.validation('Project is not published.'));
+        return;
+      }
+      const payload = CreateProjectInterestRequestSchema.parse(request.body);
+      const interest = await store.createProjectInterest(
+        requestBaseUrl(request),
+        auth.user.id,
+        params.projectId,
+        payload
+      );
+      reply.code(201);
+      return ProjectInterestSchema.parse(interest);
+    }
+  );
+
+  app.get(
+    '/v1/tracking/projects/:projectId/interests/me',
+    { schema: { tags: ['tracking'], summary: 'Get my interest in a project' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { projectId: string };
+      if (!validateId(params.projectId, reply, 'projectId')) return;
+      const interest = await store.getProjectInterestByUser(
+        requestBaseUrl(request),
+        auth.user.id,
+        params.projectId
+      );
+      return interest ? ProjectInterestSchema.parse(interest) : null;
+    }
+  );
+
+  app.get(
+    '/v1/tracking/projects/:projectId/interests',
+    { schema: { tags: ['tracking'], summary: 'List interest requests for a project (instructor)' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { projectId: string };
+      if (!validateId(params.projectId, reply, 'projectId')) return;
+      const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
+      if (!project) {
+        reply.code(404).send(Errors.notFound('Project'));
+        return;
+      }
+      if (!project.courseId || !canManageCourse(auth, project.courseId)) {
+        reply.code(403).send(Errors.forbidden());
+        return;
+      }
+      const interests = await store.listProjectInterests(requestBaseUrl(request), params.projectId);
+      return interests.map((entry) => ProjectInterestSchema.parse(entry));
+    }
+  );
+
+  app.patch(
+    '/v1/tracking/projects/:projectId/interests/:interestId',
+    {
+      schema: {
+        tags: ['tracking'],
+        summary: 'Approve or reject a project interest (instructor)',
+      },
+    },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { projectId: string; interestId: string };
+      if (!validateId(params.projectId, reply, 'projectId')) return;
+      if (!validateId(params.interestId, reply, 'interestId')) return;
+      const project = await store.getTrackingProjectById(requestBaseUrl(request), params.projectId);
+      if (!project) {
+        reply.code(404).send(Errors.notFound('Project'));
+        return;
+      }
+      if (!project.courseId || !canManageCourse(auth, project.courseId)) {
+        reply.code(403).send(Errors.forbidden());
+        return;
+      }
+      const body = UpdateProjectInterestRequestSchema.parse(request.body);
+      const updated = await store.updateProjectInterest(
+        requestBaseUrl(request),
+        auth.user.id,
+        params.interestId,
+        body.status
+      );
+      if (!updated) {
+        reply.code(404).send(Errors.notFound('Project interest'));
+        return;
+      }
+      return ProjectInterestSchema.parse(updated);
     }
   );
 

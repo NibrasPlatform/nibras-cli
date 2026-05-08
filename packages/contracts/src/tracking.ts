@@ -4,6 +4,8 @@ export const TrackingMembershipRoleSchema = z.enum(['student', 'instructor', 'ta
 export const TrackingProjectStatusSchema = z.enum(['draft', 'published', 'archived']);
 export const TrackingDeliveryModeSchema = z.enum(['individual', 'team']);
 export const ProjectTemplateStatusSchema = z.enum(['draft', 'active']);
+export const ProjectTemplateDifficultySchema = z.enum(['beginner', 'intermediate', 'advanced']);
+export const ProjectInterestStatusSchema = z.enum(['pending', 'approved', 'rejected']);
 export const TeamFormationStatusSchema = z.enum([
   'not_started',
   'application_open',
@@ -89,12 +91,39 @@ export const ProjectTemplateSchema = z.object({
   deliveryMode: TrackingDeliveryModeSchema,
   teamSize: z.number().int().positive().nullable(),
   status: ProjectTemplateStatusSchema,
+  difficulty: ProjectTemplateDifficultySchema.nullable().default(null),
+  tags: z.array(z.string()).default([]),
+  estimatedDuration: z.string().nullable().default(null),
   rubric: z.array(TrackingRubricItemSchema),
   resources: z.array(TrackingResourceSchema),
   roles: z.array(ProjectTemplateRoleSchema),
   milestones: z.array(ProjectTemplateMilestoneSchema),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+});
+
+export const CatalogTemplateSchema = ProjectTemplateSchema.extend({
+  courseName: z.string().min(1),
+  courseCode: z.string().min(1),
+});
+
+export const ProjectInterestSchema = z.object({
+  id: z.string().min(1),
+  projectId: z.string().min(1),
+  userId: z.string().min(1),
+  userName: z.string().min(1),
+  message: z.string().default(''),
+  status: ProjectInterestStatusSchema,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const CreateProjectInterestRequestSchema = z.object({
+  message: z.string().default(''),
+});
+
+export const UpdateProjectInterestRequestSchema = z.object({
+  status: ProjectInterestStatusSchema,
 });
 
 export const TrackingProjectSummarySchema = z.object({
@@ -586,6 +615,9 @@ export const CreateProjectTemplateRequestSchema = z.object({
   deliveryMode: TrackingDeliveryModeSchema.default('team'),
   teamSize: z.number().int().positive().nullable().default(null),
   status: ProjectTemplateStatusSchema.default('active'),
+  difficulty: ProjectTemplateDifficultySchema.nullable().default(null),
+  tags: z.array(z.string()).default([]),
+  estimatedDuration: z.string().nullable().default(null),
   rubric: z.array(TrackingRubricItemSchema).default([]),
   resources: z.array(TrackingResourceSchema).default([]),
   roles: z.array(ProjectTemplateRoleSchema.omit({ id: true })).default([]),
@@ -691,3 +723,9 @@ export type CreateProjectRoleApplicationRequest = z.infer<
 export type GenerateTeamFormationRequest = z.infer<typeof GenerateTeamFormationRequestSchema>;
 export type LockTeamFormationRequest = z.infer<typeof LockTeamFormationRequestSchema>;
 export type UpdateTeamRequest = z.infer<typeof UpdateTeamRequestSchema>;
+export type ProjectTemplateDifficulty = z.infer<typeof ProjectTemplateDifficultySchema>;
+export type ProjectInterestStatus = z.infer<typeof ProjectInterestStatusSchema>;
+export type CatalogTemplate = z.infer<typeof CatalogTemplateSchema>;
+export type ProjectInterest = z.infer<typeof ProjectInterestSchema>;
+export type CreateProjectInterestRequest = z.infer<typeof CreateProjectInterestRequestSchema>;
+export type UpdateProjectInterestRequest = z.infer<typeof UpdateProjectInterestRequestSchema>;

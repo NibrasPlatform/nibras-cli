@@ -43,6 +43,13 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
       />
     </svg>
   ),
+  Catalog: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="14" height="4" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="1" y="7" width="14" height="4" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="1" y="13" width="8" height="2" rx="1" fill="currentColor" opacity=".6" />
+    </svg>
+  ),
   Instructor: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.3" />
