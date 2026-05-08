@@ -19,6 +19,7 @@
     "db:deploy": "npx prisma migrate deploy",
     "db:local:reset": "docker compose down -v && docker compose up -d && until docker compose exec -T postgres pg_isready -U nibras -d nibras; do sleep 1; done",
     "db:local:migrate": "npm run db:deploy",
+    "build:cli:package": "npm --prefix packages/contracts run build && npm --prefix packages/core run build && npm --prefix apps/cli run build",
     "build": "npm run db:generate && npm run build -w @nibras/contracts && npm run build -w @nibras/core && npm run build -w @nibras/github && npm run build -w @nibras/grading && npm run build -w @nibras/api && npm run build -w @nibras/proxy && npm run build -w @nibras/cli && npm run build -w @nibras/worker",
     "api:dev": "node -r dotenv/config apps/api/dist/server.js",
     "worker:dev": "node -r dotenv/config apps/worker/dist/worker.js",
@@ -34,7 +35,8 @@
     "test": "npm run build && node --test test/*.js",
     "lint": "eslint . && prettier --check .",
     "lint:fix": "eslint . --fix && prettier --write .",
-    "validate:env": "node scripts/validate-env.js"
+    "validate:env": "node scripts/validate-env.js",
+    "verify:cli-download": "node scripts/verify-cli-download.js"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

@@ -115,10 +115,10 @@ nibras-cli/
 │   └── grading/                   # AI semantic grading runner
 │
 ├── src/                           # Legacy CommonJS CLI (backwards compat)
-│   └── cli.js                     # Entry point; used if apps/cli/dist/ absent
+│   └── cli.js                     # Legacy entry point used as the final fallback
 │
 ├── bin/
-│   └── nibras.js                  # Tries apps/cli/dist/ first, falls back to src/
+│   └── nibras.js                  # Tries the bundled modern CLI first, then falls back
 │
 ├── prisma/
 │   ├── schema.prisma              # PostgreSQL schema (Prisma ORM)
@@ -210,20 +210,21 @@ npm run dev
 
 ### Install
 
-Install the current release from the Git tag (works on macOS, Linux, and Windows):
+Install the current release from npm (works on macOS, Linux, and Windows):
 
 ```bash
-npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2
+npm install -g @nibras/cli@1.0.2
 ```
+
+If npm returns `404 Not Found`, the tagged CLI release has not been published to npm yet.
 
 Verify:
 
 ```bash
-nibras --version   # → v1.0.2-<commit>
+nibras --version   # → v1.0.2
 ```
 
-> The npm package is not yet published, so `npm install -g @nibras/cli` and `npx @nibras/cli` currently return a 404.
-> To run from source, use `npm run build` then `node bin/nibras.js`.
+> To run from source, use `npm run build` then `node bin/nibras.js` (source checkouts may append `-<commit>` to the version output).
 
 For platform-specific prerequisites (Node.js, git, permission fixes) and a full step-by-step walkthrough, see **[docs/student-guide.md](docs/student-guide.md)**.
 
@@ -238,16 +239,16 @@ nibras login --api-base-url https://nibras.yourschool.edu
 ### Core workflow
 
 ```bash
-nibras login  --api-base-url https://nibras.yourschool.edu  # Device-flow GitHub OAuth
-nibras setup  --project cs101/assignment-1                  # Bootstrap or refresh a project
-nibras task                                                  # Print assignment instructions
-nibras test                                                  # Run manifest-configured tests locally
-nibras submit                                                # Stage → commit → push → verify
+nibras login --api-base-url https://nibras.yourschool.edu  # Device-flow GitHub OAuth
+nibras setup --project cs101/assignment-1                  # Bootstrap or refresh a project
+nibras task                                                # Print assignment instructions
+nibras test                                                # Run manifest-configured tests locally
+nibras submit                                              # Stage → commit → push → verify
 ```
 
 | Command         | What it does                                                                                                   |
 | --------------- | -------------------------------------------------------------------------------------------------------------- |
-| `nibras setup`  | Writes `.nibras/project.json` + `.nibras/task.md`, inits git, adds `origin`, optionally extracts starter files |
+| `nibras setup --project` | Writes `.nibras/project.json` + `.nibras/task.md`, inits git, adds `origin`, optionally extracts starter files |
 | `nibras test`   | Runs the OS-aware test command from the manifest; non-zero exit = failure                                      |
 | `nibras submit` | Runs tests, stages only allowed files, commits, pushes, registers with API, polls verification                 |
 
@@ -266,9 +267,9 @@ nibras logout   # Clear the local session
 ### Update & uninstall
 
 ```bash
-nibras update --check                    # Compare installed version against latest release
-nibras update --version v1.0.2          # Reinstall a specific Git-tag release
-nibras update --force --version v1.0.2  # Force reinstall the same tag
+nibras update --check                   # Compare installed version against latest release
+nibras update --version v1.0.2          # Reinstall a specific published CLI release
+nibras update --force --version v1.0.2  # Force reinstall the same version
 nibras uninstall                         # Remove binary; config is preserved
 ```
 
@@ -334,7 +335,7 @@ contracts → core → github
 
 ### Legacy CLI (`src/`)
 
-`bin/nibras.js` tries `apps/cli/dist/index.js` first. If the modern build is absent it falls back to `src/cli.js` — the original CommonJS CLI kept for backwards compatibility (used by the CS161 course).
+`bin/nibras.js` tries `apps/cli/bundle/index.js` first, then `apps/cli/dist/index.js`. If neither modern build is present it falls back to `src/cli.js` — the original CommonJS CLI kept for backwards compatibility (used by the CS161 course).
 
 ---
 
@@ -551,8 +552,9 @@ For the full manual validation sequence, see `TEST.md`.
 1. Verify the tag matches the root and CLI package versions (hardened check — exits on mismatch)
 2. Verify `NPM_TOKEN` is configured and can authenticate to npm
 3. Build all packages
-4. Dry-run the CLI publish tarball
-5. Publish `@nibras/cli` to npm (public)
+4. Verify the CLI can be freshly installed from a clean checkout
+5. Dry-run the CLI publish tarball
+6. Publish `@nibras/cli` to npm (public)
 6. Create a GitHub Release with auto-generated notes
 
 Requires an `NPM_TOKEN` Actions secret that can publish `@nibras/cli`. If your npm account enforces 2FA for writes, this should be a granular token that can bypass 2FA for publishing.

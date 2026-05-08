@@ -9,10 +9,10 @@ import {
   buildHostedLoginCommand,
   buildStudentQuickStart,
   discoverOnboardingApiBaseUrl,
-  GIT_INSTALL_COMMAND,
   getInstallTroubleshootingCommand,
   getOnboardingConfigPath,
   getOnboardingDirExample,
+  NPM_INSTALL_COMMAND,
   PINNED_RELEASE_TAG,
 } from './onboarding-content.js';
 import styles from './page.module.css';
@@ -231,7 +231,7 @@ const COMMAND_REFERENCE_GROUPS: CommandReferenceGroup[] = [
     items: [
       {
         command: 'nibras update --version <tag>',
-        description: 'Reinstall a pinned Git-tag release.',
+        description: 'Reinstall a pinned published CLI release.',
         note: 'Use `nibras update --check` to compare the installed CLI against the latest GitHub release.',
       },
       {
@@ -1008,32 +1008,27 @@ export default function OnboardingPage() {
             onToggleComplete={() => toggleStep('step-02')}
           >
             <p className={styles.bodyText}>
-              Install the current CLI release directly from GitHub. This pins the install to{' '}
+              Install the current CLI release from npm. This pins the install to{' '}
               <code className={styles.inlineCode}>{PINNED_RELEASE_TAG}</code> and makes the{' '}
               <code className={styles.inlineCode}>nibras</code> command available everywhere in your
               terminal.
             </p>
 
-            <div className={`${styles.callout} ${styles.calloutInfo}`}>
-              <span className={styles.calloutIcon}>ℹ</span>
-              <p>
-                The npm package is not yet published.{' '}
-                <code className={styles.inlineCode}>npm install -g @nibras/cli</code> and{' '}
-                <code className={styles.inlineCode}>npx @nibras/cli</code> will fail with a 404
-                until then. Install from the Git tag instead.
-              </p>
-            </div>
-
             <OsCode
               os={os}
-              mac={GIT_INSTALL_COMMAND}
-              linux={GIT_INSTALL_COMMAND}
-              windows={GIT_INSTALL_COMMAND}
+              mac={NPM_INSTALL_COMMAND}
+              linux={NPM_INSTALL_COMMAND}
+              windows={NPM_INSTALL_COMMAND}
             />
+            <p className={styles.hint}>
+              If npm returns <code className={styles.inlineCode}>404 Not Found</code>, publish the
+              tagged <code className={styles.inlineCode}>@nibras/cli</code> release before sending
+              students these instructions.
+            </p>
             <p className={styles.hint}>
               Verify: <code className={styles.inlineCode}>nibras --version</code> should start with{' '}
               <code className={styles.inlineCode}>{PINNED_RELEASE_TAG}</code>, for example{' '}
-              <code className={styles.inlineCode}>{PINNED_RELEASE_TAG}-499d7f9</code>.
+              <code className={styles.inlineCode}>{PINNED_RELEASE_TAG}</code>.
             </p>
             <p className={styles.bodyText}>
               To reinstall later:{' '}

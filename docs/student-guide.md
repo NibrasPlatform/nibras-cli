@@ -219,11 +219,13 @@ git --version
 
 ## 2. Install the Nibras CLI
 
-Install the pinned release directly from the Git tag. Run this in your terminal (all platforms):
+Install the pinned release from npm. Run this in your terminal (all platforms):
 
 ```bash
-npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2
+npm install -g @nibras/cli@1.0.2
 ```
+
+If npm returns `404 Not Found`, ask your instructor or admin to confirm that this CLI release has been published to npm.
 
 > **Behind a corporate proxy?** Set `npm_config_https_proxy` and `npm_config_proxy` before running, or configure them in `.npmrc`.
 
@@ -232,7 +234,7 @@ npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2
 If you already have a different version installed:
 
 ```bash
-npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2
+npm install -g @nibras/cli@1.0.2
 ```
 
 npm will overwrite the existing global link automatically.
@@ -247,7 +249,7 @@ npm uninstall -g nibras 2>/dev/null || true
 npm uninstall -g @nibras/cli 2>/dev/null || true
 
 # Then reinstall
-npm install -g git+https://github.com/NibrasPlatform/nibras-cli.git#v1.0.2
+npm install -g @nibras/cli@1.0.2
 ```
 
 ### EACCES permission error (macOS / Linux — system npm)
@@ -298,8 +300,10 @@ nibras --version
 Expected output (version number may differ):
 
 ```
-v1.0.2-499d7f9
+v1.0.2
 ```
+
+If you are running the CLI from a source checkout instead of a packaged install, the version may include a trailing Git SHA.
 
 If you see `command not found` / `is not recognized`, revisit §2 for your platform.
 
@@ -332,7 +336,7 @@ The CLI will:
 | ------- | -------------------------------------------------- |
 | macOS   | `~/Library/Application Support/nibras/config.json` |
 | Linux   | `~/.config/nibras/config.json`                     |
-| Windows | `%APPDATA%\nibras\config.json`                     |
+| Windows | `%APPDATA%\\nibras\\config.json`                   |
 
 ### Confirm login
 
@@ -415,6 +419,7 @@ nibras test
 ```
 
 Runs the test command defined in `.nibras/project.json` for your operating system. A **non-zero exit code** means the tests failed — read the output to see which tests are failing.
+This is the manifest-configured local test command for your current project.
 
 Run tests against the previous milestone (if supported by your project):
 
@@ -422,7 +427,7 @@ Run tests against the previous milestone (if supported by your project):
 nibras test --previous
 ```
 
-> Tests failing locally does not block submission — the CLI still records the result and submits. Fix what you can, then submit.
+> Tests failing locally does not block submission — the CLI still records the result and submits. Even when tests fail, the submission still continues. Fix what you can, then submit.
 
 ---
 
@@ -656,7 +661,7 @@ The CLI stores a single active API URL. If you are enrolled in multiple courses 
 | ------- | -------------------------------------------------- |
 | macOS | `~/Library/Application Support/nibras/config.json` |
 | Linux | `~/.config/nibras/config.json` |
-| Windows | `%APPDATA%\nibras\config.json` |
+| Windows | `%APPDATA%\\nibras\\config.json` |
 
 Delete the file to wipe all saved sessions (equivalent to `nibras logout`).
 

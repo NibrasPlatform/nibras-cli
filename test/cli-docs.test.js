@@ -74,29 +74,32 @@ test('README and onboarding docs cover every public CLI command', () => {
 test('CLI install docs stay pinned to the current package tag and hosted login flow', () => {
   const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const documentedTag = `v${pkg.version}`;
+  const documentedPackageInstall = `npm install -g @nibras/cli@${pkg.version}`;
   const runtimeVersion = runCli(['--version']).trim();
   const readme = fs.readFileSync(readmePath, 'utf8');
   const onboarding =
     fs.readFileSync(onboardingPath, 'utf8') + fs.readFileSync(onboardingHelperPath, 'utf8');
   const studentGuide = fs.readFileSync(studentGuidePath, 'utf8');
 
-  assert.equal(pkg.version, '1.0.2');
   assert.ok(
     runtimeVersion.startsWith(documentedTag),
     `Expected runtime version ${runtimeVersion} to start with ${documentedTag}`
   );
 
-  assert.match(readme, /git\+https:\/\/github\.com\/NibrasPlatform\/nibras-cli\.git#v1\.0\.2/);
-  assert.match(onboarding, /git\+https:\/\/github\.com\/NibrasPlatform\/nibras-cli\.git#v1\.0\.2/);
+  assert.match(readme, new RegExp(documentedPackageInstall.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(
+    onboarding,
+    new RegExp(documentedPackageInstall.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  );
   assert.match(
     studentGuide,
-    /git\+https:\/\/github\.com\/NibrasPlatform\/nibras-cli\.git#v1\.0\.2/
+    new RegExp(documentedPackageInstall.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   );
   assert.match(readme, /nibras login --api-base-url https:\/\/nibras\.yourschool\.edu/);
   assert.match(studentGuide, /nibras login --api-base-url https:\/\/nibras\.yourschool\.edu/);
   assert.match(readme, /nibras update --check/);
   assert.match(onboarding, /CLI Command Reference/);
-  assert.doesNotMatch(readme, /Install the published package:/);
+  assert.doesNotMatch(readme, /npm package is not yet published/i);
 });
 
 test('student guide removes stale CLI instructions', () => {
