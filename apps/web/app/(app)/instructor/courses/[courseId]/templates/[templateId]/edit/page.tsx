@@ -81,9 +81,7 @@ export default function EditTemplatePage({
         setDifficulty(data.difficulty ?? '');
         setTags((data.tags ?? []).join(', '));
         setEstimatedDuration(data.estimatedDuration ?? '');
-        setRoles(
-          data.roles.map((r) => ({ key: r.key, label: r.label, count: r.count }))
-        );
+        setRoles(data.roles.map((r) => ({ key: r.key, label: r.label, count: r.count })));
         setMilestones(
           data.milestones.map((m) => ({
             title: m.title,
@@ -127,7 +125,12 @@ export default function EditTemplatePage({
           deliveryMode === 'team'
             ? roles
                 .filter((r) => r.key.trim() && r.label.trim())
-                .map((r, i) => ({ key: r.key.trim(), label: r.label.trim(), count: r.count, sortOrder: i }))
+                .map((r, i) => ({
+                  key: r.key.trim(),
+                  label: r.label.trim(),
+                  count: r.count,
+                  sortOrder: i,
+                }))
             : [],
         milestones: milestones
           .filter((m) => m.title.trim())
@@ -185,12 +188,7 @@ export default function EditTemplatePage({
 
         <div className={styles.formGroup}>
           <label htmlFor="slug">Slug</label>
-          <input
-            id="slug"
-            type="text"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-          />
+          <input id="slug" type="text" value={slug} onChange={(e) => setSlug(e.target.value)} />
         </div>
 
         <div className={styles.formGroup}>
@@ -271,9 +269,7 @@ export default function EditTemplatePage({
                 <button
                   type="button"
                   className={styles.btnAddRow}
-                  onClick={() =>
-                    setRoles((prev) => [...prev, { key: '', label: '', count: 1 }])
-                  }
+                  onClick={() => setRoles((prev) => [...prev, { key: '', label: '', count: 1 }])}
                 >
                   + Add role
                 </button>

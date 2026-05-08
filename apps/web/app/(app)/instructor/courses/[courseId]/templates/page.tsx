@@ -64,7 +64,9 @@ export default function CourseTemplatesPage({ params }: { params: Promise<{ cour
             </article>
             <article className={styles.summaryCard}>
               <span className={styles.summaryLabel}>Team-ready</span>
-              <strong>{(templates ?? []).filter((template) => template.deliveryMode === 'team').length}</strong>
+              <strong>
+                {(templates ?? []).filter((template) => template.deliveryMode === 'team').length}
+              </strong>
               <p>Include team size or role configuration</p>
             </article>
           </div>
@@ -81,13 +83,16 @@ export default function CourseTemplatesPage({ params }: { params: Promise<{ cour
                 {templates.map((template) => (
                   <div key={template.id} className={`${styles.projectRow} ${styles.templateRow}`}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+                      >
                         <span className={styles.statusBadge}>{template.status}</span>
                         {template.difficulty && (
                           <span
                             className={styles.statusBadge}
                             style={{
-                              background: DIFFICULTY_COLORS[template.difficulty] ?? 'var(--surface-muted)',
+                              background:
+                                DIFFICULTY_COLORS[template.difficulty] ?? 'var(--surface-muted)',
                               color: '#fff',
                             }}
                           >
@@ -132,7 +137,14 @@ export default function CourseTemplatesPage({ params }: { params: Promise<{ cour
                         </div>
                       )}
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6,
+                        alignItems: 'flex-end',
+                      }}
+                    >
                       <span className={styles.muted}>
                         {template.deliveryMode === 'team' ? 'Team template' : 'Individual template'}
                       </span>

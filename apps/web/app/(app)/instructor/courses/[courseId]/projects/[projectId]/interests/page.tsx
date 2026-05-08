@@ -44,15 +44,12 @@ export default function ProjectInterestsPage({
       setUpdating(interestId);
       setActionError('');
       try {
-        const res = await apiFetch(
-          `/v1/tracking/projects/${projectId}/interests/${interestId}`,
-          {
-            auth: true,
-            method: 'PATCH',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ status }),
-          }
-        );
+        const res = await apiFetch(`/v1/tracking/projects/${projectId}/interests/${interestId}`, {
+          auth: true,
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ status }),
+        });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as { error?: string };
           throw new Error(body.error ?? `Action failed (${res.status})`);

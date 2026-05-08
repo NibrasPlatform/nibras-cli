@@ -458,7 +458,8 @@ function WindowsQuickStart({
       </ol>
       <p className={styles.windowsGuideHint}>
         If you are unsure, use <strong>PowerShell</strong>. Use <strong>Git Bash</strong> only if
-        you already want Unix-style paths like <code className={styles.inlineCode}>/c/projects/a1</code>.
+        you already want Unix-style paths like{' '}
+        <code className={styles.inlineCode}>/c/projects/a1</code>.
       </p>
     </div>
   );
@@ -1044,7 +1045,8 @@ export default function OnboardingPage() {
                 <span className={styles.calloutIcon}>⊞</span>
                 <div>
                   <p>
-                    Run this in the same <strong>{windowsShell === 'powershell' ? 'PowerShell' : 'Git Bash'}</strong>{' '}
+                    Run this in the same{' '}
+                    <strong>{windowsShell === 'powershell' ? 'PowerShell' : 'Git Bash'}</strong>{' '}
                     window you verified above. If <code className={styles.inlineCode}>nibras</code>{' '}
                     is not recognized afterwards, close the terminal and open a fresh one before
                     troubleshooting anything else.

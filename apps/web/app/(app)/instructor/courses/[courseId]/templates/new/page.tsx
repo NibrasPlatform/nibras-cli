@@ -224,9 +224,7 @@ export default function NewTemplatePage({ params }: { params: Promise<{ courseId
                     onChange={(event) =>
                       setRoles((current) =>
                         current.map((entry, currentIndex) =>
-                          currentIndex === index
-                            ? { ...entry, label: event.target.value }
-                            : entry
+                          currentIndex === index ? { ...entry, label: event.target.value } : entry
                         )
                       )
                     }
@@ -250,9 +248,7 @@ export default function NewTemplatePage({ params }: { params: Promise<{ courseId
                   <button
                     type="button"
                     className={styles.btnRemoveRow}
-                    onClick={() =>
-                      setRoles((current) => current.filter((_, i) => i !== index))
-                    }
+                    onClick={() => setRoles((current) => current.filter((_, i) => i !== index))}
                   >
                     ✕
                   </button>
