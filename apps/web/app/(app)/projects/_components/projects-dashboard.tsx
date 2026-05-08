@@ -825,8 +825,21 @@ export default function ProjectsDashboard({
                             : 'Rank your preferred roles before the instructor generates and locks teams.'}
                       </p>
                     </div>
-                    <span className={styles.teamWorkflowStatus}>
-                      {activeProject.teamFormationStatus.replace(/_/g, ' ')}
+                    <span
+                      className={[
+                        styles.teamWorkflowStatus,
+                        teamWorkflowState === 'locked'
+                          ? styles.teamWorkflowStatusLocked
+                          : teamWorkflowState === 'applied'
+                            ? styles.teamWorkflowStatusApplied
+                            : styles.teamWorkflowStatusPending,
+                      ].join(' ')}
+                    >
+                      {teamWorkflowState === 'locked'
+                        ? 'Teams locked'
+                        : teamWorkflowState === 'applied'
+                          ? 'Applied ✓'
+                          : 'Apply now'}
                     </span>
                   </div>
                 )}
