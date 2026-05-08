@@ -52,6 +52,8 @@ export type MembershipRole = 'student' | 'instructor' | 'ta';
 export type ProjectStatus = 'draft' | 'published' | 'archived';
 export type DeliveryMode = 'individual' | 'team';
 export type ProjectTemplateStatus = 'draft' | 'active';
+export type ProjectTemplateDifficulty = 'beginner' | 'intermediate' | 'advanced';
+export type ProjectInterestStatus = 'pending' | 'approved' | 'rejected';
 export type TeamFormationStatus =
   | 'not_started'
   | 'application_open'
@@ -166,6 +168,7 @@ export type ProgramVersionRecord = {
   isActive: boolean;
   policyText: string;
   trackSelectionMinYear: number;
+  durationYears: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -411,10 +414,30 @@ export type ProjectTemplateRecord = {
   deliveryMode: DeliveryMode;
   teamSize: number | null;
   status: ProjectTemplateStatus;
+  difficulty: ProjectTemplateDifficulty | null;
+  tags: string[];
+  estimatedDuration: string | null;
   rubric: TrackingRubricItemRecord[];
   resources: TrackingResourceRecord[];
   roles: ProjectTemplateRoleRecord[];
   milestones: ProjectTemplateMilestoneRecord[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CatalogTemplateRecord = ProjectTemplateRecord & {
+  courseName: string;
+  courseCode: string;
+  projectId: string | null;
+};
+
+export type ProjectInterestRecord = {
+  id: string;
+  projectId: string;
+  userId: string;
+  userName: string;
+  message: string;
+  status: ProjectInterestStatus;
   createdAt: string;
   updatedAt: string;
 };
@@ -1008,6 +1031,7 @@ export interface AppStore {
       isActive: boolean;
       policyText: string;
       trackSelectionMinYear: number;
+      durationYears: number;
     }
   ): Promise<ProgramVersionRecord>;
   getProgramVersionDetail(
@@ -1122,7 +1146,8 @@ export interface AppStore {
         sourceType: PlannedCourseSourceType;
         note: string | null;
       }>;
-    }
+    },
+    options?: { bypassLock?: boolean }
   ): Promise<StudentProgramPlanRecord | null>;
   getStudentProgramSheet(
     apiBaseUrl: string,
@@ -1264,6 +1289,9 @@ export interface AppStore {
       deliveryMode: DeliveryMode;
       teamSize: number | null;
       status: ProjectTemplateStatus;
+      difficulty: ProjectTemplateDifficulty | null;
+      tags: string[];
+      estimatedDuration: string | null;
       rubric: TrackingRubricItemRecord[];
       resources: TrackingResourceRecord[];
       roles: Array<Omit<ProjectTemplateRoleRecord, 'id'>>;
@@ -1285,12 +1313,37 @@ export interface AppStore {
       deliveryMode: DeliveryMode;
       teamSize: number | null;
       status: ProjectTemplateStatus;
+      difficulty: ProjectTemplateDifficulty | null;
+      tags: string[];
+      estimatedDuration: string | null;
       rubric: TrackingRubricItemRecord[];
       resources: TrackingResourceRecord[];
       roles: Array<Omit<ProjectTemplateRoleRecord, 'id'>>;
       milestones: Array<Omit<ProjectTemplateMilestoneRecord, 'id'>>;
     }>
   ): Promise<ProjectTemplateRecord | null>;
+  listPublicTemplates(
+    apiBaseUrl: string,
+    filters: { difficulty?: string; tags?: string[]; deliveryMode?: string }
+  ): Promise<CatalogTemplateRecord[]>;
+  createProjectInterest(
+    apiBaseUrl: string,
+    userId: string,
+    projectId: string,
+    payload: { message: string }
+  ): Promise<ProjectInterestRecord>;
+  getProjectInterestByUser(
+    apiBaseUrl: string,
+    userId: string,
+    projectId: string
+  ): Promise<ProjectInterestRecord | null>;
+  listProjectInterests(apiBaseUrl: string, projectId: string): Promise<ProjectInterestRecord[]>;
+  updateProjectInterest(
+    apiBaseUrl: string,
+    executorId: string,
+    interestId: string,
+    status: ProjectInterestStatus
+  ): Promise<ProjectInterestRecord | null>;
   createProjectRoleApplication(
     apiBaseUrl: string,
     userId: string,
@@ -1414,6 +1467,10 @@ export interface AppStore {
     }
   ): Promise<ReviewRecord>;
   getTrackingReview(apiBaseUrl: string, submissionId: string): Promise<ReviewRecord | null>;
+  getTrackingReviewsBySubmissionIds(
+    apiBaseUrl: string,
+    submissionIds: string[]
+  ): Promise<Map<string, ReviewRecord>>;
   getSubmissionStudentEmail(
     apiBaseUrl: string,
     submissionId: string
@@ -1584,6 +1641,9 @@ export function resolveProjectTemplateRecord(
       deliveryMode: 'team',
       teamSize: project.teamSize,
       status: 'active',
+      difficulty: null,
+      tags: [],
+      estimatedDuration: null,
       rubric: [],
       resources: [],
       roles: project.teamRoles || [],
@@ -1973,6 +2033,7 @@ function seedData(apiBaseUrl: string): StoreData {
       isActive: true,
       policyText: programSeed.version.policyText,
       trackSelectionMinYear: programSeed.version.trackSelectionMinYear,
+      durationYears: programSeed.version.durationYears,
       createdAt,
       updatedAt: createdAt,
     },
@@ -3411,6 +3472,7 @@ export class FileStore implements AppStore {
       isActive: boolean;
       policyText: string;
       trackSelectionMinYear: number;
+      durationYears: number;
     }
   ): Promise<ProgramVersionRecord> {
     const data = this.read(apiBaseUrl);
@@ -3423,6 +3485,7 @@ export class FileStore implements AppStore {
       isActive: payload.isActive,
       policyText: payload.policyText,
       trackSelectionMinYear: payload.trackSelectionMinYear,
+      durationYears: payload.durationYears,
       createdAt: nowIso(),
       updatedAt: nowIso(),
     };
@@ -3767,11 +3830,20 @@ export class FileStore implements AppStore {
         sourceType: PlannedCourseSourceType;
         note: string | null;
       }>;
-    }
+    },
+    options?: { bypassLock?: boolean }
   ): Promise<StudentProgramPlanRecord | null> {
     const data = this.read(apiBaseUrl);
     const studentProgram = (data.studentPrograms || []).find((entry) => entry.userId === userId);
-    if (!studentProgram || studentProgram.isLocked) return null;
+    if (!studentProgram || (studentProgram.isLocked && !options?.bypassLock)) return null;
+    // Defense-in-depth: reject duplicate catalogCourseId entries
+    const seen = new Set<string>();
+    for (const course of payload.plannedCourses) {
+      if (seen.has(course.catalogCourseId)) {
+        throw new Error(`Duplicate course in plan: ${course.catalogCourseId}`);
+      }
+      seen.add(course.catalogCourseId);
+    }
     const now = nowIso();
     data.studentPlannedCourses = [
       ...(data.studentPlannedCourses || []).filter(
@@ -4206,6 +4278,9 @@ export class FileStore implements AppStore {
       deliveryMode: DeliveryMode;
       teamSize: number | null;
       status: ProjectTemplateStatus;
+      difficulty: ProjectTemplateDifficulty | null;
+      tags: string[];
+      estimatedDuration: string | null;
       rubric: TrackingRubricItemRecord[];
       resources: TrackingResourceRecord[];
       roles: Array<Omit<ProjectTemplateRoleRecord, 'id'>>;
@@ -4222,6 +4297,9 @@ export class FileStore implements AppStore {
       deliveryMode: payload.deliveryMode,
       teamSize: payload.teamSize,
       status: payload.status,
+      difficulty: payload.difficulty ?? null,
+      tags: payload.tags ?? [],
+      estimatedDuration: payload.estimatedDuration ?? null,
       rubric: payload.rubric,
       resources: payload.resources,
       roles: payload.roles.map((role, index) => ({
@@ -4278,6 +4356,9 @@ export class FileStore implements AppStore {
       deliveryMode: DeliveryMode;
       teamSize: number | null;
       status: ProjectTemplateStatus;
+      difficulty: ProjectTemplateDifficulty | null;
+      tags: string[];
+      estimatedDuration: string | null;
       rubric: TrackingRubricItemRecord[];
       resources: TrackingResourceRecord[];
       roles: Array<Omit<ProjectTemplateRoleRecord, 'id'>>;
@@ -4295,6 +4376,10 @@ export class FileStore implements AppStore {
     if (payload.deliveryMode !== undefined) template.deliveryMode = payload.deliveryMode;
     if (payload.teamSize !== undefined) template.teamSize = payload.teamSize;
     if (payload.status !== undefined) template.status = payload.status;
+    if ('difficulty' in payload) template.difficulty = payload.difficulty ?? null;
+    if ('tags' in payload) template.tags = payload.tags ?? [];
+    if ('estimatedDuration' in payload)
+      template.estimatedDuration = payload.estimatedDuration ?? null;
     if (payload.rubric !== undefined) template.rubric = payload.rubric;
     if (payload.resources !== undefined) template.resources = payload.resources;
     if (payload.roles !== undefined) {
@@ -4330,6 +4415,85 @@ export class FileStore implements AppStore {
     );
     this.write(data);
     return template;
+  }
+
+  async listPublicTemplates(
+    apiBaseUrl: string,
+    filters: { difficulty?: string; tags?: string[]; deliveryMode?: string }
+  ): Promise<CatalogTemplateRecord[]> {
+    const data = this.read(apiBaseUrl);
+    return (data.projectTemplates ?? [])
+      .filter((t) => t.status === 'active')
+      .filter((t) => !filters.difficulty || t.difficulty === filters.difficulty)
+      .filter((t) => !filters.deliveryMode || t.deliveryMode === filters.deliveryMode)
+      .filter(
+        (t) => !filters.tags?.length || filters.tags.every((tag) => (t.tags ?? []).includes(tag))
+      )
+      .map((t) => {
+        const course = data.courses.find((c) => c.id === t.courseId);
+        const project = (data.projects ?? []).find(
+          (entry) => entry.templateId === t.id && entry.status === 'published'
+        );
+        return {
+          ...t,
+          courseName: course?.title ?? '',
+          courseCode: course?.courseCode ?? '',
+          projectId: project?.id ?? null,
+        };
+      });
+  }
+
+  async createProjectInterest(
+    apiBaseUrl: string,
+    userId: string,
+    projectId: string,
+    payload: { message: string }
+  ): Promise<ProjectInterestRecord> {
+    const now = nowIso();
+    return {
+      id: randomUUID(),
+      projectId,
+      userId,
+      userName: userId,
+      message: payload.message,
+      status: 'pending',
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  async getProjectInterestByUser(
+    _apiBaseUrl: string,
+    _userId: string,
+    _projectId: string
+  ): Promise<ProjectInterestRecord | null> {
+    return null;
+  }
+
+  async listProjectInterests(
+    _apiBaseUrl: string,
+    _projectId: string
+  ): Promise<ProjectInterestRecord[]> {
+    return [];
+  }
+
+  async updateProjectInterest(
+    _apiBaseUrl: string,
+    _executorId: string,
+    interestId: string,
+    status: ProjectInterestStatus
+  ): Promise<ProjectInterestRecord | null> {
+    const now = nowIso();
+    return {
+      id: interestId,
+      projectId: '',
+      userId: '',
+      userName: '',
+      message: '',
+      status,
+      createdAt: now,
+      updatedAt: now,
+    };
   }
 
   async createProjectRoleApplication(
@@ -4981,6 +5145,22 @@ export class FileStore implements AppStore {
         .filter((entry) => entry.submissionId === submissionId)
         .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0] || null
     );
+  }
+
+  async getTrackingReviewsBySubmissionIds(
+    apiBaseUrl: string,
+    submissionIds: string[]
+  ): Promise<Map<string, ReviewRecord>> {
+    const data = this.read(apiBaseUrl);
+    const result = new Map<string, ReviewRecord>();
+    for (const submissionId of submissionIds) {
+      const review =
+        data.reviews
+          .filter((entry) => entry.submissionId === submissionId)
+          .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0] || null;
+      if (review) result.set(submissionId, review);
+    }
+    return result;
   }
 
   async getSubmissionStudentEmail(

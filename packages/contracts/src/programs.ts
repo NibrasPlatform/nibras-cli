@@ -68,6 +68,7 @@ export const ProgramVersionSummarySchema = z.object({
   isActive: z.boolean(),
   policyText: z.string().default(''),
   trackSelectionMinYear: z.number().int().min(1).max(4).default(2),
+  durationYears: z.number().int().min(1).default(4),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -139,7 +140,7 @@ export const StudentPlannedCourseSchema = z.object({
   id: z.string().min(1),
   studentProgramId: z.string().min(1),
   catalogCourseId: z.string().min(1),
-  plannedYear: z.number().int().min(1).max(4),
+  plannedYear: z.number().int().min(1),
   plannedTerm: AcademicTermSchema,
   sourceType: PlannedCourseSourceTypeSchema,
   note: z.string().nullable().default(null),
@@ -199,7 +200,7 @@ export const ProgramSheetSectionCourseSchema = z.object({
   catalogNumber: z.string().min(1),
   title: z.string().min(1),
   units: z.number().int().positive(),
-  plannedYear: z.number().int().min(1).max(4),
+  plannedYear: z.number().int().min(1),
   plannedTerm: AcademicTermSchema,
   sourceType: PlannedCourseSourceTypeSchema,
 });
@@ -276,6 +277,7 @@ export const CreateProgramVersionRequestSchema = z.object({
   isActive: z.boolean().default(false),
   policyText: z.string().default(''),
   trackSelectionMinYear: z.number().int().min(1).max(4).default(2),
+  durationYears: z.number().int().min(1).default(4),
 });
 
 export const CreateCatalogCourseRequestSchema = z.object({
@@ -333,17 +335,24 @@ export const SelectTrackRequestSchema = z.object({
   trackId: z.string().min(1),
 });
 
-export const UpdateStudentPlanRequestSchema = z.object({
-  plannedCourses: z.array(
-    z.object({
-      catalogCourseId: z.string().min(1),
-      plannedYear: z.number().int().min(1).max(4),
-      plannedTerm: AcademicTermSchema,
-      sourceType: PlannedCourseSourceTypeSchema.default('standard'),
-      note: z.string().nullable().default(null),
-    })
-  ),
-});
+export const UpdateStudentPlanRequestSchema = z
+  .object({
+    plannedCourses: z.array(
+      z.object({
+        catalogCourseId: z.string().min(1),
+        plannedYear: z.number().int().min(1),
+        plannedTerm: AcademicTermSchema,
+        sourceType: PlannedCourseSourceTypeSchema.default('standard'),
+        note: z.string().nullable().default(null),
+      })
+    ),
+  })
+  .refine(
+    (data) =>
+      new Set(data.plannedCourses.map((c) => c.catalogCourseId)).size ===
+      data.plannedCourses.length,
+    { message: 'Each course may only appear once in the plan.', path: ['plannedCourses'] }
+  );
 
 export const CreatePetitionRequestSchema = z.object({
   type: PetitionTypeSchema,
@@ -361,6 +370,23 @@ export const UpdatePetitionRequestSchema = z.object({
 export const ProgramApprovalRequestSchema = z.object({
   status: ApprovalStatusSchema.default('approved'),
   notes: z.string().nullable().default(null),
+});
+
+export const TrackRecommendationSchema = z.object({
+  trackId: z.string().min(1),
+  trackTitle: z.string().min(1),
+  trackSlug: z.string().min(1),
+  trackDescription: z.string().default(''),
+  matchScore: z.number().int().min(0).max(100),
+  matchedUnits: z.number().int().nonnegative(),
+  totalTrackUnits: z.number().int().nonnegative(),
+  matchedCourseCount: z.number().int().nonnegative(),
+  reason: z.string().min(1),
+});
+
+export const TrackRecommendationResponseSchema = z.object({
+  recommendations: z.array(TrackRecommendationSchema),
+  year1CourseCount: z.number().int().nonnegative(),
 });
 
 export type ProgramSummary = z.infer<typeof ProgramSummarySchema>;
@@ -387,6 +413,8 @@ export type CreateTrackRequest = z.infer<typeof CreateTrackRequestSchema>;
 export type UpdateTrackRequest = z.infer<typeof UpdateTrackRequestSchema>;
 export type SelectTrackRequest = z.infer<typeof SelectTrackRequestSchema>;
 export type UpdateStudentPlanRequest = z.infer<typeof UpdateStudentPlanRequestSchema>;
+export type TrackRecommendation = z.infer<typeof TrackRecommendationSchema>;
+export type TrackRecommendationResponse = z.infer<typeof TrackRecommendationResponseSchema>;
 export type CreatePetitionRequest = z.infer<typeof CreatePetitionRequestSchema>;
 export type UpdatePetitionRequest = z.infer<typeof UpdatePetitionRequestSchema>;
 export type ProgramApprovalRequest = z.infer<typeof ProgramApprovalRequestSchema>;

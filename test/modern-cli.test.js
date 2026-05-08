@@ -151,10 +151,7 @@ exit 0
   assert.match(result.stdout, /Cleanup:\s+removed 2 stale global install path\(s\)\./);
   const npmCalls = fs.readFileSync(npmLog, 'utf8');
   assert.match(npmCalls, /uninstall\n-g\nnibras\n@nibras\/cli\n---/);
-  assert.match(
-    npmCalls,
-    /install\n-g\ngit\+https:\/\/github\.com\/NibrasPlatform\/nibras-cli\.git#v1\.0\.2\n---/
-  );
+  assert.match(npmCalls, /install\n-g\n@nibras\/cli@1\.0\.2\n---/);
   assert.equal(fs.existsSync(path.join(fakePrefix, 'bin', 'nibras')), false);
   assert.equal(fs.existsSync(path.join(fakeRoot, 'nibras')), false);
 });

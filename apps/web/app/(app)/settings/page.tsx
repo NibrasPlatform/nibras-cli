@@ -3,8 +3,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiFetch } from '../../lib/session';
-import { prefs } from '../../lib/prefs';
+import { prefs, PREF_EVENTS } from '../../lib/prefs';
 import { useSession } from '../_components/session-context';
 import { getLevelLabel, MAX_LEVEL } from '../../lib/levels';
 import styles from './page.module.css';
@@ -298,20 +299,40 @@ function AdminYearTab() {
 
 export default function SettingsPage() {
   const { user, loading: sessionLoading } = useSession();
+  const router = useRouter();
 
   const isAdmin = user?.systemRole === 'admin';
 
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [compact, setCompact] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [installUrl, setInstallUrl] = useState<string | null>(null);
   const [installUrlLoading, setInstallUrlLoading] = useState(false);
   const [manualInstallId, setManualInstallId] = useState('');
   const [manualInstallStatus, setManualInstallStatus] = useState('');
   const [manualInstallSubmitting, setManualInstallSubmitting] = useState(false);
 
+  // ── Delete account state ─────────────────────────────────────────────────────
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
   useEffect(() => {
-    setCompact(prefs.getCompact());
+    function syncPreferences() {
+      setCompact(prefs.getCompact());
+      setSidebarCollapsed(prefs.getSidebarCollapsed());
+    }
+
+    syncPreferences();
+    window.addEventListener(PREF_EVENTS.compactChanged, syncPreferences);
+    window.addEventListener(PREF_EVENTS.sidebarCollapsedChanged, syncPreferences);
     void fetchInstallUrl();
+
+    return () => {
+      window.removeEventListener(PREF_EVENTS.compactChanged, syncPreferences);
+      window.removeEventListener(PREF_EVENTS.sidebarCollapsedChanged, syncPreferences);
+    };
   }, []);
 
   async function fetchInstallUrl() {
@@ -360,7 +381,29 @@ export default function SettingsPage() {
   function handleCompactChange(val: boolean) {
     setCompact(val);
     prefs.setCompact(val);
-    window.dispatchEvent(new Event('nibras:compact-changed'));
+  }
+
+  function handleSidebarCollapsedChange(val: boolean) {
+    setSidebarCollapsed(val);
+    prefs.setSidebarCollapsed(val);
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmText !== 'DELETE') return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const res = await apiFetch('/v1/me/account', { method: 'DELETE', auth: true });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `Failed to delete account (${res.status}).`);
+      }
+      // Account deleted — redirect to root
+      router.push('/');
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : String(err));
+      setDeleting(false);
+    }
   }
 
   const identity = user?.username || user?.githubLogin || '—';
@@ -622,18 +665,43 @@ export default function SettingsPage() {
           {/* ── Preferences tab ── */}
           {activeTab === 'preferences' && (
             <section className={styles.contentSection}>
-              <h2 className={styles.sectionHeading}>Preferences</h2>
-              <p className={styles.sectionSub}>Customise how Nibras looks and feels for you.</p>
+              <h2 className={styles.sectionHeading}>Appearance &amp; Layout</h2>
+              <p className={styles.sectionSub}>
+                Manage the interface settings stored on this device, including spacing and
+                navigation layout.
+              </p>
 
               <div className={styles.prefRow}>
                 <div className={styles.prefInfo}>
                   <label htmlFor="compact-toggle" className={styles.prefLabel}>
                     Compact mode
                   </label>
-                  <p className={styles.prefDesc}>Reduce spacing for a denser layout</p>
+                  <p className={styles.prefDesc}>
+                    Reduce spacing across navigation, headers, and content for a denser workspace.
+                  </p>
                 </div>
                 <Toggle id="compact-toggle" checked={compact} onChange={handleCompactChange} />
               </div>
+
+              <div className={styles.prefRow}>
+                <div className={styles.prefInfo}>
+                  <label htmlFor="sidebar-collapsed-toggle" className={styles.prefLabel}>
+                    Collapsed sidebar
+                  </label>
+                  <p className={styles.prefDesc}>
+                    Start with the sidebar collapsed to save horizontal space.
+                  </p>
+                </div>
+                <Toggle
+                  id="sidebar-collapsed-toggle"
+                  checked={sidebarCollapsed}
+                  onChange={handleSidebarCollapsedChange}
+                />
+              </div>
+
+              <p className={styles.prefNote}>
+                These settings are stored in your browser on this device.
+              </p>
             </section>
           )}
 
@@ -666,6 +734,82 @@ export default function SettingsPage() {
                 </svg>
                 Sign out of Nibras
               </Link>
+
+              {/* ── Delete account card ── */}
+              <div className={styles.deleteCard}>
+                <p className={styles.deleteCardTitle}>Delete account</p>
+                <p className={styles.deleteCardDesc}>
+                  Permanently delete your account and all associated data — submissions, team
+                  memberships, program plans, and tokens. This action cannot be undone and your data
+                  cannot be recovered.
+                </p>
+
+                {!showDeleteConfirm ? (
+                  <button
+                    className={styles.deleteBtn}
+                    onClick={() => {
+                      setShowDeleteConfirm(true);
+                      setDeleteConfirmText('');
+                      setDeleteError('');
+                    }}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                    </svg>
+                    Delete my account
+                  </button>
+                ) : (
+                  <div className={styles.deleteConfirmBox}>
+                    <p className={styles.deleteConfirmLabel}>
+                      Type <strong>DELETE</strong> to confirm permanent account deletion:
+                    </p>
+                    <div className={styles.deleteConfirmRow}>
+                      <input
+                        className={styles.deleteInput}
+                        type="text"
+                        placeholder="DELETE"
+                        value={deleteConfirmText}
+                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                        disabled={deleting}
+                        autoFocus
+                      />
+                      <button
+                        className={styles.deleteConfirmBtn}
+                        onClick={() => void handleDeleteAccount()}
+                        disabled={deleting || deleteConfirmText !== 'DELETE'}
+                      >
+                        {deleting ? 'Deleting…' : 'Confirm'}
+                      </button>
+                      <button
+                        className={styles.deleteBtn}
+                        onClick={() => {
+                          setShowDeleteConfirm(false);
+                          setDeleteConfirmText('');
+                          setDeleteError('');
+                        }}
+                        disabled={deleting}
+                        style={{ marginLeft: 0 }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {deleteError && <p className={styles.deleteError}>{deleteError}</p>}
+                  </div>
+                )}
+              </div>
             </section>
           )}
         </div>

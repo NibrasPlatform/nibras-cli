@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import NibrasLogo from '@/app/_components/nibras-logo';
 import { getInitials } from '../../lib/utils';
-import { prefs } from '../../lib/prefs';
+import { prefs, PREF_EVENTS } from '../../lib/prefs';
 import { appNavItems, canAccessNavItem, isNavItemActive } from './nav-config';
 
 type ShellSessionUser = {
@@ -41,6 +41,13 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
         strokeWidth="1.3"
         strokeLinecap="round"
       />
+    </svg>
+  ),
+  Catalog: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="14" height="4" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="1" y="7" width="14" height="4" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="1" y="13" width="8" height="2" rx="1" fill="currentColor" opacity=".6" />
     </svg>
   ),
   Instructor: (
@@ -109,7 +116,13 @@ export default function Sidebar({
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    if (prefs.getSidebarCollapsed()) setCollapsed(true);
+    function syncCollapsed() {
+      setCollapsed(prefs.getSidebarCollapsed());
+    }
+
+    syncCollapsed();
+    window.addEventListener(PREF_EVENTS.sidebarCollapsedChanged, syncCollapsed);
+    return () => window.removeEventListener(PREF_EVENTS.sidebarCollapsedChanged, syncCollapsed);
   }, []);
 
   function toggleCollapse() {
@@ -122,7 +135,8 @@ export default function Sidebar({
     <aside
       className="sidebar"
       style={{
-        width: collapsed ? 64 : undefined,
+        width: collapsed ? 72 : 248,
+        minWidth: collapsed ? 72 : 248,
         transition: 'width 0.2s ease',
         overflow: collapsed ? 'visible' : undefined,
       }}

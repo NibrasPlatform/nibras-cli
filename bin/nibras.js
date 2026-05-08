@@ -4,8 +4,15 @@ const fs = require('fs');
 const path = require('path');
 
 async function main() {
-  const modernEntry = path.join(__dirname, '..', 'apps', 'cli', 'dist', 'index.js');
-  if (fs.existsSync(modernEntry)) {
+  const modernEntries = [
+    path.join(__dirname, '..', 'apps', 'cli', 'bundle', 'index.js'),
+    path.join(__dirname, '..', 'apps', 'cli', 'dist', 'index.js'),
+  ];
+
+  for (const modernEntry of modernEntries) {
+    if (!fs.existsSync(modernEntry)) {
+      continue;
+    }
     const { runCli } = require(modernEntry);
     await runCli(process.argv);
     return;

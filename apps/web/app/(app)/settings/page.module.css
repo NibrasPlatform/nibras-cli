@@ -509,6 +509,13 @@
   color: rgba(161, 161, 170, 0.5);
 }
 
+.prefNote {
+  margin: 18px 0 0;
+  font-size: 12px;
+  color: rgba(161, 161, 170, 0.48);
+  max-width: 520px;
+}
+
 .toggle {
   position: relative;
   width: 38px;
@@ -543,6 +550,12 @@
 
 .toggleOn .toggleThumb {
   transform: translateX(17px);
+}
+
+@media (max-width: 700px) {
+  .prefRow {
+    gap: 16px;
+  }
 }
 
 /* ── Danger zone ────────────────────────────────────────────────────────────── */
@@ -583,6 +596,133 @@
 .signOutBtn:hover {
   background: rgba(239, 68, 68, 0.14);
   border-color: rgba(239, 68, 68, 0.38);
+}
+
+/* ── Delete account ─────────────────────────────────────────────────────────── */
+
+.deleteCard {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 520px;
+}
+
+.deleteCardTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f87171;
+}
+
+.deleteCardDesc {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(161, 161, 170, 0.55);
+  line-height: 1.6;
+}
+
+.deleteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 9px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  align-self: flex-start;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.deleteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deleteConfirmBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.deleteConfirmLabel {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(248, 113, 113, 0.8);
+}
+
+.deleteConfirmRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.deleteInput {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #fafafa;
+  font-size: 13px;
+  font-family: var(--font-mono, monospace);
+  outline: none;
+  letter-spacing: 0.05em;
+}
+
+.deleteInput:focus {
+  border-color: rgba(239, 68, 68, 0.55);
+}
+
+.deleteConfirmBtn {
+  padding: 9px 18px;
+  border-radius: 7px;
+  background: #ef4444;
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+
+.deleteConfirmBtn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.deleteConfirmBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deleteError {
+  margin: 0;
+  font-size: 12.5px;
+  color: #f87171;
+  font-weight: 600;
 }
 
 /* ── Admin Year Tab ─────────────────────────────────────────────────────────── */

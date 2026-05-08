@@ -3,6 +3,11 @@ const KEY_SIDEBAR_COLLAPSED = 'nibras.sidebar.collapsed';
 const KEY_ONBOARDING_OS = 'nibras.onboarding.os';
 const KEY_SELECTED_COURSE_ID = 'nibras.selectedCourseId';
 
+export const PREF_EVENTS = {
+  compactChanged: 'nibras:compact-changed',
+  sidebarCollapsedChanged: 'nibras:sidebar-collapsed-changed',
+} as const;
+
 function safeGet(key: string): string | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -30,11 +35,22 @@ function safeRemove(key: string): void {
   }
 }
 
+function emitPreferenceChange(eventName: string): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(eventName));
+}
+
 export const prefs = {
   getCompact: () => safeGet(KEY_COMPACT) === 'true',
-  setCompact: (v: boolean) => safeSet(KEY_COMPACT, String(v)),
+  setCompact: (v: boolean) => {
+    safeSet(KEY_COMPACT, String(v));
+    emitPreferenceChange(PREF_EVENTS.compactChanged);
+  },
   getSidebarCollapsed: () => safeGet(KEY_SIDEBAR_COLLAPSED) === 'true',
-  setSidebarCollapsed: (v: boolean) => safeSet(KEY_SIDEBAR_COLLAPSED, String(v)),
+  setSidebarCollapsed: (v: boolean) => {
+    safeSet(KEY_SIDEBAR_COLLAPSED, String(v));
+    emitPreferenceChange(PREF_EVENTS.sidebarCollapsedChanged);
+  },
   getOnboardingOs: () => safeGet(KEY_ONBOARDING_OS),
   setOnboardingOs: (v: string) => safeSet(KEY_ONBOARDING_OS, v),
   getSelectedCourseId: () => safeGet(KEY_SELECTED_COURSE_ID),

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { getInitials } from '../../lib/utils';
 import NibrasLogo from '@/app/_components/nibras-logo';
+import { prefs, PREF_EVENTS } from '../../lib/prefs';
 import NotificationsPanel from './notifications-panel';
 import { appNavItems, canAccessNavItem, isNavItemActive } from './nav-config';
 
@@ -414,14 +415,26 @@ export default function TopHeader({
 }) {
   const pathname = usePathname();
   const identity = user?.username || user?.githubLogin || 'Nibras';
+  const [compact, setCompact] = useState(false);
 
   const githubAvatarUrl =
     user?.githubLogin && user.githubLinked
       ? `https://avatars.githubusercontent.com/${user.githubLogin}?s=64`
       : null;
 
+  useEffect(() => {
+    function syncCompact() {
+      setCompact(prefs.getCompact());
+    }
+
+    syncCompact();
+    window.addEventListener(PREF_EVENTS.compactChanged, syncCompact);
+    return () => window.removeEventListener(PREF_EVENTS.compactChanged, syncCompact);
+  }, []);
+
   return (
     <header
+      className="topHeader"
       style={{
         position: 'sticky',
         top: 0,
@@ -438,18 +451,20 @@ export default function TopHeader({
         style={{
           maxWidth: 1280,
           margin: '0 auto',
-          padding: '0 40px',
-          height: 52,
+          padding: compact ? '0 24px' : '0 40px',
+          height: compact ? 46 : 52,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 24,
+          gap: compact ? 16 : 24,
         }}
       >
         {/* Left: Logo + Beta + Nav */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <NibrasLogo variant="inverse" width={90} priority />
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: compact ? 14 : 20, flexShrink: 0 }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 6 : 8 }}>
+            <NibrasLogo variant="inverse" width={compact ? 82 : 90} priority />
             <span
               style={{
                 fontSize: 10,
@@ -467,7 +482,7 @@ export default function TopHeader({
             </span>
           </div>
 
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: compact ? 0 : 2 }}>
             {appNavItems
               .filter((item) => canAccessNavItem(item, user))
               .map((item) => {
@@ -478,9 +493,9 @@ export default function TopHeader({
                     href={item.href}
                     title={item.description}
                     style={{
-                      padding: '5px 11px',
+                      padding: compact ? '4px 9px' : '5px 11px',
                       borderRadius: 7,
-                      fontSize: 13,
+                      fontSize: compact ? 12 : 13,
                       fontWeight: isActive ? 600 : 500,
                       color: isActive ? '#fafafa' : 'rgba(161,161,170,0.7)',
                       textDecoration: 'none',
@@ -496,9 +511,9 @@ export default function TopHeader({
             <Link
               href="/settings"
               style={{
-                padding: '5px 11px',
+                padding: compact ? '4px 9px' : '5px 11px',
                 borderRadius: 7,
-                fontSize: 13,
+                fontSize: compact ? 12 : 13,
                 fontWeight: pathname === '/settings' ? 600 : 500,
                 color: pathname === '/settings' ? '#fafafa' : 'rgba(161,161,170,0.7)',
                 textDecoration: 'none',
@@ -513,7 +528,7 @@ export default function TopHeader({
         </div>
 
         {/* Right: Notifications + User dropdown */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 2 : 4, flexShrink: 0 }}>
           <NotificationsPanel />
           <UserDropdown
             user={user}

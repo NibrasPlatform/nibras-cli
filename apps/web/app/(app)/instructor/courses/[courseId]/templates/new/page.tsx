@@ -21,6 +21,7 @@ type MilestoneRow = {
 export default function NewTemplatePage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = use(params);
   const router = useRouter();
+  const [deliveryMode, setDeliveryMode] = useState<'team' | 'individual'>('team');
   const [teamSize, setTeamSize] = useState(3);
   const [roles, setRoles] = useState<RoleRow[]>([
     { key: 'backend', label: 'Backend', count: 1 },
@@ -52,21 +53,40 @@ export default function NewTemplatePage({ params }: { params: Promise<{ courseId
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
+    const rawTags = String(form.get('tags') || '').trim();
+    const tags = rawTags
+      ? rawTags
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
+    const estimatedDuration = String(form.get('estimatedDuration') || '').trim() || null;
+    const difficulty = (String(form.get('difficulty') || '') || null) as
+      | 'beginner'
+      | 'intermediate'
+      | 'advanced'
+      | null;
     void submit({
       slug,
       title,
       description: String(form.get('description') || '').trim(),
-      deliveryMode: 'team',
-      teamSize,
+      deliveryMode,
+      teamSize: deliveryMode === 'team' ? teamSize : null,
       status: 'active',
-      roles: roles
-        .filter((role) => role.key.trim() && role.label.trim())
-        .map((role, index) => ({
-          key: role.key.trim(),
-          label: role.label.trim(),
-          count: Number(role.count) || 1,
-          sortOrder: index,
-        })),
+      difficulty,
+      tags,
+      estimatedDuration,
+      roles:
+        deliveryMode === 'team'
+          ? roles
+              .filter((role) => role.key.trim() && role.label.trim())
+              .map((role, index) => ({
+                key: role.key.trim(),
+                label: role.label.trim(),
+                count: Number(role.count) || 1,
+                sortOrder: index,
+              }))
+          : [],
       rubric: rubric
         .filter((row) => row.criterion.trim())
         .map((row) => ({ criterion: row.criterion.trim(), maxScore: Number(row.maxScore) || 0 })),
@@ -113,74 +133,130 @@ export default function NewTemplatePage({ params }: { params: Promise<{ courseId
         </div>
 
         <div className={styles.formGroup}>
-          <label htmlFor="teamSize">Exact Team Size</label>
+          <label htmlFor="deliveryMode">Delivery Mode</label>
+          <select
+            id="deliveryMode"
+            name="deliveryMode"
+            value={deliveryMode}
+            onChange={(e) => setDeliveryMode(e.target.value as 'team' | 'individual')}
+          >
+            <option value="team">Team</option>
+            <option value="individual">Individual</option>
+          </select>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="difficulty">Difficulty</label>
+          <select id="difficulty" name="difficulty" defaultValue="intermediate">
+            <option value="">— Not specified —</option>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="tags">Skill Tags</label>
           <input
-            id="teamSize"
-            type="number"
-            min={2}
-            max={8}
-            value={teamSize}
-            onChange={(event) => setTeamSize(Number(event.target.value) || 2)}
+            id="tags"
+            name="tags"
+            type="text"
+            placeholder="React, Node.js, Python (comma-separated)"
           />
         </div>
 
-        <div className={styles.dynamicSection}>
-          <div className={styles.dynamicSectionHeader}>
-            <span className={styles.dynamicSectionLabel}>Role Slots</span>
-            <button
-              type="button"
-              className={styles.btnAddRow}
-              onClick={() => setRoles((current) => [...current, { key: '', label: '', count: 1 }])}
-            >
-              + Add role
-            </button>
-          </div>
-          {roles.map((role, index) => (
-            <div key={index} className={styles.dynamicRow}>
+        <div className={styles.formGroup}>
+          <label htmlFor="estimatedDuration">Estimated Duration</label>
+          <input
+            id="estimatedDuration"
+            name="estimatedDuration"
+            type="text"
+            placeholder="4 weeks"
+          />
+        </div>
+
+        {deliveryMode === 'team' && (
+          <>
+            <div className={styles.formGroup}>
+              <label htmlFor="teamSize">Exact Team Size</label>
               <input
-                type="text"
-                placeholder="role-key"
-                value={role.key}
-                onChange={(event) =>
-                  setRoles((current) =>
-                    current.map((entry, currentIndex) =>
-                      currentIndex === index ? { ...entry, key: event.target.value } : entry
-                    )
-                  )
-                }
-                className={styles.dynamicRowLabel}
-              />
-              <input
-                type="text"
-                placeholder="Role label"
-                value={role.label}
-                onChange={(event) =>
-                  setRoles((current) =>
-                    current.map((entry, currentIndex) =>
-                      currentIndex === index ? { ...entry, label: event.target.value } : entry
-                    )
-                  )
-                }
-                className={styles.dynamicRowMain}
-              />
-              <input
+                id="teamSize"
                 type="number"
-                min={1}
-                value={role.count}
-                onChange={(event) =>
-                  setRoles((current) =>
-                    current.map((entry, currentIndex) =>
-                      currentIndex === index
-                        ? { ...entry, count: Number(event.target.value) || 1 }
-                        : entry
-                    )
-                  )
-                }
-                className={styles.dynamicRowScore}
+                min={2}
+                max={8}
+                value={teamSize}
+                onChange={(event) => setTeamSize(Number(event.target.value) || 2)}
               />
             </div>
-          ))}
-        </div>
+
+            <div className={styles.dynamicSection}>
+              <div className={styles.dynamicSectionHeader}>
+                <span className={styles.dynamicSectionLabel}>Role Slots</span>
+                <button
+                  type="button"
+                  className={styles.btnAddRow}
+                  onClick={() =>
+                    setRoles((current) => [...current, { key: '', label: '', count: 1 }])
+                  }
+                >
+                  + Add role
+                </button>
+              </div>
+              {roles.map((role, index) => (
+                <div key={index} className={styles.dynamicRow}>
+                  <input
+                    type="text"
+                    placeholder="role-key"
+                    value={role.key}
+                    onChange={(event) =>
+                      setRoles((current) =>
+                        current.map((entry, currentIndex) =>
+                          currentIndex === index ? { ...entry, key: event.target.value } : entry
+                        )
+                      )
+                    }
+                    className={styles.dynamicRowLabel}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Role label"
+                    value={role.label}
+                    onChange={(event) =>
+                      setRoles((current) =>
+                        current.map((entry, currentIndex) =>
+                          currentIndex === index ? { ...entry, label: event.target.value } : entry
+                        )
+                      )
+                    }
+                    className={styles.dynamicRowMain}
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    value={role.count}
+                    onChange={(event) =>
+                      setRoles((current) =>
+                        current.map((entry, currentIndex) =>
+                          currentIndex === index
+                            ? { ...entry, count: Number(event.target.value) || 1 }
+                            : entry
+                        )
+                      )
+                    }
+                    className={styles.dynamicRowScore}
+                  />
+                  <button
+                    type="button"
+                    className={styles.btnRemoveRow}
+                    onClick={() => setRoles((current) => current.filter((_, i) => i !== index))}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         <div className={styles.dynamicSection}>
           <div className={styles.dynamicSectionHeader}>

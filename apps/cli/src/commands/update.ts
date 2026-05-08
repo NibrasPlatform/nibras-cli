@@ -1,23 +1,18 @@
 import { createSpinner } from '../ui/spinner';
 import { printBox } from '../ui/box';
 import { runGlobalNpm, uninstallGlobalCli } from './global-install';
+import { parseOption, hasFlag } from '../util/args';
 
 const DEFAULT_RELEASE_API_URL =
   'https://api.github.com/repos/NibrasPlatform/nibras-cli/releases/latest';
-const DEFAULT_GIT_INSTALL_URL = 'git+https://github.com/NibrasPlatform/nibras-cli.git';
-
-function parseOption(args: string[], name: string): string | null {
-  const index = args.indexOf(name);
-  if (index === -1) return null;
-  return args[index + 1] || null;
-}
-
-function hasFlag(args: string[], flag: string): boolean {
-  return args.includes(flag);
-}
+const DEFAULT_PACKAGE_NAME = '@nibras/cli';
 
 function normalizeTag(value: string): string {
   return value.startsWith('v') ? value : `v${value}`;
+}
+
+function trimTagPrefix(value: string): string {
+  return value.startsWith('v') ? value.slice(1) : value;
 }
 
 function getInstalledVersion(): string | null {
@@ -88,20 +83,21 @@ export async function commandUpdate(args: string[], plain: boolean): Promise<voi
     return;
   }
 
-  const installUrl = `${process.env.NIBRAS_UPDATE_GIT_URL || DEFAULT_GIT_INSTALL_URL}#${targetTag}`;
+  const packageName = process.env.NIBRAS_UPDATE_PACKAGE_NAME || DEFAULT_PACKAGE_NAME;
+  const installSpecifier = `${packageName}@${trimTagPrefix(targetTag)}`;
 
   spinner.text('Removing any existing global CLI install');
   const removedArtifacts = uninstallGlobalCli(plain);
 
   spinner.text(`Installing ${targetTag}`);
-  runGlobalNpm(['install', '-g', installUrl], plain);
+  runGlobalNpm(['install', '-g', installSpecifier], plain);
   spinner.succeed(`Updated to ${targetTag}`);
 
   printBox(
     'CLI updated',
     [
       `Installed: ${targetTag}`,
-      `Source:    ${installUrl}`,
+      `Source:    ${installSpecifier}`,
       removedArtifacts.length > 0
         ? `Cleanup:   removed ${removedArtifacts.length} stale global install path(s).`
         : 'Cleanup:   no stale global install paths were left behind.',

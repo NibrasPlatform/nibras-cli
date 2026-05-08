@@ -125,7 +125,16 @@ test('team project application and locking flow works end to end', async () => {
     rubric: [],
     resources: [],
     roles: [{ id: 'role_backend', key: 'backend', label: 'Backend', count: 1, sortOrder: 0 }],
-    milestones: [{ id: 'tmpl_ms_final', title: 'Final', description: '', order: 1, dueAt: null, isFinal: true }],
+    milestones: [
+      {
+        id: 'tmpl_ms_final',
+        title: 'Final',
+        description: '',
+        order: 1,
+        dueAt: null,
+        isFinal: true,
+      },
+    ],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
@@ -133,7 +142,9 @@ test('team project application and locking flow works end to end', async () => {
   project.deliveryMode = 'team';
   project.templateId = 'template_team_exam1';
   project.teamSize = 1;
-  project.teamRoles = [{ id: 'role_backend', key: 'backend', label: 'Backend', count: 1, sortOrder: 0 }];
+  project.teamRoles = [
+    { id: 'role_backend', key: 'backend', label: 'Backend', count: 1, sortOrder: 0 },
+  ];
   project.teamFormationStatus = 'application_open';
   project.applicationOpenAt = new Date(Date.now() - 1000).toISOString();
   project.applicationCloseAt = new Date(Date.now() + 60_000).toISOString();

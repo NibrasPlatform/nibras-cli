@@ -8,9 +8,20 @@ import styles from '../../../instructor.module.css';
 type Template = {
   id: string;
   title: string;
+  description: string;
   status: string;
+  deliveryMode: string;
   teamSize: number | null;
+  difficulty: 'beginner' | 'intermediate' | 'advanced' | null;
+  tags: string[];
+  estimatedDuration: string | null;
   roles: Array<{ id: string }>;
+};
+
+const DIFFICULTY_COLORS: Record<string, string> = {
+  beginner: 'var(--success)',
+  intermediate: 'var(--warning, #f59e0b)',
+  advanced: 'var(--error, #ef4444)',
 };
 
 export default function CourseTemplatesPage({ params }: { params: Promise<{ courseId: string }> }) {
@@ -53,7 +64,9 @@ export default function CourseTemplatesPage({ params }: { params: Promise<{ cour
             </article>
             <article className={styles.summaryCard}>
               <span className={styles.summaryLabel}>Team-ready</span>
-              <strong>{(templates ?? []).filter((template) => template.teamSize).length}</strong>
+              <strong>
+                {(templates ?? []).filter((template) => template.deliveryMode === 'team').length}
+              </strong>
               <p>Include team size or role configuration</p>
             </article>
           </div>
@@ -69,18 +82,80 @@ export default function CourseTemplatesPage({ params }: { params: Promise<{ cour
               <div className={styles.projectList}>
                 {templates.map((template) => (
                   <div key={template.id} className={`${styles.projectRow} ${styles.templateRow}`}>
-                    <div>
-                      <span className={styles.statusBadge}>{template.status}</span>
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+                      >
+                        <span className={styles.statusBadge}>{template.status}</span>
+                        {template.difficulty && (
+                          <span
+                            className={styles.statusBadge}
+                            style={{
+                              background:
+                                DIFFICULTY_COLORS[template.difficulty] ?? 'var(--surface-muted)',
+                              color: '#fff',
+                            }}
+                          >
+                            {template.difficulty}
+                          </span>
+                        )}
+                        {template.estimatedDuration && (
+                          <span className={styles.muted} style={{ fontSize: 12 }}>
+                            ⏱ {template.estimatedDuration}
+                          </span>
+                        )}
+                      </div>
                       <strong style={{ display: 'block', marginTop: 8 }}>{template.title}</strong>
+                      {template.description && (
+                        <p className={styles.muted} style={{ marginTop: 2, fontSize: 13 }}>
+                          {template.description.length > 80
+                            ? `${template.description.slice(0, 80)}…`
+                            : template.description}
+                        </p>
+                      )}
                       <p className={styles.muted}>
-                        {template.teamSize
-                          ? `${template.teamSize} students · ${template.roles.length} roles`
+                        {template.deliveryMode === 'team'
+                          ? `${template.teamSize ?? '?'} students · ${template.roles.length} roles`
                           : 'Individual blueprint'}
                       </p>
+                      {(template.tags ?? []).length > 0 && (
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+                          {template.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              style={{
+                                fontSize: 11,
+                                padding: '2px 8px',
+                                borderRadius: 99,
+                                background: 'var(--surface-strong)',
+                                color: 'var(--text-soft)',
+                              }}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <span className={styles.muted} style={{ marginLeft: 'auto' }}>
-                      {template.teamSize ? 'Team template' : 'Individual template'}
-                    </span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6,
+                        alignItems: 'flex-end',
+                      }}
+                    >
+                      <span className={styles.muted}>
+                        {template.deliveryMode === 'team' ? 'Team template' : 'Individual template'}
+                      </span>
+                      <Link
+                        href={`/instructor/courses/${courseId}/templates/${template.id}/edit`}
+                        className={styles.backLink}
+                        style={{ fontSize: 13 }}
+                      >
+                        Edit
+                      </Link>
+                    </div>
                   </div>
                 ))}
               </div>

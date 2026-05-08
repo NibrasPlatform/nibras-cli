@@ -9,10 +9,10 @@ import {
   buildHostedLoginCommand,
   buildStudentQuickStart,
   discoverOnboardingApiBaseUrl,
-  GIT_INSTALL_COMMAND,
   getInstallTroubleshootingCommand,
   getOnboardingConfigPath,
   getOnboardingDirExample,
+  NPM_INSTALL_COMMAND,
   PINNED_RELEASE_TAG,
 } from './onboarding-content.js';
 import styles from './page.module.css';
@@ -231,7 +231,7 @@ const COMMAND_REFERENCE_GROUPS: CommandReferenceGroup[] = [
     items: [
       {
         command: 'nibras update --version <tag>',
-        description: 'Reinstall a pinned Git-tag release.',
+        description: 'Reinstall a pinned published CLI release.',
         note: 'Use `nibras update --check` to compare the installed CLI against the latest GitHub release.',
       },
       {
@@ -432,6 +432,39 @@ function WindowsShellTabs({
   );
 }
 
+function WindowsQuickStart({
+  shell,
+  setShell,
+}: {
+  shell: WindowsShell;
+  setShell: (value: WindowsShell) => void;
+}) {
+  const shellLabel = shell === 'powershell' ? 'PowerShell' : 'Git Bash';
+
+  return (
+    <div className={styles.windowsGuide}>
+      <div className={styles.windowsGuideHeader}>
+        <div>
+          <p className={styles.windowsGuideEyebrow}>Recommended For Windows</p>
+          <h3 className={styles.windowsGuideTitle}>Use one shell and keep using it</h3>
+        </div>
+        <WindowsShellTabs shell={shell} setShell={setShell} />
+      </div>
+      <ol className={styles.windowsGuideSteps}>
+        <li>Open Windows Terminal and choose {shellLabel}.</li>
+        <li>Install Node.js, then install Git.</li>
+        <li>Close that terminal window and open a new {shellLabel} window.</li>
+        <li>Run the verify commands below before installing `nibras`.</li>
+      </ol>
+      <p className={styles.windowsGuideHint}>
+        If you are unsure, use <strong>PowerShell</strong>. Use <strong>Git Bash</strong> only if
+        you already want Unix-style paths like{' '}
+        <code className={styles.inlineCode}>/c/projects/a1</code>.
+      </p>
+    </div>
+  );
+}
+
 // ── Troubleshoot row ──────────────────────────────────────────────────────────
 function TroubleshootRow({
   title,
@@ -531,8 +564,8 @@ function TroubleshootAccordion({
         >
           <OsCode
             os={os}
-            mac={`# Recommended: switch to nvm\ncurl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash\nsource ~/.zshrc && nvm install --lts && nvm use --lts\n${GIT_INSTALL_COMMAND}\n\n# Alternative: fix the npm global prefix without sudo\nmkdir -p ~/.npm-global && npm config set prefix '~/.npm-global'\nexport PATH="$HOME/.npm-global/bin:$PATH"`}
-            linux={`# Recommended: switch to nvm\ncurl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash\nsource ~/.bashrc && nvm install --lts && nvm use --lts\n${GIT_INSTALL_COMMAND}\n\n# Alternative: fix the npm global prefix without sudo\nmkdir -p ~/.npm-global && npm config set prefix '~/.npm-global'\nexport PATH="$HOME/.npm-global/bin:$PATH"`}
+            mac={`# Recommended: switch to nvm\ncurl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash\nsource ~/.zshrc && nvm install --lts && nvm use --lts\n${NPM_INSTALL_COMMAND}\n\n# Alternative: fix the npm global prefix without sudo\nmkdir -p ~/.npm-global && npm config set prefix '~/.npm-global'\nexport PATH="$HOME/.npm-global/bin:$PATH"`}
+            linux={`# Recommended: switch to nvm\ncurl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash\nsource ~/.bashrc && nvm install --lts && nvm use --lts\n${NPM_INSTALL_COMMAND}\n\n# Alternative: fix the npm global prefix without sudo\nmkdir -p ~/.npm-global && npm config set prefix '~/.npm-global'\nexport PATH="$HOME/.npm-global/bin:$PATH"`}
           />
         </TroubleshootRow>
       )}
@@ -874,14 +907,7 @@ export default function OnboardingPage() {
             </p>
 
             {os === 'windows' && (
-              <div className={`${styles.callout} ${styles.calloutInfo}`}>
-                <span className={styles.calloutIcon}>⊞</span>
-                <p>
-                  Use <strong>PowerShell 7+</strong> or <strong>Git Bash</strong> (both work). Avoid
-                  the legacy <code className={styles.inlineCode}>cmd.exe</code> — it lacks features
-                  used by CLI output. Pick one shell and stick with it throughout.
-                </p>
-              </div>
+              <WindowsQuickStart shell={windowsShell} setShell={setWindowsShell} />
             )}
 
             {/* Node.js install */}
@@ -1008,32 +1034,42 @@ export default function OnboardingPage() {
             onToggleComplete={() => toggleStep('step-02')}
           >
             <p className={styles.bodyText}>
-              Install the current CLI release directly from GitHub. This pins the install to{' '}
+              Install the current CLI release from npm. This pins the install to{' '}
               <code className={styles.inlineCode}>{PINNED_RELEASE_TAG}</code> and makes the{' '}
               <code className={styles.inlineCode}>nibras</code> command available everywhere in your
               terminal.
             </p>
 
-            <div className={`${styles.callout} ${styles.calloutInfo}`}>
-              <span className={styles.calloutIcon}>ℹ</span>
-              <p>
-                The npm package is not yet published.{' '}
-                <code className={styles.inlineCode}>npm install -g @nibras/cli</code> and{' '}
-                <code className={styles.inlineCode}>npx @nibras/cli</code> will fail with a 404
-                until then. Install from the Git tag instead.
-              </p>
-            </div>
+            {os === 'windows' && (
+              <div className={`${styles.callout} ${styles.calloutInfo}`}>
+                <span className={styles.calloutIcon}>⊞</span>
+                <div>
+                  <p>
+                    Run this in the same{' '}
+                    <strong>{windowsShell === 'powershell' ? 'PowerShell' : 'Git Bash'}</strong>{' '}
+                    window you verified above. If <code className={styles.inlineCode}>nibras</code>{' '}
+                    is not recognized afterwards, close the terminal and open a fresh one before
+                    troubleshooting anything else.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <OsCode
               os={os}
-              mac={GIT_INSTALL_COMMAND}
-              linux={GIT_INSTALL_COMMAND}
-              windows={GIT_INSTALL_COMMAND}
+              mac={NPM_INSTALL_COMMAND}
+              linux={NPM_INSTALL_COMMAND}
+              windows={NPM_INSTALL_COMMAND}
             />
+            <p className={styles.hint}>
+              If npm returns <code className={styles.inlineCode}>404 Not Found</code>, publish the
+              tagged <code className={styles.inlineCode}>@nibras/cli</code> release before sending
+              students these instructions.
+            </p>
             <p className={styles.hint}>
               Verify: <code className={styles.inlineCode}>nibras --version</code> should start with{' '}
               <code className={styles.inlineCode}>{PINNED_RELEASE_TAG}</code>, for example{' '}
-              <code className={styles.inlineCode}>{PINNED_RELEASE_TAG}-499d7f9</code>.
+              <code className={styles.inlineCode}>{PINNED_RELEASE_TAG}</code>.
             </p>
             <p className={styles.bodyText}>
               To reinstall later:{' '}
@@ -1083,6 +1119,26 @@ export default function OnboardingPage() {
               prints a one-time URL and short code, then tries to open the browser automatically
               unless you pass <code className={styles.inlineCode}>--no-open</code>.
             </p>
+            {os === 'windows' && (
+              <div className={`${styles.callout} ${styles.calloutInfo}`}>
+                <span className={styles.calloutIcon}>⊞</span>
+                <div>
+                  <p>
+                    On Windows, the most common path is: run the login command in{' '}
+                    <strong>{windowsShell === 'powershell' ? 'PowerShell' : 'Git Bash'}</strong>,
+                    let the browser open, approve GitHub, then return to the same terminal window
+                    and wait for the success box.
+                  </p>
+                  <p style={{ marginTop: 8 }}>
+                    If the browser does not open, rerun with{' '}
+                    <code className={styles.inlineCode}>
+                      {(loginCommand ?? 'nibras login --api-base-url <url>') + ' --no-open'}
+                    </code>{' '}
+                    and paste the printed URL into any browser manually.
+                  </p>
+                </div>
+              </div>
+            )}
             {apiDiscoveryState === 'ready' && loginCommand ? (
               <>
                 <CliCodeBlock code={loginCommand} />

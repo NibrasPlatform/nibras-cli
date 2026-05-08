@@ -714,6 +714,18 @@
   color: rgba(161, 161, 170, 0.7);
 }
 
+/* ── 9-card feature grid (3×3) ──────────────────────────────────────────────── */
+
+.featureGrid9 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 /* ── How it works (numbered cards) ─────────────────────────────────────────── */
 
 .timeline {
@@ -1526,6 +1538,9 @@
   .featureGrid6 {
     grid-template-columns: 1fr 1fr;
   }
+  .featureGrid9 {
+    grid-template-columns: 1fr 1fr;
+  }
   .featureGrid {
     grid-template-columns: 1fr 1fr;
   }
@@ -1581,6 +1596,9 @@
 
 @media (max-width: 600px) {
   .featureGrid6 {
+    grid-template-columns: 1fr;
+  }
+  .featureGrid9 {
     grid-template-columns: 1fr;
   }
   .featureGrid {

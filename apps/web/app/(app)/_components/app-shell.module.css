@@ -1,7 +1,5 @@
 .appShell {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
   background: #0a0a0a;
 }
 
@@ -10,11 +8,13 @@
   flex-direction: column;
   flex: 1;
   min-width: 0;
+  min-height: 100vh;
 }
 
 .pageBody {
   flex: 1;
   width: 100%;
+  padding: 24px 0 40px;
 }
 
 /* ── Centered content wrapper ───────────────────────────────────────────── */
@@ -27,6 +27,14 @@
   box-sizing: border-box;
 }
 
+.appShell[data-compact='true'] .pageBody {
+  padding: 16px 0 28px;
+}
+
+.appShell[data-compact='true'] .pageInner {
+  padding: 0 24px;
+}
+
 @media (max-width: 900px) {
   .pageInner {
     padding: 0 24px;
@@ -34,7 +42,15 @@
 }
 
 @media (max-width: 600px) {
+  .pageBody {
+    padding: 18px 0 28px;
+  }
+
   .pageInner {
     padding: 0 16px;
+  }
+
+  .appShell[data-compact='true'] .pageInner {
+    padding: 0 14px;
   }
 }
