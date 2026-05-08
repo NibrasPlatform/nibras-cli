@@ -345,12 +345,14 @@ function toProjectTemplateRecord(template: {
 function toCatalogTemplateRecord(
   template: Parameters<typeof toProjectTemplateRecord>[0] & {
     course: { title: string; courseCode: string };
+    projectId?: string | null;
   }
 ): CatalogTemplateRecord {
   return {
     ...toProjectTemplateRecord(template),
     courseName: template.course.title,
     courseCode: template.course.courseCode,
+    projectId: template.projectId ?? null,
   };
 }
 
@@ -4311,7 +4313,36 @@ export class PrismaStore implements AppStore {
       },
       orderBy: { createdAt: 'desc' },
     });
-    return templates.map((t) => toCatalogTemplateRecord(t));
+    const templateIds = templates.map((template) => template.id);
+    const projectIdByTemplateId = new Map<string, string>();
+
+    if (templateIds.length > 0) {
+      const publishedProjects = await this.prisma.project.findMany({
+        where: {
+          templateId: { in: templateIds },
+          status: PrismaProjectStatus.published,
+        },
+        select: {
+          id: true,
+          templateId: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+
+      for (const project of publishedProjects) {
+        if (project.templateId && !projectIdByTemplateId.has(project.templateId)) {
+          projectIdByTemplateId.set(project.templateId, project.id);
+        }
+      }
+    }
+
+    return templates.map((template) =>
+      toCatalogTemplateRecord({
+        ...template,
+        projectId: projectIdByTemplateId.get(template.id) ?? null,
+      })
+    );
   }
 
   async createProjectInterest(
@@ -4326,7 +4357,9 @@ export class PrismaStore implements AppStore {
       include: {
         user: true,
         project: {
-          include: { course: { include: { memberships: { where: { role: CourseRole.instructor } } } } },
+          include: {
+            course: { include: { memberships: { where: { role: CourseRole.instructor } } } },
+          },
         },
       },
     });

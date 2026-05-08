@@ -105,6 +105,7 @@ export const ProjectTemplateSchema = z.object({
 export const CatalogTemplateSchema = ProjectTemplateSchema.extend({
   courseName: z.string().min(1),
   courseCode: z.string().min(1),
+  projectId: z.string().nullable().default(null),
 });
 
 export const ProjectInterestSchema = z.object({

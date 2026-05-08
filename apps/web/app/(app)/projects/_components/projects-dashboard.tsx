@@ -179,14 +179,17 @@ function MilestoneCard({
 
 export default function ProjectsDashboard({
   initialCourseId = null,
+  initialProjectId = null,
 }: {
   initialCourseId?: string | null;
+  initialProjectId?: string | null;
 }) {
   const { user: sessionUser } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const courseIdFromUrl = searchParams.get('courseId');
+  const projectIdFromUrl = searchParams.get('projectId');
   const [dashboard, setDashboard] = useState<StudentProjectsDashboardResponse | null>(null);
   const [courses, setCourses] = useState<TrackingCourseSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,12 +215,17 @@ export default function ProjectsDashboard({
     statusMessage: 'GitHub status is temporarily unavailable.',
   });
 
-  function replaceCourseQuery(courseId: string | null) {
+  function replaceSelectionQuery(courseId: string | null, projectId: string | null) {
     const params = new URLSearchParams(searchParams.toString());
     if (courseId) {
       params.set('courseId', courseId);
     } else {
       params.delete('courseId');
+    }
+    if (projectId) {
+      params.set('projectId', projectId);
+    } else {
+      params.delete('projectId');
     }
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
@@ -225,7 +233,12 @@ export default function ProjectsDashboard({
 
   function syncCourseSelection(courseId: string | null) {
     prefs.setSelectedCourseId(courseId);
-    replaceCourseQuery(courseId);
+    replaceSelectionQuery(courseId, null);
+  }
+
+  function syncProjectSelection(projectId: string) {
+    setSelectedProjectId(projectId);
+    replaceSelectionQuery(activeCourseId ?? dashboard?.course?.id ?? null, projectId);
   }
 
   async function loadGitHubStatus(): Promise<GitHubStatus> {
@@ -328,13 +341,16 @@ export default function ProjectsDashboard({
       }
       const payload = (await response.json()) as StudentProjectsDashboardResponse;
       const nextCourses = (await coursesResponse.json()) as TrackingCourseSummary[];
+      const preferredProjectId = projectIdFromUrl || initialProjectId;
       setDashboard(payload);
       setCourses(nextCourses);
       setGitHubStatus(nextGitHubStatus);
       setSelectedProjectId((current) =>
-        payload.projects.some((p) => p.id === current)
-          ? current
-          : (payload.activeProjectId ?? payload.projects[0]?.id ?? '')
+        preferredProjectId && payload.projects.some((p) => p.id === preferredProjectId)
+          ? preferredProjectId
+          : payload.projects.some((p) => p.id === current)
+            ? current
+            : (payload.activeProjectId ?? payload.projects[0]?.id ?? '')
       );
       const resolvedCourseId = payload.course?.id ?? nextCourses[0]?.id ?? null;
       if (resolvedCourseId !== activeCourseId) {
@@ -664,7 +680,7 @@ export default function ProjectsDashboard({
                   type="button"
                   className={`${styles.projectTab} ${isActive ? styles.projectTabActive : ''} ${isLocked ? styles.projectTabLocked : ''}`}
                   onClick={() => {
-                    if (!isLocked) setSelectedProjectId(project.id);
+                    if (!isLocked) syncProjectSelection(project.id);
                   }}
                   disabled={isLocked}
                   title={

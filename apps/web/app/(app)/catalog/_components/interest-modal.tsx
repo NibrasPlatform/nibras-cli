@@ -65,8 +65,8 @@ export default function InterestModal({ projectId, templateTitle, onClose, onSuc
       >
         <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>Express Interest</h2>
         <p style={{ color: 'var(--text-soft)', margin: '0 0 20px', fontSize: 14 }}>
-          You're expressing interest in <strong>{templateTitle}</strong>. The instructor will be
-          notified and can approve or decline your request.
+          You&apos;re expressing interest in <strong>{templateTitle}</strong>. The instructor will
+          be notified and can approve or decline your request.
         </p>
 
         <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600 }}>
@@ -90,7 +90,14 @@ export default function InterestModal({ projectId, templateTitle, onClose, onSuc
             boxSizing: 'border-box',
           }}
         />
-        <p style={{ fontSize: 12, color: 'var(--text-soft)', margin: '4px 0 16px', textAlign: 'right' }}>
+        <p
+          style={{
+            fontSize: 12,
+            color: 'var(--text-soft)',
+            margin: '4px 0 16px',
+            textAlign: 'right',
+          }}
+        >
           {message.length}/500
         </p>
 

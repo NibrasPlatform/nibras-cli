@@ -428,6 +428,7 @@ export type ProjectTemplateRecord = {
 export type CatalogTemplateRecord = ProjectTemplateRecord & {
   courseName: string;
   courseCode: string;
+  projectId: string | null;
 };
 
 export type ProjectInterestRecord = {
@@ -1336,10 +1337,7 @@ export interface AppStore {
     userId: string,
     projectId: string
   ): Promise<ProjectInterestRecord | null>;
-  listProjectInterests(
-    apiBaseUrl: string,
-    projectId: string
-  ): Promise<ProjectInterestRecord[]>;
+  listProjectInterests(apiBaseUrl: string, projectId: string): Promise<ProjectInterestRecord[]>;
   updateProjectInterest(
     apiBaseUrl: string,
     executorId: string,
@@ -4380,7 +4378,8 @@ export class FileStore implements AppStore {
     if (payload.status !== undefined) template.status = payload.status;
     if ('difficulty' in payload) template.difficulty = payload.difficulty ?? null;
     if ('tags' in payload) template.tags = payload.tags ?? [];
-    if ('estimatedDuration' in payload) template.estimatedDuration = payload.estimatedDuration ?? null;
+    if ('estimatedDuration' in payload)
+      template.estimatedDuration = payload.estimatedDuration ?? null;
     if (payload.rubric !== undefined) template.rubric = payload.rubric;
     if (payload.resources !== undefined) template.resources = payload.resources;
     if (payload.roles !== undefined) {
@@ -4428,16 +4427,18 @@ export class FileStore implements AppStore {
       .filter((t) => !filters.difficulty || t.difficulty === filters.difficulty)
       .filter((t) => !filters.deliveryMode || t.deliveryMode === filters.deliveryMode)
       .filter(
-        (t) =>
-          !filters.tags?.length ||
-          filters.tags.every((tag) => (t.tags ?? []).includes(tag))
+        (t) => !filters.tags?.length || filters.tags.every((tag) => (t.tags ?? []).includes(tag))
       )
       .map((t) => {
         const course = data.courses.find((c) => c.id === t.courseId);
+        const project = (data.projects ?? []).find(
+          (entry) => entry.templateId === t.id && entry.status === 'published'
+        );
         return {
           ...t,
           courseName: course?.title ?? '',
           courseCode: course?.courseCode ?? '',
+          projectId: project?.id ?? null,
         };
       });
   }

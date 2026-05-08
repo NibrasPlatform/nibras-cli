@@ -20,6 +20,7 @@ type CatalogTemplate = {
   status: string;
   courseName: string;
   courseCode: string;
+  projectId: string | null;
 };
 
 const DIFFICULTY_COLORS: Record<string, { bg: string; text: string }> = {
@@ -93,7 +94,7 @@ export default function CatalogPage() {
     const tagFilter = filterTag.trim().toLowerCase();
     return templates.filter((t) => {
       if (filterDelivery !== 'all' && t.deliveryMode !== filterDelivery) return false;
-      if (filterDifficulty.size > 0 && t.difficulty && !filterDifficulty.has(t.difficulty))
+      if (filterDifficulty.size > 0 && (!t.difficulty || !filterDifficulty.has(t.difficulty)))
         return false;
       if (tagFilter && !(t.tags ?? []).some((tag) => tag.toLowerCase().includes(tagFilter)))
         return false;
@@ -138,7 +139,16 @@ export default function CatalogPage() {
 
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
-        <p style={{ fontSize: 12, color: 'var(--text-soft)', margin: '0 0 4px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <p
+          style={{
+            fontSize: 12,
+            color: 'var(--text-soft)',
+            margin: '0 0 4px',
+            fontWeight: 600,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+          }}
+        >
           Project Catalog
         </p>
         <h1 style={{ margin: '0 0 8px', fontSize: 28, fontWeight: 700 }}>Browse Projects</h1>
@@ -148,12 +158,22 @@ export default function CatalogPage() {
       </div>
 
       {error && (
-        <div style={{ color: 'var(--error, #ef4444)', padding: '12px 16px', background: '#fee2e2', borderRadius: 8, marginBottom: 24 }}>
+        <div
+          style={{
+            color: 'var(--error, #ef4444)',
+            padding: '12px 16px',
+            background: '#fee2e2',
+            borderRadius: 8,
+            marginBottom: 24,
+          }}
+        >
           {error}
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 32, alignItems: 'start' }}>
+      <div
+        style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 32, alignItems: 'start' }}
+      >
         {/* Filter panel */}
         <aside
           style={{
@@ -169,13 +189,29 @@ export default function CatalogPage() {
 
           {/* Delivery mode */}
           <div style={{ marginBottom: 20 }}>
-            <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <p
+              style={{
+                margin: '0 0 8px',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--text-soft)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               Delivery
             </p>
             {(['all', 'team', 'individual'] as const).map((mode) => (
               <label
                 key={mode}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer', fontSize: 14 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 6,
+                  cursor: 'pointer',
+                  fontSize: 14,
+                }}
               >
                 <input
                   type="radio"
@@ -190,13 +226,29 @@ export default function CatalogPage() {
 
           {/* Difficulty */}
           <div style={{ marginBottom: 20 }}>
-            <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <p
+              style={{
+                margin: '0 0 8px',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--text-soft)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               Difficulty
             </p>
             {(['beginner', 'intermediate', 'advanced'] as const).map((d) => (
               <label
                 key={d}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer', fontSize: 14 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 6,
+                  cursor: 'pointer',
+                  fontSize: 14,
+                }}
               >
                 <input
                   type="checkbox"
@@ -210,7 +262,16 @@ export default function CatalogPage() {
 
           {/* Tag search */}
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <p
+              style={{
+                margin: '0 0 8px',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--text-soft)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               Search Tags
             </p>
             <input
@@ -257,7 +318,13 @@ export default function CatalogPage() {
         {/* Template grid */}
         <div>
           {loading ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                gap: 16,
+              }}
+            >
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div
                   key={i}
@@ -291,7 +358,13 @@ export default function CatalogPage() {
               <p style={{ color: 'var(--text-soft)', fontSize: 13, marginBottom: 16 }}>
                 {filtered.length} template{filtered.length !== 1 ? 's' : ''} found
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                  gap: 16,
+                }}
+              >
                 {filtered.map((template) => (
                   <TemplateCard
                     key={template.id}
@@ -326,8 +399,10 @@ function TemplateCard({
   template: CatalogTemplate;
   onExpressInterest: (projectId: string) => void;
 }) {
-  const difficultyStyle = template.difficulty
-    ? DIFFICULTY_COLORS[template.difficulty]
+  const difficultyStyle = template.difficulty ? DIFFICULTY_COLORS[template.difficulty] : null;
+  const hasPublishedProject = Boolean(template.projectId);
+  const projectHref = template.projectId
+    ? `/projects?courseId=${encodeURIComponent(template.courseId)}&projectId=${encodeURIComponent(template.projectId)}`
     : null;
 
   return (
@@ -455,39 +530,62 @@ function TemplateCard({
       {/* CTA */}
       <div style={{ marginTop: 'auto', paddingTop: 4 }}>
         {template.deliveryMode === 'team' ? (
-          <a
-            href={`/projects`}
-            style={{
-              display: 'block',
-              textAlign: 'center',
-              padding: '8px',
-              borderRadius: 8,
-              border: '1px solid var(--primary)',
-              color: 'var(--primary)',
-              textDecoration: 'none',
-              fontSize: 14,
-              fontWeight: 600,
-            }}
-          >
-            Apply for Roles →
-          </a>
+          projectHref ? (
+            <a
+              href={projectHref}
+              style={{
+                display: 'block',
+                textAlign: 'center',
+                padding: '8px',
+                borderRadius: 8,
+                border: '1px solid var(--primary)',
+                color: 'var(--primary)',
+                textDecoration: 'none',
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              Apply for Roles →
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              style={{
+                width: '100%',
+                padding: '8px',
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+                background: 'var(--surface-strong)',
+                color: 'var(--text-soft)',
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'not-allowed',
+              }}
+            >
+              Roles Not Open Yet
+            </button>
+          )
         ) : (
           <button
             type="button"
-            onClick={() => onExpressInterest(template.id)}
+            onClick={() => {
+              if (template.projectId) onExpressInterest(template.projectId);
+            }}
+            disabled={!hasPublishedProject}
             style={{
               width: '100%',
               padding: '8px',
               borderRadius: 8,
               border: 'none',
-              background: 'var(--primary)',
-              color: '#fff',
+              background: hasPublishedProject ? 'var(--primary)' : 'var(--surface-strong)',
+              color: hasPublishedProject ? '#fff' : 'var(--text-soft)',
               fontSize: 14,
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: hasPublishedProject ? 'pointer' : 'not-allowed',
             }}
           >
-            Express Interest
+            {hasPublishedProject ? 'Express Interest' : 'Project Not Open Yet'}
           </button>
         )}
       </div>
