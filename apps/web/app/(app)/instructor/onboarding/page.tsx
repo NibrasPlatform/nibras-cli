@@ -432,6 +432,38 @@ function WindowsShellTabs({
   );
 }
 
+function WindowsQuickStart({
+  shell,
+  setShell,
+}: {
+  shell: WindowsShell;
+  setShell: (value: WindowsShell) => void;
+}) {
+  const shellLabel = shell === 'powershell' ? 'PowerShell' : 'Git Bash';
+
+  return (
+    <div className={styles.windowsGuide}>
+      <div className={styles.windowsGuideHeader}>
+        <div>
+          <p className={styles.windowsGuideEyebrow}>Recommended For Windows</p>
+          <h3 className={styles.windowsGuideTitle}>Use one shell and keep using it</h3>
+        </div>
+        <WindowsShellTabs shell={shell} setShell={setShell} />
+      </div>
+      <ol className={styles.windowsGuideSteps}>
+        <li>Open Windows Terminal and choose {shellLabel}.</li>
+        <li>Install Node.js, then install Git.</li>
+        <li>Close that terminal window and open a new {shellLabel} window.</li>
+        <li>Run the verify commands below before installing `nibras`.</li>
+      </ol>
+      <p className={styles.windowsGuideHint}>
+        If you are unsure, use <strong>PowerShell</strong>. Use <strong>Git Bash</strong> only if
+        you already want Unix-style paths like <code className={styles.inlineCode}>/c/projects/a1</code>.
+      </p>
+    </div>
+  );
+}
+
 // ── Troubleshoot row ──────────────────────────────────────────────────────────
 function TroubleshootRow({
   title,
@@ -531,8 +563,8 @@ function TroubleshootAccordion({
         >
           <OsCode
             os={os}
-            mac={`# Recommended: switch to nvm\ncurl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash\nsource ~/.zshrc && nvm install --lts && nvm use --lts\n${GIT_INSTALL_COMMAND}\n\n# Alternative: fix the npm global prefix without sudo\nmkdir -p ~/.npm-global && npm config set prefix '~/.npm-global'\nexport PATH="$HOME/.npm-global/bin:$PATH"`}
-            linux={`# Recommended: switch to nvm\ncurl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash\nsource ~/.bashrc && nvm install --lts && nvm use --lts\n${GIT_INSTALL_COMMAND}\n\n# Alternative: fix the npm global prefix without sudo\nmkdir -p ~/.npm-global && npm config set prefix '~/.npm-global'\nexport PATH="$HOME/.npm-global/bin:$PATH"`}
+            mac={`# Recommended: switch to nvm\ncurl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash\nsource ~/.zshrc && nvm install --lts && nvm use --lts\n${NPM_INSTALL_COMMAND}\n\n# Alternative: fix the npm global prefix without sudo\nmkdir -p ~/.npm-global && npm config set prefix '~/.npm-global'\nexport PATH="$HOME/.npm-global/bin:$PATH"`}
+            linux={`# Recommended: switch to nvm\ncurl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash\nsource ~/.bashrc && nvm install --lts && nvm use --lts\n${NPM_INSTALL_COMMAND}\n\n# Alternative: fix the npm global prefix without sudo\nmkdir -p ~/.npm-global && npm config set prefix '~/.npm-global'\nexport PATH="$HOME/.npm-global/bin:$PATH"`}
           />
         </TroubleshootRow>
       )}
@@ -874,14 +906,7 @@ export default function OnboardingPage() {
             </p>
 
             {os === 'windows' && (
-              <div className={`${styles.callout} ${styles.calloutInfo}`}>
-                <span className={styles.calloutIcon}>⊞</span>
-                <p>
-                  Use <strong>PowerShell 7+</strong> or <strong>Git Bash</strong> (both work). Avoid
-                  the legacy <code className={styles.inlineCode}>cmd.exe</code> — it lacks features
-                  used by CLI output. Pick one shell and stick with it throughout.
-                </p>
-              </div>
+              <WindowsQuickStart shell={windowsShell} setShell={setWindowsShell} />
             )}
 
             {/* Node.js install */}
@@ -1014,6 +1039,20 @@ export default function OnboardingPage() {
               terminal.
             </p>
 
+            {os === 'windows' && (
+              <div className={`${styles.callout} ${styles.calloutInfo}`}>
+                <span className={styles.calloutIcon}>⊞</span>
+                <div>
+                  <p>
+                    Run this in the same <strong>{windowsShell === 'powershell' ? 'PowerShell' : 'Git Bash'}</strong>{' '}
+                    window you verified above. If <code className={styles.inlineCode}>nibras</code>{' '}
+                    is not recognized afterwards, close the terminal and open a fresh one before
+                    troubleshooting anything else.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <OsCode
               os={os}
               mac={NPM_INSTALL_COMMAND}
@@ -1078,6 +1117,26 @@ export default function OnboardingPage() {
               prints a one-time URL and short code, then tries to open the browser automatically
               unless you pass <code className={styles.inlineCode}>--no-open</code>.
             </p>
+            {os === 'windows' && (
+              <div className={`${styles.callout} ${styles.calloutInfo}`}>
+                <span className={styles.calloutIcon}>⊞</span>
+                <div>
+                  <p>
+                    On Windows, the most common path is: run the login command in{' '}
+                    <strong>{windowsShell === 'powershell' ? 'PowerShell' : 'Git Bash'}</strong>,
+                    let the browser open, approve GitHub, then return to the same terminal window
+                    and wait for the success box.
+                  </p>
+                  <p style={{ marginTop: 8 }}>
+                    If the browser does not open, rerun with{' '}
+                    <code className={styles.inlineCode}>
+                      {(loginCommand ?? 'nibras login --api-base-url <url>') + ' --no-open'}
+                    </code>{' '}
+                    and paste the printed URL into any browser manually.
+                  </p>
+                </div>
+              </div>
+            )}
             {apiDiscoveryState === 'ready' && loginCommand ? (
               <>
                 <CliCodeBlock code={loginCommand} />

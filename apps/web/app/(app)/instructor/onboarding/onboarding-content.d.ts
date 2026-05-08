@@ -2,6 +2,7 @@ export type OnboardingOs = 'mac' | 'linux' | 'windows';
 export type WindowsShell = 'powershell' | 'gitbash';
 
 export const PINNED_RELEASE_TAG: string;
+export const NPM_INSTALL_COMMAND: string;
 export const GIT_INSTALL_COMMAND: string;
 
 export function getOnboardingConfigPath(os: OnboardingOs): string;
