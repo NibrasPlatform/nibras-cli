@@ -3,7 +3,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { apiFetch } from '../../lib/session';
 import InterestModal from './_components/interest-modal';
+import ApplyModal from './_components/apply-modal';
 import s from './page.module.css';
+
+type TemplateRole = {
+  id: string;
+  key: string;
+  label: string;
+  count: number;
+  sortOrder: number;
+};
 
 type CatalogTemplate = {
   id: string;
@@ -16,13 +25,19 @@ type CatalogTemplate = {
   difficulty: 'beginner' | 'intermediate' | 'advanced' | null;
   tags: string[];
   estimatedDuration: string | null;
-  roles: Array<{ id: string; key: string; label: string; count: number }>;
+  roles: TemplateRole[];
   milestones: Array<{ id: string; title: string }>;
   status: string;
   courseName: string;
   courseCode: string;
   /** ID of the published project instance linked to this template, or null if none exists yet. */
   projectId: string | null;
+};
+
+type ApplyTarget = {
+  projectId: string;
+  templateTitle: string;
+  roles: TemplateRole[];
 };
 
 export default function CatalogPage() {
@@ -36,11 +51,12 @@ export default function CatalogPage() {
   const [filterDifficulty, setFilterDifficulty] = useState<Set<string>>(new Set());
   const [filterTag, setFilterTag] = useState('');
 
-  // Interest modal state
+  // Modal state
   const [interestTarget, setInterestTarget] = useState<{
     projectId: string;
     templateTitle: string;
   } | null>(null);
+  const [applyTarget, setApplyTarget] = useState<ApplyTarget | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -95,6 +111,12 @@ export default function CatalogPage() {
     setInterestTarget(null);
     setToast('✅ Interest sent! The instructor has been notified.');
     setTimeout(() => setToast(''), 4000);
+  }
+
+  function handleApplySuccess() {
+    setApplyTarget(null);
+    setToast("🎉 Application submitted! You'll be notified when teams are formed.");
+    setTimeout(() => setToast(''), 5000);
   }
 
   return (
@@ -236,6 +258,17 @@ export default function CatalogPage() {
                     onExpressInterest={(projectId) =>
                       setInterestTarget({ projectId, templateTitle: template.title })
                     }
+                    onApplyForRoles={(projectId) =>
+                      setApplyTarget({
+                        projectId,
+                        templateTitle: template.title,
+                        roles: template.roles
+                          .slice()
+                          .sort(
+                            (a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label)
+                          ),
+                      })
+                    }
                   />
                 ))}
               </div>
@@ -252,6 +285,16 @@ export default function CatalogPage() {
           onSuccess={handleInterestSuccess}
         />
       )}
+
+      {applyTarget && (
+        <ApplyModal
+          projectId={applyTarget.projectId}
+          templateTitle={applyTarget.templateTitle}
+          roles={applyTarget.roles}
+          onClose={() => setApplyTarget(null)}
+          onSuccess={handleApplySuccess}
+        />
+      )}
     </main>
   );
 }
@@ -259,14 +302,13 @@ export default function CatalogPage() {
 function TemplateCard({
   template,
   onExpressInterest,
+  onApplyForRoles,
 }: {
   template: CatalogTemplate;
   onExpressInterest: (projectId: string) => void;
+  onApplyForRoles: (projectId: string) => void;
 }) {
   const hasPublishedProject = Boolean(template.projectId);
-  const projectHref = template.projectId
-    ? `/projects?courseId=${encodeURIComponent(template.courseId)}&projectId=${encodeURIComponent(template.projectId)}`
-    : null;
 
   const difficultyClass =
     template.difficulty === 'beginner'
@@ -274,6 +316,10 @@ function TemplateCard({
       : template.difficulty === 'intermediate'
         ? s.badgeIntermediate
         : s.badgeAdvanced;
+
+  const sortedRoles = template.roles
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label));
 
   return (
     <article className={s.card}>
@@ -305,15 +351,28 @@ function TemplateCard({
         {template.deliveryMode === 'team' && template.teamSize && (
           <span className={s.metaItem}>👥 {template.teamSize} members</span>
         )}
-        {template.deliveryMode === 'team' && template.roles.length > 0 && (
-          <span className={s.metaItem}>{template.roles.length} roles</span>
-        )}
         {template.milestones.length > 0 && (
           <span className={s.metaItem}>
-            {template.milestones.length} milestone{template.milestones.length !== 1 ? 's' : ''}
+            🏁 {template.milestones.length} milestone
+            {template.milestones.length !== 1 ? 's' : ''}
           </span>
         )}
       </div>
+
+      {/* Roles (team projects only) */}
+      {template.deliveryMode === 'team' && sortedRoles.length > 0 && (
+        <div className={s.rolesSection}>
+          <span className={s.rolesSectionLabel}>Open roles</span>
+          <div className={s.rolesRow}>
+            {sortedRoles.map((role) => (
+              <span key={role.id} className={s.roleChip}>
+                {role.label}
+                <span className={s.roleCount}>{role.count}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Inline tags */}
       {(template.tags ?? []).length > 0 && (
@@ -329,10 +388,14 @@ function TemplateCard({
       {/* CTA */}
       <div className={s.cardCta}>
         {template.deliveryMode === 'team' ? (
-          projectHref ? (
-            <a href={projectHref} className={s.ctaPrimary}>
+          hasPublishedProject ? (
+            <button
+              type="button"
+              onClick={() => onApplyForRoles(template.projectId!)}
+              className={s.ctaPrimary}
+            >
               Apply for Roles →
-            </a>
+            </button>
           ) : (
             <button type="button" disabled className={s.ctaDisabled}>
               Roles Not Open Yet
