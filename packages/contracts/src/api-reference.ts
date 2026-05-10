@@ -2,6 +2,7 @@
 /**
  * @file api-reference.ts
  * @description Complete TypeScript API reference for the Nibras platform.
+ * @version 2.0.0
  *
  * Every endpoint is typed with its HTTP method, path, auth requirements,
  * query parameters, request body, and response shape.
@@ -10,6 +11,29 @@
  * All authenticated endpoints require either:
  *   - Bearer token header:  Authorization: Bearer <accessToken>
  *   - Session cookie:       nibras-session (web clients)
+ *
+ * ── Changelog ────────────────────────────────────────────────────────────────
+ * v2.0.0 (2026-05-10)
+ *   NEW  PATCH /v1/notifications/:id/read         — mark single notification read
+ *   NEW  GET   /v1/notifications/preferences       — list per-type opt-in/out prefs
+ *   NEW  PATCH /v1/notifications/preferences/:type — toggle a notification type
+ *   NEW  GET   /v1/admin/audit-logs               — paginated, filterable audit log
+ *   NEW  POST  /v1/admin/submissions/bulk-retry   — re-queue multiple submissions
+ *   NEW  GET   /v1/tracking/analytics/instructor  — course analytics for instructors
+ *   NEW  DELETE /v1/tracking/submissions/:id      — cancel a queued submission
+ *   NEW  POST  /v1/tracking/courses/:id/invites/bulk — bulk invite code generation
+ *   UPD  SubmissionStatus: added `cancelled` value
+ *   UPD  Milestone: added optional `slug` field (auto-generated from title)
+ *   UPD  SSE auth: session token now accepted via ?st= query param
+ *   UPD  Worker: aggregate AI confidence threshold enforced for needsReview
+ *   UPD  Worker: instructors/TAs notified via notification + email on needs_review
+ *   UPD  Email: HTML templates added for all three notification emails
+ *   UPD  CLI: `nibras list`, `nibras status`, and `--milestone <slug>` flag
+ *   UPD  Web: submission status page uses SSE instead of polling
+ *   NEW  Web: instructor analytics page at /instructor/courses/:id/analytics
+ *   NEW  Web: admin audit log page at /admin/audit-logs
+ *   NEW  Web: admin bulk-retry checkboxes on submissions table
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 // ─── Re-export all contract types for convenience ─────────────────────────────
@@ -1932,6 +1956,51 @@ export namespace Notifications {
   export interface ReadAllResponse {
     ok: true;
   }
+
+  /**
+   * PATCH /v1/notifications/:id/read
+   * Mark a single notification as read.
+   * @auth Required
+   * @param id  Notification CUID
+   * @response 200 { ok: true }
+   * @response 404 Notification not found or belongs to another user
+   */
+  export interface MarkReadResponse {
+    ok: true;
+  }
+
+  /**
+   * GET /v1/notifications/preferences
+   * List all notification type preferences for the authenticated user.
+   * Types not present default to enabled (opt-out model).
+   * @auth Required
+   * @response 200
+   */
+  export interface PreferencesResponse {
+    preferences: NotificationPreference[];
+  }
+
+  export interface NotificationPreference {
+    id: CuidId;
+    userId: CuidId;
+    type: string;
+    enabled: boolean;
+    createdAt: ISODateString;
+    updatedAt: ISODateString;
+  }
+
+  /**
+   * PATCH /v1/notifications/preferences/:type
+   * Enable or disable a notification type for the authenticated user.
+   * Creates the preference record if it does not exist (upsert).
+   * @auth Required
+   * @param type  Notification type string, e.g. "feedback", "review_ready"
+   * @body { enabled: boolean }
+   * @response 200
+   */
+  export interface UpsertPreferenceResponse {
+    preference: NotificationPreference;
+  }
 }
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
@@ -1943,8 +2012,10 @@ export namespace Admin {
    * @auth Required (admin)
    * @query
    */
+  export type SubmissionStatus = 'queued' | 'running' | 'passed' | 'failed' | 'needs_review' | 'cancelled';
+
   export interface SubmissionsQuery {
-    status?: 'queued' | 'running' | 'passed' | 'failed' | 'needs_review';
+    status?: SubmissionStatus;
     projectId?: CuidId;
   }
 
@@ -2054,6 +2125,56 @@ export namespace Admin {
    * @body { yearLevel: 1 | 2 | 3 | 4 }
    * @response 200 StudentRecord
    */
+
+  /**
+   * GET /v1/admin/audit-logs
+   * Read the platform audit log with optional filters and cursor pagination.
+   * @auth Required (admin)
+   * @query
+   */
+  export interface AuditLogsQuery {
+    action?: string;
+    targetType?: string;
+    courseId?: CuidId;
+    userId?: CuidId;
+    fromDate?: ISODateString;
+    toDate?: ISODateString;
+    limit?: number;   // default 50, max 200
+    offset?: number;
+  }
+
+  export interface AuditLogEntry {
+    id: CuidId;
+    action: string;
+    targetType: string;
+    targetId: string;
+    userId: CuidId | null;
+    courseId: CuidId | null;
+    metadata: Record<string, unknown>;
+    createdAt: ISODateString;
+  }
+
+  export interface AuditLogsResponse {
+    logs: AuditLogEntry[];
+    total: number;
+  }
+
+  /**
+   * POST /v1/admin/submissions/bulk-retry
+   * Re-queue multiple submissions for fresh verification in a single call.
+   * @auth Required (admin)
+   * @body { submissionIds: CuidId[] }
+   * @response 200
+   */
+  export interface BulkRetryRequest {
+    submissionIds: CuidId[];
+  }
+
+  export interface BulkRetryResponse {
+    ok: true;
+    queued: number;
+    skipped: number;
+  }
 }
 
 // ─── Endpoint registry (for tooling / codegen) ────────────────────────────────
