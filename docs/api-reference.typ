@@ -1371,6 +1371,31 @@ Aggregated views for students and instructors, plus per-student submission analy
   body: [#response-label("200", "InstructorDashboardResponse")]
 )
 
+#endpoint("GET", "/v1/tracking/analytics/instructor", auth: true,
+  desc: "Aggregated course analytics for an instructor — total students, submission counts, pass rate, per-milestone breakdown, and per-student progress. Requires course management permission.",
+  body: [
+    #params-table((
+      (text(font:mono,size:7.5pt,"courseId"), text(font:mono,size:7.5pt,"string"), "Required — course to analyse"),
+    ))
+    #response-label("200", "")
+    #code-block(
+"{ courseId, courseTitle,
+  totalStudents: number,
+  submissionCount: number,
+  passRate: number,           // 0.0 – 1.0
+  milestones: [{
+    milestoneId, milestoneTitle,
+    submissionCount, passCount, failCount, needsReviewCount
+  }],
+  students: [{
+    userId, username,
+    submittedMilestones, passedMilestones, totalMilestones
+  }]
+}"
+    )
+  ]
+)
+
 #endpoint("GET", "/v1/tracking/analytics/student", auth: true,
   desc: "Per-course, per-project, per-milestone submission analytics for the authenticated student. Used to power the Submissions page progress bars.",
   body: [
@@ -1690,6 +1715,42 @@ In-app notification endpoints. The web dashboard polls `/count` every 60 seconds
   body: [#response-label("200", `{ ok: true }`)]
 )
 
+#endpoint("PATCH", "/v1/notifications/:id/read", auth: true,
+  desc: "Mark a single notification as read by ID. Returns 404 if the notification does not belong to the authenticated user.",
+  body: [
+    #response-label("200", `{ ok: true }`)
+    #response-label("404", "Notification not found or not owned by user")
+  ]
+)
+
+== Notification Preferences
+
+#endpoint("GET", "/v1/notifications/preferences", auth: true,
+  desc: "List all notification preference settings for the authenticated user. Returns one record per notification type that has been explicitly configured; unset types default to enabled.",
+  body: [
+    #response-label("200", "")
+    #code-block(
+"{ preferences: [{
+    id, userId,
+    type: string,        // e.g. \"feedback\", \"review_ready\"
+    enabled: boolean,
+    createdAt, updatedAt
+  }] }"
+    )
+  ]
+)
+
+#endpoint("PATCH", "/v1/notifications/preferences/:type", auth: true,
+  desc: "Enable or disable a specific notification type for the authenticated user. Upserts — creates the preference record if it does not yet exist.",
+  body: [
+    #params-table((
+      (text(font:mono,size:7.5pt,"enabled"), text(font:mono,size:7.5pt,"boolean"), "true to enable, false to silence"),
+    ))
+    #response-label("200", "")
+    #code-block(`{ id, userId, type, enabled, createdAt, updatedAt }`)
+  ]
+)
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  SECTION 12 — ADMIN
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1730,6 +1791,46 @@ Platform-wide admin endpoints. All require `systemRole: "admin"`.
 #endpoint("POST", "/v1/admin/submissions/:submissionId/retry", auth: true,
   desc: "Re-queue a submission for fresh automated verification. Resets status to `queued`.",
   body: [#response-label("200", `{ ok: true, status: "queued" }`)]
+)
+
+#endpoint("POST", "/v1/admin/submissions/bulk-retry", auth: true,
+  desc: "Re-queue multiple submissions for fresh verification in a single request. Each submission is reset to `queued` and a new verification job is enqueued. Silently skips IDs that are already queued or running.",
+  body: [
+    #params-table((
+      (text(font:mono,size:7.5pt,"submissionIds"), text(font:mono,size:7.5pt,"string[]"), "Array of submission CUIDs to retry"),
+    ))
+    #response-label("200", "")
+    #code-block(`{ ok: true, queued: number, skipped: number }`)
+  ]
+)
+
+== Audit Log
+
+#endpoint("GET", "/v1/admin/audit-logs", auth: true,
+  desc: "Read the platform audit log. Every significant write action (course creation, role changes, submission overrides, etc.) is recorded automatically. Supports filtering and offset pagination.",
+  body: [
+    #params-table((
+      (text(font:mono,size:7.5pt,"action"),     text(font:mono,size:7.5pt,"string?"),  "Filter by action name (substring match)"),
+      (text(font:mono,size:7.5pt,"targetType"), text(font:mono,size:7.5pt,"string?"),  "Entity type (e.g. \"Course\", \"Submission\")"),
+      (text(font:mono,size:7.5pt,"courseId"),   text(font:mono,size:7.5pt,"string?"),  "Filter by course"),
+      (text(font:mono,size:7.5pt,"userId"),     text(font:mono,size:7.5pt,"string?"),  "Filter by acting user"),
+      (text(font:mono,size:7.5pt,"fromDate"),   text(font:mono,size:7.5pt,"string?"),  "ISO date lower bound"),
+      (text(font:mono,size:7.5pt,"toDate"),     text(font:mono,size:7.5pt,"string?"),  "ISO date upper bound"),
+      (text(font:mono,size:7.5pt,"limit"),      text(font:mono,size:7.5pt,"number?"),  "Max records (default 50, max 200)"),
+      (text(font:mono,size:7.5pt,"offset"),     text(font:mono,size:7.5pt,"number?"),  "Records to skip"),
+    ))
+    #response-label("200", "")
+    #code-block(
+"{ logs: [{
+    id, action, targetType, targetId,
+    userId: string | null,
+    courseId: string | null,
+    metadata: Record<string, unknown>,
+    createdAt
+  }],
+  total: number }"
+    )
+  ]
 )
 
 == Platform Management
@@ -1813,8 +1914,8 @@ Platform-wide admin endpoints. All require `systemRole: "admin"`.
   #line(length: 80pt, stroke: 1pt + border)
   #v(1em)
   #text(font: sans, size: 9pt, fill: muted)[
-    Nibras Platform · REST API Reference · May 2026 \
-    87 endpoints · 12 feature areas \
+    Nibras Platform · REST API Reference v2.0.0 · May 2026 \
+    97 endpoints · 12 feature areas \
     Generated from #raw("packages/contracts/src/api-reference.ts")
   ]
   #v(0.5em)
