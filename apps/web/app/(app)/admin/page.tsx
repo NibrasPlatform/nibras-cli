@@ -55,6 +55,9 @@ export default function AdminPage() {
             <Link href="/admin/projects" className={styles.btnSecondary}>
               Manage Projects
             </Link>
+            <Link href="/admin/audit-logs" className={styles.btnSecondary}>
+              Audit Logs
+            </Link>
           </div>
         </>
       )}

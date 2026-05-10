@@ -1,9 +1,9 @@
 'use client';
 
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { GitHubRepositoryValidateResponse, TrackingSubmissionType } from '@nibras/contracts';
-import { apiFetch } from '../../../lib/session';
+import { apiFetch, resolveApiBaseUrl } from '../../../lib/session';
 import {
   canSubmitSubmission,
   isValidAbsoluteHttpUrl,
@@ -625,6 +625,67 @@ export default function SubmissionDetailPage({
     void loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submissionId]);
+
+  /* ── SSE live status updates ───────────────────────────────────────────── */
+  const sseRef = useRef<EventSource | null>(null);
+
+  useEffect(() => {
+    // Only open SSE while submission is in a transitional state
+    const isTransitional = submission?.status === 'queued' || submission?.status === 'running';
+    if (!isTransitional) {
+      sseRef.current?.close();
+      sseRef.current = null;
+      return;
+    }
+
+    // Avoid duplicate connections
+    if (sseRef.current) return;
+
+    const sessionToken =
+      typeof window !== 'undefined' ? (window.localStorage.getItem('nibras.webSession') ?? '') : '';
+    const apiBase = resolveApiBaseUrl();
+    const url = `${apiBase}/v1/submissions/${submissionId}/stream${sessionToken ? `?st=${encodeURIComponent(sessionToken)}` : ''}`;
+
+    const es = new EventSource(url);
+    sseRef.current = es;
+
+    es.addEventListener('status', (event: Event) => {
+      try {
+        const data = JSON.parse((event as MessageEvent).data) as {
+          status?: string;
+          summary?: string;
+        };
+        if (data.status) {
+          setSubmission((prev) =>
+            prev ? { ...prev, status: data.status!, summary: data.summary ?? prev.summary } : prev
+          );
+          // Once we hit a terminal state, reload the full data to get review etc.
+          if (
+            data.status === 'passed' ||
+            data.status === 'failed' ||
+            data.status === 'needs_review'
+          ) {
+            es.close();
+            sseRef.current = null;
+            void loadData();
+          }
+        }
+      } catch {
+        // ignore parse errors
+      }
+    });
+
+    es.addEventListener('error', () => {
+      es.close();
+      sseRef.current = null;
+    });
+
+    return () => {
+      es.close();
+      sseRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submission?.status, submissionId]);
 
   /* Whether the student can still edit this submission */
   const canEdit = !review || (review.status !== 'approved' && review.status !== 'graded');
