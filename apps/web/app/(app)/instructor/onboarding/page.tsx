@@ -212,6 +212,19 @@ const COMMAND_REFERENCE_GROUPS: CommandReferenceGroup[] = [
     ],
   },
   {
+    title: 'Discovery',
+    items: [
+      {
+        command: 'nibras list',
+        description: 'List all enrolled courses and their projects.',
+      },
+      {
+        command: 'nibras status',
+        description: 'Show recent submissions with live status badges.',
+      },
+    ],
+  },
+  {
     title: 'Session and diagnostics',
     items: [
       {
