@@ -737,6 +737,31 @@ export namespace TrackingCourses {
    * @query PaginationQuery
    * @response 200 TrackingProjectSummary[]
    */
+
+  /**
+   * POST /v1/tracking/courses/:courseId/invites/bulk
+   * Generate multiple single-use invite codes in one request (max 50).
+   * @auth Required (instructor or ta)
+   * @param courseId
+   * @body
+   */
+  export interface BulkCreateInvitesRequest {
+    count: number; // 1 – 50
+    role?: 'student' | 'ta';
+    maxUses?: number;
+    expiresAt?: ISODateString;
+  }
+
+  export interface BulkCreateInvitesResponse {
+    invites: Array<{
+      id: CuidId;
+      code: string;
+      role: string;
+      maxUses: number | null;
+      expiresAt: ISODateString | null;
+      createdAt: ISODateString;
+    }>;
+  }
 }
 
 // ─── Tracking – Projects & Milestones ────────────────────────────────────────
@@ -1064,7 +1089,7 @@ export namespace TrackingSubmissions {
   export interface ReviewQueueQuery extends PaginationQuery {
     courseId?: CuidId;
     projectId?: CuidId;
-    status?: 'queued' | 'running' | 'passed' | 'failed' | 'needs_review';
+    status?: 'queued' | 'running' | 'passed' | 'failed' | 'needs_review' | 'cancelled';
   }
 
   /**
@@ -1073,6 +1098,16 @@ export namespace TrackingSubmissions {
   export interface ReviewQueueResponse {
     submissions: Submission[];
   }
+
+  /**
+   * DELETE /v1/tracking/submissions/:submissionId
+   * Cancel a submission that is still in the `queued` state.
+   * Returns 409 if the submission is already running, passed, failed, or cancelled.
+   * @auth Required (submission owner or admin)
+   * @param submissionId
+   * @response 200 Submission (with status: 'cancelled')
+   * @response 409 Cannot cancel a submission that is not queued
+   */
 }
 
 // ─── Tracking – Team Formation ────────────────────────────────────────────────
@@ -1487,6 +1522,48 @@ export namespace TrackingDashboards {
     action: string;
     summary: string;
     createdAt: ISODateString;
+  }
+
+  /**
+   * GET /v1/tracking/analytics/instructor?courseId=<required>
+   * Per-milestone and per-student submission analytics for an instructor.
+   * @auth Required (instructor or ta for the given course)
+   * @query { courseId: string }
+   * @response 200
+   */
+  export interface InstructorAnalyticsResponse {
+    courseId: CuidId;
+    totalStudents: number;
+    submissionCount: number;
+    passRate: number; // 0–1
+    milestones: InstructorMilestoneAnalytics[];
+    students: InstructorStudentProgress[];
+  }
+
+  export interface InstructorMilestoneAnalytics {
+    milestoneId: CuidId;
+    milestoneTitle: string;
+    projectTitle: string;
+    dueAt: ISODateString | null;
+    totalSubmissions: number;
+    passedCount: number;
+    failedCount: number;
+    needsReviewCount: number;
+    passRate: number; // 0–1
+  }
+
+  export interface InstructorStudentProgress {
+    userId: CuidId;
+    username: string;
+    githubLogin: string | null;
+    milestoneStatuses: Array<{
+      milestoneId: CuidId;
+      status: 'passed' | 'failed' | 'needs_review' | 'queued' | 'running' | 'not_submitted';
+      submittedAt: ISODateString | null;
+    }>;
+    passedCount: number;
+    totalMilestones: number;
+    completionRate: number; // 0–1
   }
 }
 
@@ -2012,7 +2089,13 @@ export namespace Admin {
    * @auth Required (admin)
    * @query
    */
-  export type SubmissionStatus = 'queued' | 'running' | 'passed' | 'failed' | 'needs_review' | 'cancelled';
+  export type SubmissionStatus =
+    | 'queued'
+    | 'running'
+    | 'passed'
+    | 'failed'
+    | 'needs_review'
+    | 'cancelled';
 
   export interface SubmissionsQuery {
     status?: SubmissionStatus;
@@ -2139,7 +2222,7 @@ export namespace Admin {
     userId?: CuidId;
     fromDate?: ISODateString;
     toDate?: ISODateString;
-    limit?: number;   // default 50, max 200
+    limit?: number; // default 50, max 200
     offset?: number;
   }
 
@@ -2241,6 +2324,12 @@ export const API_ENDPOINTS = [
     tag: 'tracking',
   },
   { method: 'POST', path: '/v1/tracking/courses/:courseId/invites', auth: true, tag: 'tracking' },
+  {
+    method: 'POST',
+    path: '/v1/tracking/courses/:courseId/invites/bulk',
+    auth: true,
+    tag: 'tracking',
+  },
   { method: 'GET', path: '/v1/tracking/invites/:code', auth: false, tag: 'tracking' },
   { method: 'POST', path: '/v1/tracking/invites/:code/join', auth: true, tag: 'tracking' },
   { method: 'GET', path: '/v1/tracking/courses/:courseId/templates', auth: true, tag: 'tracking' },
@@ -2290,6 +2379,7 @@ export const API_ENDPOINTS = [
   },
   { method: 'GET', path: '/v1/tracking/submissions/:submissionId', auth: true, tag: 'tracking' },
   { method: 'PATCH', path: '/v1/tracking/submissions/:submissionId', auth: true, tag: 'tracking' },
+  { method: 'DELETE', path: '/v1/tracking/submissions/:submissionId', auth: true, tag: 'tracking' },
   {
     method: 'GET',
     path: '/v1/tracking/submissions/:submissionId/commits',
@@ -2353,6 +2443,7 @@ export const API_ENDPOINTS = [
   { method: 'GET', path: '/v1/tracking/dashboard/instructor', auth: true, tag: 'tracking' },
   { method: 'GET', path: '/v1/tracking/dashboard/course/:courseId', auth: true, tag: 'tracking' },
   { method: 'GET', path: '/v1/tracking/analytics/student', auth: true, tag: 'tracking' },
+  { method: 'GET', path: '/v1/tracking/analytics/instructor', auth: true, tag: 'tracking' },
   { method: 'GET', path: '/v1/tracking/activity', auth: true, tag: 'tracking' },
   // Programs
   { method: 'GET', path: '/v1/programs', auth: true, tag: 'programs' },
@@ -2411,11 +2502,21 @@ export const API_ENDPOINTS = [
   { method: 'GET', path: '/v1/notifications', auth: true, tag: 'notifications' },
   { method: 'GET', path: '/v1/notifications/count', auth: true, tag: 'notifications' },
   { method: 'POST', path: '/v1/notifications/read-all', auth: true, tag: 'notifications' },
+  { method: 'PATCH', path: '/v1/notifications/:id/read', auth: true, tag: 'notifications' },
+  { method: 'GET', path: '/v1/notifications/preferences', auth: true, tag: 'notifications' },
+  {
+    method: 'PATCH',
+    path: '/v1/notifications/preferences/:type',
+    auth: true,
+    tag: 'notifications',
+  },
   // Admin
   { method: 'GET', path: '/v1/admin/submissions', auth: true, tag: 'admin' },
   { method: 'PATCH', path: '/v1/admin/submissions/:submissionId/status', auth: true, tag: 'admin' },
   { method: 'GET', path: '/v1/admin/submissions/:submissionId/logs', auth: true, tag: 'admin' },
   { method: 'POST', path: '/v1/admin/submissions/:submissionId/retry', auth: true, tag: 'admin' },
+  { method: 'POST', path: '/v1/admin/submissions/bulk-retry', auth: true, tag: 'admin' },
+  { method: 'GET', path: '/v1/admin/audit-logs', auth: true, tag: 'admin' },
   { method: 'GET', path: '/v1/admin/projects', auth: true, tag: 'admin' },
   { method: 'DELETE', path: '/v1/admin/courses/:courseId', auth: true, tag: 'admin' },
   { method: 'POST', path: '/v1/admin/projects/:projectId/archive', auth: true, tag: 'admin' },
