@@ -82,7 +82,7 @@ export async function gradeSemanticAnswer(input: {
   question: GradingQuestion;
   answerText: string;
 }): Promise<AiGradeResult> {
-  const { aiConfig, subject, project, question, answerText } = input;
+  const { aiConfig, subject, question, answerText } = input;
 
   // Build rubric description
   const rubricDescription = question.rubric

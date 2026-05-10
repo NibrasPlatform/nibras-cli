@@ -246,13 +246,20 @@ nibras test                                                # Run manifest-config
 nibras submit                                              # Stage → commit → push → verify
 ```
 
-| Command         | What it does                                                                                                   |
-| --------------- | -------------------------------------------------------------------------------------------------------------- |
+| Command                  | What it does                                                                                                   |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------- |
 | `nibras setup --project` | Writes `.nibras/project.json` + `.nibras/task.md`, inits git, adds `origin`, optionally extracts starter files |
-| `nibras test`   | Runs the OS-aware test command from the manifest; non-zero exit = failure                                      |
-| `nibras submit` | Runs tests, stages only allowed files, commits, pushes, registers with API, polls verification                 |
+| `nibras test`            | Runs the OS-aware test command from the manifest; non-zero exit = failure                                      |
+| `nibras submit`          | Runs tests, stages only allowed files, commits, pushes, registers with API, polls verification                 |
 
 `nibras submit` never stops on local test failure — the result is recorded and server-side verification always runs.
+
+### Discovery
+
+```bash
+nibras list     # List all enrolled courses and projects
+nibras status   # Show recent submissions with live status badges
+```
 
 ### Diagnostics / session
 
@@ -555,7 +562,7 @@ For the full manual validation sequence, see `TEST.md`.
 4. Verify the CLI can be freshly installed from a clean checkout
 5. Dry-run the CLI publish tarball
 6. Publish `@nibras/cli` to npm (public)
-6. Create a GitHub Release with auto-generated notes
+7. Create a GitHub Release with auto-generated notes
 
 Requires an `NPM_TOKEN` Actions secret that can publish `@nibras/cli`. If your npm account enforces 2FA for writes, this should be a granular token that can bypass 2FA for publishing.
 

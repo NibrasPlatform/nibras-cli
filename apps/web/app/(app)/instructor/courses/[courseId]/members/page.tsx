@@ -41,6 +41,7 @@ export default function CourseMembersPage({ params }: { params: Promise<{ course
 
   useEffect(() => {
     void loadMembers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId]);
 
   async function loadMembers() {

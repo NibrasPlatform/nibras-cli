@@ -226,6 +226,8 @@ test('PrismaStore auto-enrollment covers both seeded demo courses', async () => 
   const courseMembershipUpserts = [];
   const fakePrisma = {
     user: {
+      findUnique: async () => null, // no pre-seeded account by username
+      update: async () => ({ id: 'user-1' }),
       upsert: async () => ({ id: 'user-1' }),
       findUniqueOrThrow: async () => ({
         id: 'user-1',
@@ -250,6 +252,9 @@ test('PrismaStore auto-enrollment covers both seeded demo courses', async () => 
     },
     auditLog: {
       create: async () => ({}),
+    },
+    notificationPreference: {
+      findUnique: async () => null, // default: enabled
     },
     course: {
       findUnique: async ({ where }) => {

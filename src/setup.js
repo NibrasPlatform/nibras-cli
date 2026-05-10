@@ -71,7 +71,7 @@ function readFileSnippet(filePath, maxChars = 160) {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
     return content.replace(/\s+/g, ' ').trim().slice(0, maxChars);
-  } catch (err) {
+  } catch {
     return '';
   }
 }

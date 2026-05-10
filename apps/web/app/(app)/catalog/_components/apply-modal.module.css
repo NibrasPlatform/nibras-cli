@@ -77,7 +77,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
   line-height: 1;
 }
 
@@ -116,7 +118,9 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  transition: background var(--transition-base), border-color var(--transition-base),
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base),
     color var(--transition-base);
 }
 
@@ -381,7 +385,9 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
 }
 
 .cancelBtn:hover:not(:disabled),
@@ -399,7 +405,9 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .nextBtn:hover {
@@ -417,7 +425,9 @@
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(34, 197, 94, 0.22);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
     opacity var(--transition-fast);
 }
 

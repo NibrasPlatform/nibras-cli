@@ -20,7 +20,8 @@
   overflow: hidden;
   border-radius: var(--radius-lg);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: radial-gradient(circle at top right, rgba(34, 197, 94, 0.18), transparent 36%),
+  background:
+    radial-gradient(circle at top right, rgba(34, 197, 94, 0.18), transparent 36%),
     radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.08), transparent 34%),
     linear-gradient(135deg, rgba(18, 18, 18, 0.96), rgba(9, 9, 9, 0.96));
   box-shadow: var(--shadow-lg);
@@ -154,7 +155,9 @@
   background: var(--surface-strong);
   color: var(--text-soft);
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast),
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
     border-color var(--transition-fast);
 }
 
@@ -220,7 +223,9 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: transform var(--transition-base), border-color var(--transition-base),
+  transition:
+    transform var(--transition-base),
+    border-color var(--transition-base),
     box-shadow var(--transition-base);
 }
 
@@ -402,7 +407,9 @@
   border: none;
   cursor: pointer;
   text-decoration: none;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
   box-shadow: 0 6px 20px rgba(34, 197, 94, 0.22);
 }
 
