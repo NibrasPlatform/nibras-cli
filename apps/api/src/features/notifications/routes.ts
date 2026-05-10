@@ -48,4 +48,71 @@ export function registerNotificationRoutes(app: FastifyInstance, store: AppStore
       return { ok: true };
     }
   );
+
+  /**
+   * PATCH /v1/notifications/:id/read
+   * Mark a single notification as read. Returns 404 if not found or already read.
+   */
+  app.patch(
+    '/v1/notifications/:id/read',
+    { schema: { tags: ['notifications'], summary: 'Mark a single notification as read' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { id: string };
+      const updated = await store.markNotificationRead(
+        requestBaseUrl(request),
+        auth.user.id,
+        params.id
+      );
+      if (!updated) {
+        return reply.code(404).send({ error: 'Notification not found or already read.' });
+      }
+      return { ok: true };
+    }
+  );
+
+  /**
+   * GET /v1/notifications/preferences
+   * List all notification preferences for the current user.
+   */
+  app.get(
+    '/v1/notifications/preferences',
+    { schema: { tags: ['notifications'], summary: 'List notification preferences' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const preferences = await store.getNotificationPreferences(
+        requestBaseUrl(request),
+        auth.user.id
+      );
+      return { preferences };
+    }
+  );
+
+  /**
+   * PATCH /v1/notifications/preferences/:type
+   * Upsert a notification preference for the given type.
+   * Body: { enabled: boolean }
+   */
+  app.patch(
+    '/v1/notifications/preferences/:type',
+    { schema: { tags: ['notifications'], summary: 'Update notification preference' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { type: string };
+      const body = request.body as { enabled?: unknown };
+      if (typeof body.enabled !== 'boolean') {
+        return reply.code(400).send({ error: '`enabled` must be a boolean.' });
+      }
+      const preference = await store.upsertNotificationPreference(
+        requestBaseUrl(request),
+        auth.user.id,
+        params.type,
+        body.enabled
+      );
+      return { preference };
+    }
+  );
 }
