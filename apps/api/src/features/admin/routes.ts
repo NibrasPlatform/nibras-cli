@@ -297,6 +297,98 @@ export function registerAdminRoutes(app: FastifyInstance, store: AppStore): void
   );
 
   /**
+   * GET /v1/admin/audit-logs
+   * List audit log entries with optional filtering. Admin only.
+   */
+  app.get(
+    '/v1/admin/audit-logs',
+    { schema: { tags: ['admin'], summary: 'List audit log entries (admin)' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!requireAdmin(auth, reply)) return;
+
+      const query = request.query as {
+        targetType?: string;
+        action?: string;
+        courseId?: string;
+        userId?: string;
+        fromDate?: string;
+        toDate?: string;
+        limit?: string;
+        offset?: string;
+      };
+
+      const limit = query.limit ? Math.min(Number(query.limit), 200) : 50;
+      const offset = query.offset ? Number(query.offset) : 0;
+
+      const filters = {
+        targetType: query.targetType,
+        action: query.action,
+        courseId: query.courseId,
+        userId: query.userId,
+        fromDate: query.fromDate,
+        toDate: query.toDate,
+      };
+
+      const [logs, total] = await Promise.all([
+        store.listAuditLogs(requestBaseUrl(request), filters, { limit, offset }),
+        store.countAuditLogs(requestBaseUrl(request), filters),
+      ]);
+
+      return { logs, total, limit, offset };
+    }
+  );
+
+  /**
+   * POST /v1/admin/submissions/bulk-retry
+   * Re-queue multiple submissions for verification. Admin only.
+   */
+  app.post(
+    '/v1/admin/submissions/bulk-retry',
+    { schema: { tags: ['admin'], summary: 'Bulk re-queue submissions for verification' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!requireAdmin(auth, reply)) return;
+
+      const body = request.body as { submissionIds?: unknown };
+      if (!Array.isArray(body.submissionIds) || body.submissionIds.length === 0) {
+        return reply.code(400).send(Errors.validation('submissionIds must be a non-empty array'));
+      }
+      const ids = body.submissionIds as string[];
+      if (ids.length > 100) {
+        return reply.code(400).send(Errors.validation('Maximum 100 submissions per bulk retry'));
+      }
+
+      const { enqueueVerificationJob } = await import('../../lib/queue');
+      const results = await Promise.allSettled(
+        ids.map(async (submissionId) => {
+          const updated = await store.overrideSubmissionStatus(
+            requestBaseUrl(request),
+            submissionId,
+            'queued',
+            'Manually re-queued by admin (bulk).',
+            auth!.user.id
+          );
+          if (!updated) return { submissionId, ok: false };
+          // Enqueue to BullMQ — no-op when Redis is not set
+          await enqueueVerificationJob({
+            jobId: submissionId,
+            submissionAttemptId: submissionId,
+            attempt: 0,
+            maxAttempts: 3,
+          }).catch(() => {
+            /* ignore queue errors */
+          });
+          return { submissionId, ok: true };
+        })
+      );
+
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+      return { ok: true, succeeded, total: ids.length };
+    }
+  );
+
+  /**
    * POST /v1/admin/projects/:projectId/archive
    * Archive a project. Admin only.
    */

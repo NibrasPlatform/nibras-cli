@@ -75,7 +75,6 @@ import {
   PlannedCourseSourceType,
   ProgramApprovalRecord,
   ProgramRecord,
-  ProgramSheetSnapshotRecord,
   ProgramSheetViewRecord,
   ProgramStatus,
   ProgramVersionDetailRecord,
@@ -119,10 +118,8 @@ import {
   UserRecord,
   VerificationLogRecord,
   WebSessionRecord,
-  buildProjectTeamBadges,
   generateTeamFormationResult,
   projectWithTeamContext,
-  resolveProjectTemplateRecord,
   submissionBelongsToUser,
 } from './store';
 
@@ -863,27 +860,12 @@ function toProgramApprovalRecord(approval: {
   };
 }
 
-function toProgramSheetSnapshotRecord(snapshot: {
-  id: string;
-  studentProgramId: string;
-  versionId: string;
-  renderedPayload: Prisma.JsonValue;
-  generatedAt: Date;
-}): ProgramSheetSnapshotRecord {
-  return {
-    id: snapshot.id,
-    studentProgramId: snapshot.studentProgramId,
-    versionId: snapshot.versionId,
-    renderedPayload: (snapshot.renderedPayload || {}) as Record<string, unknown>,
-    generatedAt: snapshot.generatedAt.toISOString(),
-  };
-}
-
 function toMilestoneRecord(milestone: {
   id: string;
   projectId: string;
   title: string;
   description: string;
+  slug?: string | null;
   order: number;
   dueAt: Date | null;
   isFinal: boolean;
@@ -895,6 +877,7 @@ function toMilestoneRecord(milestone: {
     projectId: milestone.projectId,
     title: milestone.title,
     description: milestone.description,
+    slug: milestone.slug ?? null,
     order: milestone.order,
     dueAt: milestone.dueAt ? milestone.dueAt.toISOString() : null,
     isFinal: milestone.isFinal,
@@ -2567,6 +2550,7 @@ export class PrismaStore implements AppStore {
       commitSha: string;
       repoUrl: string;
       branch: string;
+      milestoneSlug?: string;
     }
   ): Promise<SubmissionRecord> {
     await this.seed(apiBaseUrl);
@@ -2580,9 +2564,30 @@ export class PrismaStore implements AppStore {
     if (!project || project.releases.length === 0) {
       throw new Error('Project release not found.');
     }
-    // Auto-assign the latest (highest order) milestone for this project
-    const latestMilestone =
+    // If a milestone slug was provided, match by slug field first, then by title fallback.
+    // Otherwise, auto-assign the latest (highest order) milestone.
+    let targetMilestone =
       project.milestones.length > 0 ? project.milestones[project.milestones.length - 1] : null;
+    if (payload.milestoneSlug) {
+      const slugToCompare = payload.milestoneSlug.toLowerCase();
+      const matchedBySlug = project.milestones.find(
+        (m) => (m as unknown as { slug?: string | null }).slug === slugToCompare
+      );
+      if (matchedBySlug) {
+        targetMilestone = matchedBySlug;
+      } else {
+        // Fallback: match by title converted to kebab-case
+        const matchedByTitle = project.milestones.find(
+          (m) =>
+            m.title
+              .toLowerCase()
+              .replace(/\s+/g, '-')
+              .replace(/[^a-z0-9-]/g, '') === slugToCompare
+        );
+        if (matchedByTitle) targetMilestone = matchedByTitle;
+      }
+    }
+    const latestMilestone = targetMilestone;
     const repo = await this.prisma.userProjectRepo.findUnique({
       where: {
         userId_projectId: {
@@ -3690,6 +3695,9 @@ export class PrismaStore implements AppStore {
     userId: string,
     notification: { type: string; title: string; body: string; link?: string }
   ): Promise<void> {
+    // Silently skip if user has disabled this notification type
+    const enabled = await this.isNotificationEnabled(_apiBaseUrl, userId, notification.type);
+    if (!enabled) return;
     await (
       this.prisma as unknown as { notification: { create: (args: unknown) => Promise<unknown> } }
     ).notification.create({
@@ -3743,6 +3751,98 @@ export class PrismaStore implements AppStore {
         notification: { updateMany: (args: unknown) => Promise<unknown> };
       }
     ).notification.updateMany({ where: { userId, read: false }, data: { read: true } });
+  }
+
+  async markNotificationRead(
+    _apiBaseUrl: string,
+    userId: string,
+    notificationId: string
+  ): Promise<boolean> {
+    const result = await (
+      this.prisma as unknown as {
+        notification: { updateMany: (args: unknown) => Promise<{ count: number }> };
+      }
+    ).notification.updateMany({
+      where: { id: notificationId, userId, read: false },
+      data: { read: true },
+    });
+    return result.count > 0;
+  }
+
+  async getNotificationPreferences(
+    _apiBaseUrl: string,
+    userId: string
+  ): Promise<import('./store').NotificationPreferenceRecord[]> {
+    const rows = await (
+      this.prisma as unknown as {
+        notificationPreference: {
+          findMany: (args: unknown) => Promise<
+            Array<{
+              id: string;
+              userId: string;
+              type: string;
+              enabled: boolean;
+              createdAt: Date;
+              updatedAt: Date;
+            }>
+          >;
+        };
+      }
+    ).notificationPreference.findMany({
+      where: { userId },
+      orderBy: { type: 'asc' },
+    });
+    return rows.map((r) => ({
+      ...r,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
+    }));
+  }
+
+  async upsertNotificationPreference(
+    _apiBaseUrl: string,
+    userId: string,
+    type: string,
+    enabled: boolean
+  ): Promise<import('./store').NotificationPreferenceRecord> {
+    const row = await (
+      this.prisma as unknown as {
+        notificationPreference: {
+          upsert: (args: unknown) => Promise<{
+            id: string;
+            userId: string;
+            type: string;
+            enabled: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+          }>;
+        };
+      }
+    ).notificationPreference.upsert({
+      where: { userId_type: { userId, type } },
+      create: { userId, type, enabled },
+      update: { enabled },
+    });
+    return {
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  async isNotificationEnabled(_apiBaseUrl: string, userId: string, type: string): Promise<boolean> {
+    const row = await (
+      this.prisma as unknown as {
+        notificationPreference: {
+          findUnique: (args: unknown) => Promise<{ enabled: boolean } | null>;
+        };
+      }
+    ).notificationPreference.findUnique({
+      where: { userId_type: { userId, type } },
+      select: { enabled: true },
+    });
+    // no preference record → enabled by default
+    return row ? row.enabled : true;
   }
 
   async createCourseInvite(
@@ -4756,11 +4856,16 @@ export class PrismaStore implements AppStore {
     });
     const maxOrder = existing.length > 0 ? Math.max(...existing.map((m) => m.order)) : -1;
     const order = payload.order > maxOrder ? payload.order : maxOrder + 1;
+    const slug = payload.title
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
     const created = await this.prisma.milestone.create({
       data: {
         projectId,
         title: payload.title,
         description: payload.description,
+        slug,
         order,
         dueAt: payload.dueAt ? new Date(payload.dueAt) : null,
         isFinal: payload.isFinal,
@@ -5709,6 +5814,252 @@ export class PrismaStore implements AppStore {
       submittedAt: s.submittedAt?.toISOString() ?? null,
       commitSha: s.commitSha,
     }));
+  }
+
+  async listAuditLogs(
+    _apiBaseUrl: string,
+    filters: {
+      targetType?: string;
+      action?: string;
+      courseId?: string;
+      userId?: string;
+      fromDate?: string;
+      toDate?: string;
+    },
+    opts?: import('./store').PaginationOpts
+  ): Promise<import('./store').AuditLogRecord[]> {
+    const where: Record<string, unknown> = {};
+    if (filters.targetType) where.targetType = filters.targetType;
+    if (filters.action) where.action = filters.action;
+    if (filters.courseId) where.courseId = filters.courseId;
+    if (filters.userId) where.userId = filters.userId;
+    if (filters.fromDate || filters.toDate) {
+      where.createdAt = {
+        ...(filters.fromDate ? { gte: new Date(filters.fromDate) } : {}),
+        ...(filters.toDate ? { lte: new Date(filters.toDate) } : {}),
+      };
+    }
+    const rows = await this.prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: opts?.limit ?? 50,
+      skip: opts?.offset ?? 0,
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      userId: r.userId,
+      courseId: r.courseId,
+      projectId: r.projectId,
+      milestoneId: r.milestoneId,
+      submissionAttemptId: r.submissionAttemptId,
+      action: r.action,
+      targetType: r.targetType,
+      targetId: r.targetId,
+      payload: r.payload,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  }
+
+  async countAuditLogs(
+    _apiBaseUrl: string,
+    filters: {
+      targetType?: string;
+      action?: string;
+      courseId?: string;
+      userId?: string;
+      fromDate?: string;
+      toDate?: string;
+    }
+  ): Promise<number> {
+    const where: Record<string, unknown> = {};
+    if (filters.targetType) where.targetType = filters.targetType;
+    if (filters.action) where.action = filters.action;
+    if (filters.courseId) where.courseId = filters.courseId;
+    if (filters.userId) where.userId = filters.userId;
+    if (filters.fromDate || filters.toDate) {
+      where.createdAt = {
+        ...(filters.fromDate ? { gte: new Date(filters.fromDate) } : {}),
+        ...(filters.toDate ? { lte: new Date(filters.toDate) } : {}),
+      };
+    }
+    return this.prisma.auditLog.count({ where });
+  }
+
+  async getInstructorAnalytics(
+    apiBaseUrl: string,
+    courseId: string
+  ): Promise<import('./store').InstructorAnalyticsRecord> {
+    await this.seed(apiBaseUrl);
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      include: {
+        memberships: {
+          where: { role: 'student' },
+          include: { user: { select: { id: true, username: true } } },
+        },
+      },
+    });
+    if (!course) {
+      return {
+        courseId,
+        courseTitle: '',
+        totalStudents: 0,
+        submissionCount: 0,
+        passRate: 0,
+        milestones: [],
+        students: [],
+      };
+    }
+
+    const students = course.memberships.map((m) => ({
+      userId: m.userId,
+      username: (m.user as { username: string }).username,
+    }));
+    const totalStudents = students.length;
+
+    const projects = await this.prisma.project.findMany({
+      where: { courseId },
+      include: { milestones: { orderBy: { order: 'asc' } } },
+    });
+
+    const allMilestones = projects.flatMap((p) => p.milestones);
+    const totalMilestones = allMilestones.length;
+
+    // Aggregate submissions per milestone
+    const milestoneStats = await Promise.all(
+      allMilestones.map(async (m) => {
+        const submissions = await this.prisma.submissionAttempt.findMany({
+          where: { milestoneId: m.id },
+          select: { userId: true, status: true },
+        });
+        // one submission per student (latest or any)
+        const byUser = new Map<string, string>();
+        for (const s of submissions) {
+          if (!byUser.has(s.userId) || s.status === 'passed') {
+            byUser.set(s.userId, s.status);
+          }
+        }
+        const submittedCount = byUser.size;
+        const passedCount = [...byUser.values()].filter((st) => st === 'passed').length;
+        return {
+          milestoneId: m.id,
+          milestoneTitle: m.title,
+          totalStudents,
+          submittedCount,
+          passedCount,
+          passRate: totalStudents > 0 ? Math.round((passedCount / totalStudents) * 100) : 0,
+        };
+      })
+    );
+
+    // Per-student progress
+    const allSubmissions = await this.prisma.submissionAttempt.findMany({
+      where: { project: { courseId }, status: 'passed' },
+      select: { userId: true, milestoneId: true },
+      distinct: ['userId', 'milestoneId'],
+    });
+    const passedByUser = new Map<string, Set<string>>();
+    for (const s of allSubmissions) {
+      if (!passedByUser.has(s.userId)) passedByUser.set(s.userId, new Set());
+      if (s.milestoneId) passedByUser.get(s.userId)!.add(s.milestoneId);
+    }
+
+    const studentStats = students.map((s) => ({
+      userId: s.userId,
+      username: s.username,
+      passedMilestones: passedByUser.get(s.userId)?.size ?? 0,
+      totalMilestones,
+    }));
+
+    const totalPassed = allSubmissions.length;
+    const totalPossible = totalStudents * totalMilestones;
+
+    return {
+      courseId,
+      courseTitle: course.title,
+      totalStudents,
+      submissionCount: await this.prisma.submissionAttempt.count({
+        where: { project: { courseId } },
+      }),
+      passRate: totalPossible > 0 ? Math.round((totalPassed / totalPossible) * 100) : 0,
+      milestones: milestoneStats,
+      students: studentStats,
+    };
+  }
+
+  async bulkCreateCourseInvites(
+    apiBaseUrl: string,
+    courseId: string,
+    count: number,
+    opts?: { role?: import('./store').MembershipRole; maxUses?: number; expiresAt?: string | null }
+  ): Promise<import('./store').CourseInviteRecord[]> {
+    await this.seed(apiBaseUrl);
+    const role = (opts?.role ?? 'student') as CourseRole;
+    const maxUses = opts?.maxUses ?? 1;
+    const expiresAt = opts?.expiresAt ? new Date(opts.expiresAt) : null;
+    const results: import('./store').CourseInviteRecord[] = [];
+    for (let i = 0; i < count; i++) {
+      const code = Math.random().toString(36).slice(2, 10).toUpperCase();
+      const invite = await this.prisma.courseInvite.create({
+        data: { courseId, code, role, maxUses, expiresAt },
+      });
+      results.push({
+        id: invite.id,
+        courseId: invite.courseId,
+        code: invite.code,
+        role: invite.role as import('./store').MembershipRole,
+        maxUses: invite.maxUses,
+        useCount: invite.useCount,
+        expiresAt: invite.expiresAt?.toISOString() ?? null,
+        createdAt: invite.createdAt.toISOString(),
+        updatedAt: invite.updatedAt.toISOString(),
+      });
+    }
+    return results;
+  }
+
+  async cancelSubmission(
+    _apiBaseUrl: string,
+    submissionId: string,
+    _actorUserId: string
+  ): Promise<import('./store').SubmissionRecord | null> {
+    const submission = await this.prisma.submissionAttempt.findUnique({
+      where: { id: submissionId },
+      include: { project: true },
+    });
+    if (!submission) return null;
+    if (submission.status !== SubmissionStatus.queued) return null;
+
+    const vJob = await this.prisma.verificationJob.findFirst({
+      where: { submissionAttemptId: submissionId, status: SubmissionStatus.queued },
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.submissionAttempt.update({
+        where: { id: submissionId },
+        data: { status: SubmissionStatus.cancelled, summary: 'Submission cancelled by user.' },
+      });
+      if (vJob) {
+        await tx.verificationJob.update({
+          where: { id: vJob.id },
+          data: { status: SubmissionStatus.cancelled },
+        });
+      }
+    });
+
+    // Remove from BullMQ queue if running
+    if (vJob) {
+      const { removeVerificationJob } = await import('./lib/queue');
+      await removeVerificationJob(vJob.id).catch(() => {
+        /* Redis may not be running – ignore */
+      });
+    }
+
+    const updated = await this.prisma.submissionAttempt.findUnique({
+      where: { id: submissionId },
+      include: { project: true },
+    });
+    return updated ? toSubmissionRecord(updated) : null;
   }
 
   async close(): Promise<void> {

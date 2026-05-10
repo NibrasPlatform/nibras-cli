@@ -67,6 +67,23 @@ export async function enqueueVerificationJob(data: VerificationJobPayload): Prom
   }
 }
 
+/**
+ * Remove a verification job from the BullMQ queue by its DB job id.
+ * No-op when REDIS_URL is not set or the job is not found.
+ */
+export async function removeVerificationJob(jobId: string): Promise<void> {
+  const queue = getQueue();
+  if (!queue) return;
+  try {
+    const job = await queue.getJob(jobId);
+    if (job) {
+      await job.remove();
+    }
+  } catch {
+    // Redis unavailable or job already processed — ignore
+  }
+}
+
 /** Close the queue connection gracefully (called on API shutdown). */
 export async function closeQueue(): Promise<void> {
   if (_queue) {

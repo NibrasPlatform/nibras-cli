@@ -61,7 +61,13 @@ export type TeamFormationStatus =
   | 'teams_locked';
 export type ProjectRoleApplicationStatus = 'submitted' | 'withdrawn';
 export type TeamStatus = 'suggested' | 'locked';
-export type SubmissionWorkflowStatus = 'queued' | 'running' | 'passed' | 'failed' | 'needs_review';
+export type SubmissionWorkflowStatus =
+  | 'queued'
+  | 'running'
+  | 'passed'
+  | 'failed'
+  | 'needs_review'
+  | 'cancelled';
 export type SubmissionType = 'github' | 'link' | 'text';
 export type ReviewStatus = 'pending' | 'approved' | 'changes_requested' | 'graded';
 export type ProgramStatus = 'draft' | 'published' | 'archived';
@@ -105,6 +111,29 @@ export type NotificationRecord = {
   link: string | null;
   read: boolean;
   createdAt: string;
+};
+
+export type AuditLogRecord = {
+  id: string;
+  userId: string | null;
+  courseId: string | null;
+  projectId: string | null;
+  milestoneId: string | null;
+  submissionAttemptId: string | null;
+  action: string;
+  targetType: string;
+  targetId: string;
+  payload: unknown;
+  createdAt: string;
+};
+
+export type NotificationPreferenceRecord = {
+  id: string;
+  userId: string;
+  type: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type UserRecord = {
@@ -590,6 +619,7 @@ export type MilestoneRecord = {
   projectId: string;
   title: string;
   description: string;
+  slug: string | null;
   order: number;
   dueAt: string | null;
   isFinal: boolean;
@@ -892,6 +922,30 @@ export type CourseInviteRecord = {
   updatedAt: string;
 };
 
+export type MilestonePassRateRecord = {
+  milestoneId: string;
+  milestoneTitle: string;
+  totalStudents: number;
+  submittedCount: number;
+  passedCount: number;
+  passRate: number;
+};
+
+export type InstructorAnalyticsRecord = {
+  courseId: string;
+  courseTitle: string;
+  totalStudents: number;
+  submissionCount: number;
+  passRate: number;
+  milestones: MilestonePassRateRecord[];
+  students: Array<{
+    userId: string;
+    username: string;
+    passedMilestones: number;
+    totalMilestones: number;
+  }>;
+};
+
 export type StoreData = {
   users: UserRecord[];
   githubAccounts: GitHubAccountRecord[];
@@ -924,6 +978,7 @@ export type StoreData = {
   githubDeliveries: GithubDeliveryRecord[];
   activity: ActivityRecord[];
   notifications?: NotificationRecord[];
+  notificationPreferences?: NotificationPreferenceRecord[];
 };
 
 export interface AppStore {
@@ -968,6 +1023,7 @@ export interface AppStore {
       commitSha: string;
       repoUrl: string;
       branch: string;
+      milestoneSlug?: string;
     }
   ): Promise<SubmissionRecord>;
   updateLocalTestResult(
@@ -1214,6 +1270,22 @@ export interface AppStore {
   listNotifications(apiBaseUrl: string, userId: string): Promise<NotificationRecord[]>;
   countUnreadNotifications(apiBaseUrl: string, userId: string): Promise<number>;
   markAllNotificationsRead(apiBaseUrl: string, userId: string): Promise<void>;
+  markNotificationRead(
+    apiBaseUrl: string,
+    userId: string,
+    notificationId: string
+  ): Promise<boolean>;
+  getNotificationPreferences(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<NotificationPreferenceRecord[]>;
+  upsertNotificationPreference(
+    apiBaseUrl: string,
+    userId: string,
+    type: string,
+    enabled: boolean
+  ): Promise<NotificationPreferenceRecord>;
+  isNotificationEnabled(apiBaseUrl: string, userId: string, type: string): Promise<boolean>;
   createCourseInvite(
     apiBaseUrl: string,
     courseId: string,
@@ -1545,6 +1617,41 @@ export interface AppStore {
       commitSha: string;
     }>
   >;
+  listAuditLogs(
+    apiBaseUrl: string,
+    filters: {
+      targetType?: string;
+      action?: string;
+      courseId?: string;
+      userId?: string;
+      fromDate?: string;
+      toDate?: string;
+    },
+    opts?: PaginationOpts
+  ): Promise<AuditLogRecord[]>;
+  countAuditLogs(
+    apiBaseUrl: string,
+    filters: {
+      targetType?: string;
+      action?: string;
+      courseId?: string;
+      userId?: string;
+      fromDate?: string;
+      toDate?: string;
+    }
+  ): Promise<number>;
+  getInstructorAnalytics(apiBaseUrl: string, courseId: string): Promise<InstructorAnalyticsRecord>;
+  bulkCreateCourseInvites(
+    apiBaseUrl: string,
+    courseId: string,
+    count: number,
+    opts?: { role?: MembershipRole; maxUses?: number; expiresAt?: string | null }
+  ): Promise<CourseInviteRecord[]>;
+  cancelSubmission(
+    apiBaseUrl: string,
+    submissionId: string,
+    actorUserId: string
+  ): Promise<SubmissionRecord | null>;
   close?(): Promise<void>;
 }
 
@@ -1589,15 +1696,6 @@ function nowIso(): string {
 
 function futureIso(days: number): string {
   return new Date(Date.now() + days * 86_400_000).toISOString();
-}
-
-function formatDateLabel(value: string | null): string {
-  if (!value) return 'No due date';
-  return new Date(value).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
 }
 
 function statusLabel(status: string): string {
@@ -2366,6 +2464,7 @@ function seedData(apiBaseUrl: string): StoreData {
         projectId: cs161ProjectId,
         title: 'Design Review',
         description: 'Submit an initial design, edge cases, and implementation plan.',
+        slug: 'design-review',
         order: 1,
         dueAt: '2026-12-31T17:00:00.000Z',
         isFinal: false,
@@ -2377,6 +2476,7 @@ function seedData(apiBaseUrl: string): StoreData {
         projectId: cs161ProjectId,
         title: 'Final Project Submission',
         description: 'Submit the final repository state and project write-up.',
+        slug: 'final-project-submission',
         order: 2,
         dueAt: '2027-01-15T17:00:00.000Z',
         isFinal: true,
@@ -2388,8 +2488,9 @@ function seedData(apiBaseUrl: string): StoreData {
         projectId: `project_${project.projectKey.replace(/\//g, '_')}`,
         title: 'Initial Submission',
         description: project.milestoneDescription,
+        slug: 'initial-submission',
         order: 1,
-        dueAt: null,
+        dueAt: null as string | null,
         isFinal: true,
         createdAt,
         updatedAt: createdAt,
@@ -2856,6 +2957,81 @@ export class FileStore implements AppStore {
     return [];
   }
 
+  async listAuditLogs(
+    _apiBaseUrl: string,
+    _filters: {
+      targetType?: string;
+      action?: string;
+      courseId?: string;
+      userId?: string;
+      fromDate?: string;
+      toDate?: string;
+    },
+    _opts?: PaginationOpts
+  ): Promise<AuditLogRecord[]> {
+    return [];
+  }
+
+  async countAuditLogs(
+    _apiBaseUrl: string,
+    _filters: {
+      targetType?: string;
+      action?: string;
+      courseId?: string;
+      userId?: string;
+      fromDate?: string;
+      toDate?: string;
+    }
+  ): Promise<number> {
+    return 0;
+  }
+
+  async getInstructorAnalytics(
+    _apiBaseUrl: string,
+    courseId: string
+  ): Promise<InstructorAnalyticsRecord> {
+    return {
+      courseId,
+      courseTitle: '',
+      totalStudents: 0,
+      submissionCount: 0,
+      passRate: 0,
+      milestones: [],
+      students: [],
+    };
+  }
+
+  async bulkCreateCourseInvites(
+    apiBaseUrl: string,
+    courseId: string,
+    count: number,
+    opts?: { role?: MembershipRole; maxUses?: number; expiresAt?: string | null }
+  ): Promise<CourseInviteRecord[]> {
+    const results: CourseInviteRecord[] = [];
+    for (let i = 0; i < count; i++) {
+      const invite = await this.createCourseInvite(apiBaseUrl, courseId, opts?.role ?? 'student', {
+        maxUses: opts?.maxUses,
+        expiresAt: opts?.expiresAt,
+      });
+      results.push(invite);
+    }
+    return results;
+  }
+
+  async cancelSubmission(
+    _apiBaseUrl: string,
+    submissionId: string,
+    _actorUserId: string
+  ): Promise<SubmissionRecord | null> {
+    const data = this.read(_apiBaseUrl);
+    const submission = data.submissions.find((s) => s.id === submissionId);
+    if (!submission || submission.status !== 'queued') return null;
+    submission.status = 'cancelled';
+    submission.summary = 'Submission cancelled by user.';
+    this.write(data);
+    return submission;
+  }
+
   async refreshCliSession(apiBaseUrl: string, refreshToken: string): Promise<SessionRecord | null> {
     const data = this.read(apiBaseUrl);
     const session = data.sessions.find((entry) => entry.refreshToken === refreshToken);
@@ -2958,6 +3134,7 @@ export class FileStore implements AppStore {
       commitSha: string;
       repoUrl: string;
       branch: string;
+      milestoneSlug?: string;
     }
   ): Promise<SubmissionRecord> {
     const data = this.read(apiBaseUrl);
@@ -3268,6 +3445,8 @@ export class FileStore implements AppStore {
     userId: string,
     notification: { type: string; title: string; body: string; link?: string }
   ): Promise<void> {
+    const enabled = await this.isNotificationEnabled(apiBaseUrl, userId, notification.type);
+    if (!enabled) return;
     const data = this.read(apiBaseUrl);
     if (!data.notifications) data.notifications = [];
     data.notifications.push({
@@ -3302,6 +3481,68 @@ export class FileStore implements AppStore {
       if (n.userId === userId) n.read = true;
     }
     this.write(data);
+  }
+
+  async markNotificationRead(
+    apiBaseUrl: string,
+    userId: string,
+    notificationId: string
+  ): Promise<boolean> {
+    const data = this.read(apiBaseUrl);
+    const n = (data.notifications ?? []).find(
+      (x) => x.id === notificationId && x.userId === userId && !x.read
+    );
+    if (!n) return false;
+    n.read = true;
+    this.write(data);
+    return true;
+  }
+
+  async getNotificationPreferences(
+    apiBaseUrl: string,
+    userId: string
+  ): Promise<NotificationPreferenceRecord[]> {
+    const data = this.read(apiBaseUrl);
+    return (data.notificationPreferences ?? []).filter((p) => p.userId === userId);
+  }
+
+  async upsertNotificationPreference(
+    apiBaseUrl: string,
+    userId: string,
+    type: string,
+    enabled: boolean
+  ): Promise<NotificationPreferenceRecord> {
+    const data = this.read(apiBaseUrl);
+    if (!data.notificationPreferences) data.notificationPreferences = [];
+    const existing = data.notificationPreferences.find(
+      (p) => p.userId === userId && p.type === type
+    );
+    if (existing) {
+      existing.enabled = enabled;
+      existing.updatedAt = nowIso();
+      this.write(data);
+      return existing;
+    }
+    const pref: NotificationPreferenceRecord = {
+      id: randomUUID(),
+      userId,
+      type,
+      enabled,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+    data.notificationPreferences.push(pref);
+    this.write(data);
+    return pref;
+  }
+
+  async isNotificationEnabled(apiBaseUrl: string, userId: string, type: string): Promise<boolean> {
+    const data = this.read(apiBaseUrl);
+    const pref = (data.notificationPreferences ?? []).find(
+      (p) => p.userId === userId && p.type === type
+    );
+    // default: enabled (no preference record = enabled)
+    return pref ? pref.enabled : true;
   }
 
   async createCourseInvite(
@@ -4167,6 +4408,11 @@ export class FileStore implements AppStore {
           projectId: record.id,
           title: milestone.title,
           description: milestone.description,
+          slug:
+            milestone.title
+              .toLowerCase()
+              .replace(/\s+/g, '-')
+              .replace(/[^a-z0-9-]/g, '') || null,
           order: milestone.order,
           dueAt: milestone.dueAt,
           isFinal: milestone.isFinal,
@@ -4805,6 +5051,11 @@ export class FileStore implements AppStore {
       projectId,
       title: payload.title,
       description: payload.description,
+      slug:
+        payload.title
+          .toLowerCase()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9-]/g, '') || null,
       order: payload.order,
       dueAt: payload.dueAt,
       isFinal: payload.isFinal,

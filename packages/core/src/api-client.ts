@@ -44,7 +44,12 @@ async function maybeRefreshToken(baseUrl: string): Promise<void> {
         // 4xx means the refresh token itself is invalid or revoked.
         // Clear the stored credentials so the next API call gets an
         // actionable error rather than a confusing 401.
-        writeCliConfig({ ...config, accessToken: undefined, refreshToken: undefined, tokenCreatedAt: undefined });
+        writeCliConfig({
+          ...config,
+          accessToken: undefined,
+          refreshToken: undefined,
+          tokenCreatedAt: undefined,
+        });
         throw new AuthExpiredError();
       }
       // 5xx or unexpected — warn and fall through with the existing token.

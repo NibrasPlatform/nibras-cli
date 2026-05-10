@@ -21,6 +21,7 @@ export const TrackingSubmissionStatusSchema = z.enum([
   'passed',
   'failed',
   'needs_review',
+  'cancelled',
 ]);
 export const TrackingReviewStatusSchema = z.enum([
   'pending',
@@ -160,6 +161,7 @@ export const TrackingMilestoneSchema = z.object({
   projectId: z.string().min(1),
   title: z.string().min(1),
   description: z.string().default(''),
+  slug: z.string().nullable().optional(),
   order: z.number().int().nonnegative(),
   dueAt: z.string().datetime().nullable(),
   dueDateLabel: z.string().min(1),

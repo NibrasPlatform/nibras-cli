@@ -3,6 +3,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { apiFetch } from '../../lib/session';
 import InterestModal from './_components/interest-modal';
+import ApplyModal from './_components/apply-modal';
+import s from './page.module.css';
+
+type TemplateRole = {
+  id: string;
+  key: string;
+  label: string;
+  count: number;
+  sortOrder: number;
+};
 
 type CatalogTemplate = {
   id: string;
@@ -15,35 +25,20 @@ type CatalogTemplate = {
   difficulty: 'beginner' | 'intermediate' | 'advanced' | null;
   tags: string[];
   estimatedDuration: string | null;
-  roles: Array<{ id: string; key: string; label: string; count: number }>;
+  roles: TemplateRole[];
   milestones: Array<{ id: string; title: string }>;
   status: string;
   courseName: string;
   courseCode: string;
+  /** ID of the published project instance linked to this template, or null if none exists yet. */
   projectId: string | null;
 };
 
-const DIFFICULTY_COLORS: Record<string, { bg: string; text: string }> = {
-  beginner: { bg: '#dcfce7', text: '#15803d' },
-  intermediate: { bg: '#fef9c3', text: '#a16207' },
-  advanced: { bg: '#fee2e2', text: '#dc2626' },
+type ApplyTarget = {
+  projectId: string;
+  templateTitle: string;
+  roles: TemplateRole[];
 };
-
-function Skeleton({ w = '100%', h = 14, r = 6 }: { w?: string; h?: number; r?: number }) {
-  return (
-    <span
-      style={{
-        display: 'block',
-        width: w,
-        height: h,
-        borderRadius: r,
-        background: 'var(--surface-strong)',
-        animation: 'pulse 1.5s ease-in-out infinite',
-      }}
-      aria-hidden="true"
-    />
-  );
-}
 
 export default function CatalogPage() {
   const [templates, setTemplates] = useState<CatalogTemplate[]>([]);
@@ -56,11 +51,12 @@ export default function CatalogPage() {
   const [filterDifficulty, setFilterDifficulty] = useState<Set<string>>(new Set());
   const [filterTag, setFilterTag] = useState('');
 
-  // Interest modal state
+  // Modal state
   const [interestTarget, setInterestTarget] = useState<{
     projectId: string;
     templateTitle: string;
   } | null>(null);
+  const [applyTarget, setApplyTarget] = useState<ApplyTarget | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -117,102 +113,42 @@ export default function CatalogPage() {
     setTimeout(() => setToast(''), 4000);
   }
 
-  return (
-    <main style={{ padding: '32px 24px', maxWidth: 1200, margin: '0 auto' }}>
-      {toast && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 24,
-            right: 24,
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 12,
-            padding: '12px 20px',
-            zIndex: 999,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
-          }}
-        >
-          {toast}
-        </div>
-      )}
+  function handleApplySuccess() {
+    setApplyTarget(null);
+    setToast("🎉 Application submitted! You'll be notified when teams are formed.");
+    setTimeout(() => setToast(''), 5000);
+  }
 
-      {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <p
-          style={{
-            fontSize: 12,
-            color: 'var(--text-soft)',
-            margin: '0 0 4px',
-            fontWeight: 600,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-          }}
-        >
-          Project Catalog
-        </p>
-        <h1 style={{ margin: '0 0 8px', fontSize: 28, fontWeight: 700 }}>Browse Projects</h1>
-        <p style={{ color: 'var(--text-soft)', margin: 0 }}>
+  return (
+    <main className={s.page}>
+      {toast && <div className={s.toast}>{toast}</div>}
+
+      {/* Hero header */}
+      <header className={s.hero}>
+        <div className={s.heroGlow} aria-hidden />
+        <span className={s.heroEyebrow}>Project Catalog</span>
+        <h1 className={s.heroTitle}>Browse Projects</h1>
+        <p className={s.heroSub}>
           Discover project templates across all courses. Express interest or apply for team roles.
         </p>
-      </div>
+      </header>
 
       {error && (
-        <div
-          style={{
-            color: 'var(--error, #ef4444)',
-            padding: '12px 16px',
-            background: '#fee2e2',
-            borderRadius: 8,
-            marginBottom: 24,
-          }}
-        >
+        <div className={s.errorBar} role="alert">
           {error}
         </div>
       )}
 
-      <div
-        style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 32, alignItems: 'start' }}
-      >
-        {/* Filter panel */}
-        <aside
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 12,
-            padding: 20,
-            position: 'sticky',
-            top: 24,
-          }}
-        >
-          <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700 }}>Filters</h3>
+      <div className={s.layout}>
+        {/* Filter sidebar */}
+        <aside className={s.sidebar}>
+          <h3 className={s.sidebarTitle}>Filters</h3>
 
           {/* Delivery mode */}
-          <div style={{ marginBottom: 20 }}>
-            <p
-              style={{
-                margin: '0 0 8px',
-                fontSize: 12,
-                fontWeight: 600,
-                color: 'var(--text-soft)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}
-            >
-              Delivery
-            </p>
+          <div className={s.filterGroup}>
+            <p className={s.filterGroupLabel}>Delivery</p>
             {(['all', 'team', 'individual'] as const).map((mode) => (
-              <label
-                key={mode}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginBottom: 6,
-                  cursor: 'pointer',
-                  fontSize: 14,
-                }}
-              >
+              <label key={mode} className={s.filterLabel}>
                 <input
                   type="radio"
                   name="delivery"
@@ -225,31 +161,10 @@ export default function CatalogPage() {
           </div>
 
           {/* Difficulty */}
-          <div style={{ marginBottom: 20 }}>
-            <p
-              style={{
-                margin: '0 0 8px',
-                fontSize: 12,
-                fontWeight: 600,
-                color: 'var(--text-soft)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}
-            >
-              Difficulty
-            </p>
+          <div className={s.filterGroup}>
+            <p className={s.filterGroupLabel}>Difficulty</p>
             {(['beginner', 'intermediate', 'advanced'] as const).map((d) => (
-              <label
-                key={d}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginBottom: 6,
-                  cursor: 'pointer',
-                  fontSize: 14,
-                }}
-              >
+              <label key={d} className={s.filterLabel}>
                 <input
                   type="checkbox"
                   checked={filterDifficulty.has(d)}
@@ -261,51 +176,23 @@ export default function CatalogPage() {
           </div>
 
           {/* Tag search */}
-          <div>
-            <p
-              style={{
-                margin: '0 0 8px',
-                fontSize: 12,
-                fontWeight: 600,
-                color: 'var(--text-soft)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}
-            >
-              Search Tags
-            </p>
+          <div className={s.filterGroup}>
+            <p className={s.filterGroupLabel}>Search Tags</p>
             <input
               type="text"
               value={filterTag}
               onChange={(e) => setFilterTag(e.target.value)}
               placeholder="e.g. React"
-              style={{
-                width: '100%',
-                padding: '8px 10px',
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                background: 'var(--surface-strong)',
-                color: 'var(--text)',
-                fontSize: 13,
-                boxSizing: 'border-box',
-              }}
+              className={s.filterInput}
             />
             {allTags.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+              <div className={s.tagChips}>
                 {allTags.slice(0, 12).map((tag) => (
                   <button
                     key={tag}
                     type="button"
                     onClick={() => setFilterTag(filterTag === tag ? '' : tag)}
-                    style={{
-                      fontSize: 11,
-                      padding: '2px 8px',
-                      borderRadius: 99,
-                      border: '1px solid var(--border)',
-                      background: filterTag === tag ? 'var(--primary)' : 'var(--surface-strong)',
-                      color: filterTag === tag ? '#fff' : 'var(--text-soft)',
-                      cursor: 'pointer',
-                    }}
+                    className={filterTag === tag ? `${s.tagChip} ${s.tagChipActive}` : s.tagChip}
                   >
                     {tag}
                   </button>
@@ -318,59 +205,69 @@ export default function CatalogPage() {
         {/* Template grid */}
         <div>
           {loading ? (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: 16,
-              }}
-            >
+            <div className={s.cardGrid}>
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 12,
-                    padding: 20,
-                    display: 'grid',
-                    gap: 10,
-                  }}
-                >
-                  <Skeleton w="60%" h={18} />
-                  <Skeleton w="40%" h={12} />
-                  <Skeleton w="100%" h={12} />
-                  <Skeleton w="80%" h={12} />
+                <div key={i} className={s.skeletonCard}>
+                  <span
+                    className={s.skeletonLine}
+                    style={{ width: '60%', height: 18 }}
+                    aria-hidden
+                  />
+                  <span
+                    className={s.skeletonLine}
+                    style={{ width: '40%', height: 12 }}
+                    aria-hidden
+                  />
+                  <span
+                    className={s.skeletonLine}
+                    style={{ width: '100%', height: 12 }}
+                    aria-hidden
+                  />
+                  <span
+                    className={s.skeletonLine}
+                    style={{ width: '80%', height: 12 }}
+                    aria-hidden
+                  />
                 </div>
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '48px 0' }}>
-              <p style={{ fontSize: 32, marginBottom: 8 }}>📋</p>
-              <p style={{ color: 'var(--text-soft)' }}>
+            <div className={s.emptyState}>
+              <span className={s.emptyEmoji} aria-hidden>
+                📋
+              </span>
+              <h2 className={s.emptyTitle}>
+                {templates.length === 0 ? 'No Templates Yet' : 'No Matches'}
+              </h2>
+              <p className={s.emptyBody}>
                 {templates.length === 0
                   ? 'No project templates are available yet.'
-                  : 'No templates match your filters.'}
+                  : 'No templates match your current filters.'}
               </p>
             </div>
           ) : (
             <>
-              <p style={{ color: 'var(--text-soft)', fontSize: 13, marginBottom: 16 }}>
+              <p className={s.resultsCount}>
                 {filtered.length} template{filtered.length !== 1 ? 's' : ''} found
               </p>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                  gap: 16,
-                }}
-              >
+              <div className={s.cardGrid}>
                 {filtered.map((template) => (
                   <TemplateCard
                     key={template.id}
                     template={template}
                     onExpressInterest={(projectId) =>
                       setInterestTarget({ projectId, templateTitle: template.title })
+                    }
+                    onApplyForRoles={(projectId) =>
+                      setApplyTarget({
+                        projectId,
+                        templateTitle: template.title,
+                        roles: template.roles
+                          .slice()
+                          .sort(
+                            (a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label)
+                          ),
+                      })
                     }
                   />
                 ))}
@@ -388,6 +285,16 @@ export default function CatalogPage() {
           onSuccess={handleInterestSuccess}
         />
       )}
+
+      {applyTarget && (
+        <ApplyModal
+          projectId={applyTarget.projectId}
+          templateTitle={applyTarget.templateTitle}
+          roles={applyTarget.roles}
+          onClose={() => setApplyTarget(null)}
+          onSuccess={handleApplySuccess}
+        />
+      )}
     </main>
   );
 }
@@ -395,132 +302,83 @@ export default function CatalogPage() {
 function TemplateCard({
   template,
   onExpressInterest,
+  onApplyForRoles,
 }: {
   template: CatalogTemplate;
   onExpressInterest: (projectId: string) => void;
+  onApplyForRoles: (projectId: string) => void;
 }) {
-  const difficultyStyle = template.difficulty ? DIFFICULTY_COLORS[template.difficulty] : null;
   const hasPublishedProject = Boolean(template.projectId);
-  const projectHref = template.projectId
-    ? `/projects?courseId=${encodeURIComponent(template.courseId)}&projectId=${encodeURIComponent(template.projectId)}`
-    : null;
+
+  const difficultyClass =
+    template.difficulty === 'beginner'
+      ? s.badgeBeginner
+      : template.difficulty === 'intermediate'
+        ? s.badgeIntermediate
+        : s.badgeAdvanced;
+
+  const sortedRoles = template.roles
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label));
 
   return (
-    <article
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 12,
-        padding: 20,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12,
-      }}
-    >
-      {/* Course badge + delivery mode */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+    <article className={s.card}>
+      {/* Course badge + delivery mode + difficulty */}
+      <div className={s.badgeRow}>
+        <span className={`${s.badge} ${s.badgeCourse}`}>{template.courseCode}</span>
         <span
-          style={{
-            fontSize: 11,
-            padding: '2px 8px',
-            borderRadius: 99,
-            background: 'var(--surface-strong)',
-            color: 'var(--text-soft)',
-            fontWeight: 600,
-          }}
-        >
-          {template.courseCode}
-        </span>
-        <span
-          style={{
-            fontSize: 11,
-            padding: '2px 8px',
-            borderRadius: 99,
-            background: template.deliveryMode === 'team' ? '#ede9fe' : '#e0f2fe',
-            color: template.deliveryMode === 'team' ? '#7c3aed' : '#0369a1',
-            fontWeight: 600,
-          }}
+          className={`${s.badge} ${template.deliveryMode === 'team' ? s.badgeTeam : s.badgeIndividual}`}
         >
           {template.deliveryMode === 'team' ? '👥 Team' : '👤 Individual'}
         </span>
-        {difficultyStyle && template.difficulty && (
-          <span
-            style={{
-              fontSize: 11,
-              padding: '2px 8px',
-              borderRadius: 99,
-              background: difficultyStyle.bg,
-              color: difficultyStyle.text,
-              fontWeight: 600,
-            }}
-          >
-            {template.difficulty}
-          </span>
+        {template.difficulty && (
+          <span className={`${s.badge} ${difficultyClass}`}>{template.difficulty}</span>
         )}
       </div>
 
-      {/* Title + description */}
+      {/* Title + description + course name */}
       <div>
-        <h3 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700 }}>{template.title}</h3>
-        {template.description && (
-          <p
-            style={{
-              margin: 0,
-              fontSize: 13,
-              color: 'var(--text-soft)',
-              lineHeight: 1.5,
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {template.description}
-          </p>
-        )}
-        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-soft)' }}>
-          {template.courseName}
-        </p>
+        <h3 className={s.cardTitle}>{template.title}</h3>
+        {template.description && <p className={s.cardDesc}>{template.description}</p>}
+        <p className={s.cardCourseName}>{template.courseName}</p>
       </div>
 
       {/* Meta chips */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div className={s.metaRow}>
         {template.estimatedDuration && (
-          <span style={{ fontSize: 12, color: 'var(--text-soft)' }}>
-            ⏱ {template.estimatedDuration}
-          </span>
+          <span className={s.metaItem}>⏱ {template.estimatedDuration}</span>
         )}
         {template.deliveryMode === 'team' && template.teamSize && (
-          <span style={{ fontSize: 12, color: 'var(--text-soft)' }}>
-            👥 {template.teamSize} members
-          </span>
-        )}
-        {template.deliveryMode === 'team' && template.roles.length > 0 && (
-          <span style={{ fontSize: 12, color: 'var(--text-soft)' }}>
-            {template.roles.length} roles
-          </span>
+          <span className={s.metaItem}>👥 {template.teamSize} members</span>
         )}
         {template.milestones.length > 0 && (
-          <span style={{ fontSize: 12, color: 'var(--text-soft)' }}>
-            {template.milestones.length} milestone{template.milestones.length !== 1 ? 's' : ''}
+          <span className={s.metaItem}>
+            🏁 {template.milestones.length} milestone
+            {template.milestones.length !== 1 ? 's' : ''}
           </span>
         )}
       </div>
 
-      {/* Tags */}
+      {/* Roles (team projects only) */}
+      {template.deliveryMode === 'team' && sortedRoles.length > 0 && (
+        <div className={s.rolesSection}>
+          <span className={s.rolesSectionLabel}>Open roles</span>
+          <div className={s.rolesRow}>
+            {sortedRoles.map((role) => (
+              <span key={role.id} className={s.roleChip}>
+                {role.label}
+                <span className={s.roleCount}>{role.count}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Inline tags */}
       {(template.tags ?? []).length > 0 && (
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        <div className={s.tagRow}>
           {template.tags.map((tag) => (
-            <span
-              key={tag}
-              style={{
-                fontSize: 11,
-                padding: '2px 8px',
-                borderRadius: 99,
-                background: 'var(--surface-strong)',
-                color: 'var(--text-soft)',
-              }}
-            >
+            <span key={tag} className={s.inlineTag}>
               {tag}
             </span>
           ))}
@@ -528,64 +386,32 @@ function TemplateCard({
       )}
 
       {/* CTA */}
-      <div style={{ marginTop: 'auto', paddingTop: 4 }}>
+      <div className={s.cardCta}>
         {template.deliveryMode === 'team' ? (
-          projectHref ? (
-            <a
-              href={projectHref}
-              style={{
-                display: 'block',
-                textAlign: 'center',
-                padding: '8px',
-                borderRadius: 8,
-                border: '1px solid var(--primary)',
-                color: 'var(--primary)',
-                textDecoration: 'none',
-                fontSize: 14,
-                fontWeight: 600,
-              }}
-            >
-              Apply for Roles →
-            </a>
-          ) : (
+          hasPublishedProject ? (
             <button
               type="button"
-              disabled
-              style={{
-                width: '100%',
-                padding: '8px',
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                background: 'var(--surface-strong)',
-                color: 'var(--text-soft)',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'not-allowed',
-              }}
+              onClick={() => onApplyForRoles(template.projectId!)}
+              className={s.ctaPrimary}
             >
+              Apply for Roles →
+            </button>
+          ) : (
+            <button type="button" disabled className={s.ctaDisabled}>
               Roles Not Open Yet
             </button>
           )
-        ) : (
+        ) : hasPublishedProject ? (
           <button
             type="button"
-            onClick={() => {
-              if (template.projectId) onExpressInterest(template.projectId);
-            }}
-            disabled={!hasPublishedProject}
-            style={{
-              width: '100%',
-              padding: '8px',
-              borderRadius: 8,
-              border: 'none',
-              background: hasPublishedProject ? 'var(--primary)' : 'var(--surface-strong)',
-              color: hasPublishedProject ? '#fff' : 'var(--text-soft)',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: hasPublishedProject ? 'pointer' : 'not-allowed',
-            }}
+            onClick={() => onExpressInterest(template.projectId!)}
+            className={s.ctaPrimary}
           >
-            {hasPublishedProject ? 'Express Interest' : 'Project Not Open Yet'}
+            Express Interest
+          </button>
+        ) : (
+          <button type="button" disabled className={s.ctaDisabled}>
+            Project Not Open Yet
           </button>
         )}
       </div>

@@ -326,6 +326,7 @@ export function registerHostedCliRoutes(
       const submission = await store.createOrReuseSubmission(requestBaseUrl(request), {
         ...payload,
         userId: auth.user.id,
+        milestoneSlug: payload.milestoneSlug,
       });
       return SubmissionPrepareResponseSchema.parse({
         submissionId: submission.id,

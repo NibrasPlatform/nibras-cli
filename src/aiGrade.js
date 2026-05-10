@@ -147,7 +147,7 @@ function buildUserPrompt({ subject, project, question, answerText }) {
   ].join('\n');
 }
 
-function buildJsonSchema(question) {
+function buildJsonSchema(_question) {
   return {
     name: 'semantic_grade',
     strict: true,

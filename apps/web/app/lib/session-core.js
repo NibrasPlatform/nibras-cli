@@ -38,6 +38,12 @@ export function shouldIgnoreStoredApiBaseUrlForOrigin(pageOrigin, value) {
   );
 }
 
+export function shouldIgnoreConfiguredApiBaseUrlForOrigin(pageOrigin, configuredApiBaseUrl) {
+  // On a loopback origin (local dev), skip public HTTPS configured URLs — they are
+  // likely stale production values baked into the build and irrelevant locally.
+  return isLoopbackUrl(pageOrigin) && !isLoopbackUrl(configuredApiBaseUrl ?? '');
+}
+
 export function buildApiBaseUrlCandidates({ pageOrigin, storedApiBaseUrl, configuredApiBaseUrl }) {
   const candidates = [];
   const seen = new Set();
@@ -51,17 +57,26 @@ export function buildApiBaseUrlCandidates({ pageOrigin, storedApiBaseUrl, config
     candidates.push(normalized);
   }
 
-  // Explicitly configured URL wins first — prevents the web app's own origin from
-  // being mistaken for the API when Next.js rewrites proxy /v1/* to the real API.
-  push(configuredApiBaseUrl);
-
-  if (storedApiBaseUrl && !shouldIgnoreStoredApiBaseUrlForOrigin(pageOrigin, storedApiBaseUrl)) {
-    push(storedApiBaseUrl);
+  if (storedApiBaseUrl) {
+    // A stored URL means the user has previously connected successfully from this
+    // browser.  Prefer same-origin first (local proxy dev mode), then the stored URL,
+    // then the static configured fallback.
+    push(pageOrigin);
+    if (!shouldIgnoreStoredApiBaseUrlForOrigin(pageOrigin, storedApiBaseUrl)) {
+      push(storedApiBaseUrl);
+    }
+    if (!shouldIgnoreConfiguredApiBaseUrlForOrigin(pageOrigin, configuredApiBaseUrl)) {
+      push(configuredApiBaseUrl);
+    }
+  } else {
+    // No stored URL — first-time user or cleared storage.  Trust the configured
+    // build-time URL first (correct for production split-domain deployments), then
+    // fall back to same-origin (local proxy dev mode where no env var is set).
+    if (!shouldIgnoreConfiguredApiBaseUrlForOrigin(pageOrigin, configuredApiBaseUrl)) {
+      push(configuredApiBaseUrl);
+    }
+    push(pageOrigin);
   }
-
-  // Page origin is last-resort for local proxy dev (npm run proxy:dev) where no
-  // NEXT_PUBLIC_NIBRAS_API_BASE_URL is set and the proxy serves both web + API.
-  push(pageOrigin);
 
   return candidates;
 }
