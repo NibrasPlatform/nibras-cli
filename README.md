@@ -1,588 +1,1532 @@
-# Nibras
+# Nibras — Course Operations Platform
 
-> Hosted, GitHub-linked CLI for project setup, testing, and submission.
+![Nibras](https://img.shields.io/badge/Version-1.0.2-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Node](https://img.shields.io/badge/Node-≥18-brightgreen.svg)
+![NPM](https://img.shields.io/badge/npm-≥9-brightgreen.svg)
 
-Nibras is a course-operations platform: a CLI that students use to set up projects, run tests, and submit work — backed by a REST API, async worker, instructor dashboard, and GitHub App integration.
+> A comprehensive, hosted course operations platform designed for CS education. Nibras enables students to set up projects, run local tests, and submit work via an intelligent CLI; gives instructors powerful tools for course management, submission review, and analytics; and provides operators with production-ready infrastructure for deployment and monitoring.
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Repository Structure](#repository-structure)
-- [Prerequisites](#prerequisites)
-- [Quick Start (Local Dev)](#quick-start-local-dev)
-- [CLI Usage](#cli-usage)
+- [Key Features](#key-features)
 - [Architecture](#architecture)
-- [Environment Variables](#environment-variables)
-- [Database](#database)
+- [Quick Start](#quick-start)
+  - [Local Development](#local-development)
+  - [CLI Installation](#cli-installation)
+- [Student Workflow](#student-workflow)
+- [CLI Command Reference](#cli-command-reference)
+- [Configuration & Environment](#configuration--environment)
 - [GitHub App Setup](#github-app-setup)
-- [Optional Integrations](#optional-integrations)
-  - [AI Grading](#ai-grading)
-  - [Email Notifications](#email-notifications)
-  - [Commit Status Checks](#commit-status-checks)
-  - [GitHub Repository Validation](#github-repository-validation)
-  - [Grade Export](#grade-export)
-  - [Course Switching](#course-switching)
-  - [Admin Features](#admin-features)
-  - [Metrics (Prometheus + Grafana)](#metrics-prometheus--grafana)
-- [Production Deployment](#production-deployment)
+- [Database Management](#database-management)
+- [Deployment](#deployment)
+- [Development](#development)
 - [Testing](#testing)
-- [CI/CD](#cicd)
+- [Troubleshooting](#troubleshooting)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
 ## Overview
 
-| Persona    | What they do                                                               |
-| ---------- | -------------------------------------------------------------------------- |
-| Student    | `nibras login` → `nibras setup` → `nibras test` → `nibras submit`          |
-| Instructor | Manages courses, projects, milestones, reviews submissions, exports grades |
-| Operator   | Deploys API + worker + web via Docker Compose; monitors via Prometheus     |
+Nibras is a modern, full-stack course operations platform built specifically for computer science education. It seamlessly integrates with GitHub and provides three distinct user experiences:
 
-**Key capabilities:**
+| User Role | Primary Activity | Key Tools |
+|-----------|------------------|-----------|
+| **Students** | Project setup, local testing, work submission | CLI (`nibras`) commands, task viewer |
+| **Instructors** | Course management, project creation, submission review, analytics | Web dashboard, export tools, review interface |
+| **Operators** | System deployment, monitoring, infrastructure management | Docker, Kubernetes, monitoring dashboards |
 
-- Device-flow GitHub OAuth (no passwords stored)
-- Submission pipeline: stage allowed files → commit → push → verify → grade
-- Private test grading, semantic AI grading, manual score fallback, optional check50
-- Instructor dashboard: course management, review queue, CSV grade export
-- Multi-course switching with URL-persisted course selection
-- GitHub commit status badges (✅ / ❌ / 🔄) posted on student commits
-- GitHub repository validation before submission (checks ownership and write access)
-- Submission modal with live GitHub status checks replacing static submit form
-- Student notes surfaced in instructor review; milestone previews and counts in project tabs
-- Super-admin badge and accessible-course count in the settings page
-- Transactional email notifications via Resend (optional)
-- Prometheus metrics + Grafana dashboard (optional)
+### Core Value Proposition
+
+- **Simplicity for Students**: One command to set up, test, and submit work
+- **Visibility for Instructors**: Real-time insights into student progress, submission status, and aggregate metrics
+- **Reliability for Operators**: Production-ready infrastructure with optional AI grading, email notifications, and distributed job processing
 
 ---
 
-## Repository Structure
+## Key Features
 
-```
-nibras-cli/
-├── apps/                          # Deployable services
-│   ├── api/                       # Fastify REST API
-│   │   └── src/
-│   │       ├── features/
-│   │       │   ├── admin/         # Admin overrides, user management
-│   │       │   ├── github/        # OAuth, App install, webhook handling
-│   │       │   ├── hosted-cli/    # Submission, verification, status endpoints
-│   │       │   └── tracking/      # Courses, projects, milestones, progress
-│   │       ├── lib/               # Shared utilities (auth, email, errors)
-│   │       ├── app.ts             # Fastify app factory
-│   │       ├── server.ts          # Process entry point
-│   │       ├── store.ts           # In-memory dev store (no DB)
-│   │       └── prisma-store.ts    # Prisma/Postgres store
-│   │
-│   ├── cli/                       # Hosted CLI workspace / npm package source
-│   │   └── src/
-│   │       ├── commands/          # login, logout, whoami, setup, test,
-│   │       │                      #   submit, task, ping, update-buildpack
-│   │       ├── ui/                # Terminal UI helpers
-│   │       └── index.ts           # Commander.js entry point
-│   │
-│   ├── web/                       # Next.js 15 instructor dashboard
-│   │   └── app/
-│   │       ├── (app)/             # Authenticated routes
-│   │       │   ├── dashboard/     # Overview with multi-course switcher
-│   │       │   ├── instructor/    # Course/project/milestone management,
-│   │       │   │                  #   submission review, grade export,
-│   │       │   │                  #   onboarding wizard (OS-aware)
-│   │       │   ├── projects/      # Student project dashboard with
-│   │       │   │                  #   status-aware submission modal
-│   │       │   ├── settings/      # Profile, GitHub App install,
-│   │       │   │                  #   super-admin badge & course count
-│   │       │   └── submissions/   # Student submission detail
-│   │       ├── auth/              # GitHub OAuth callback
-│   │       ├── join/              # Course invite flow
-│   │       └── api/               # Next.js route handlers
-│   │
-│   ├── worker/                    # Async job processor
-│   │   └── src/
-│   │       ├── worker.ts          # Job loop: verification + grading
-│   │       ├── queue.ts           # Job queue abstraction
-│   │       ├── sandbox.ts         # Isolated test runner
-│   │       └── email.ts           # Submission-result email dispatch
-│   │
-│   └── proxy/                     # Local same-origin proxy (dev only)
-│       └── src/                   # /v1/* → API, else → web
-│
-├── packages/                      # Shared internal libraries (build order)
-│   ├── contracts/                 # Zod schemas + inferred TS types
-│   ├── core/                      # API client, config, manifest, git ops
-│   ├── github/                    # JWT signing + webhook HMAC validation
-│   └── grading/                   # AI semantic grading runner
-│
-├── src/                           # Legacy CommonJS CLI (backwards compat)
-│   └── cli.js                     # Legacy entry point used as the final fallback
-│
-├── bin/
-│   └── nibras.js                  # Tries the bundled modern CLI first, then falls back
-│
-├── prisma/
-│   ├── schema.prisma              # PostgreSQL schema (Prisma ORM)
-│   ├── seed.ts                    # Dev seed data
-│   └── migrations/                # Applied migration history
-│
-├── docs/
-│   ├── instructor-guide.md
-│   ├── student-guide.md
-│   ├── ops-guide.md
-│   ├── runbook.md
-│   └── project-tracking.md
-│
-├── nginx/                         # Nginx config for production reverse proxy
-├── grafana/                       # Grafana dashboard JSON
-├── sample-answers/                # Test fixtures for grading validation
-│
-├── .github/workflows/
-│   ├── ci.yml                     # Test, lint, build on every push/PR
-│   └── release.yml                # Publish @nibras/cli to npm on v* tags
-│
-├── docker-compose.yml             # Local dev: Postgres only
-├── docker-compose.prod.yml        # Production: API + worker + web + Postgres
-├── Dockerfile                     # CLI image
-├── Dockerfile.api                 # API image
-├── Dockerfile.worker              # Worker image
-│
-├── .env.example                   # Required env vars (copy to .env)
-├── .env.ngrok.example             # Env for live GitHub + ngrok validation
-├── .env.prod.example              # Production env template
-│
-├── package.json                   # Root workspace + scripts
-├── tsconfig.base.json             # Shared TS config (ES2022, strict, CJS)
-└── eslint.config.mjs              # ESLint v9 flat config + Prettier
-```
+### Student Experience
+✅ **Device Flow Authentication** — Secure GitHub login without storing credentials  
+✅ **Project Bootstrapping** — One-command project setup with starter code and task descriptions  
+✅ **Local Testing** — Run tests locally before submission with guaranteed environment consistency  
+✅ **Smart Submissions** — Automatic file staging, commit creation, and push to GitHub  
+✅ **Real-time Status** — Live submission status updates and verification results  
+✅ **Project Discovery** — List and filter enrolled courses and projects  
 
----
+### Instructor Experience
+✅ **Course Management** — Create and configure courses, projects, and milestones  
+✅ **Submission Tracking** — View all submissions with detailed metadata and status filters  
+✅ **Code Review Interface** — In-app code review with diff viewing and commenting  
+✅ **Analytics Dashboard** — Per-course submission metrics, milestone progress, and student activity  
+✅ **Bulk Operations** — Retry failed submissions, update grades, export results  
+✅ **Notifications** — In-app and email notifications for review-ready and graded work  
 
-## Prerequisites
+### Platform Features
+✅ **Optional AI Grading** — Semantic grading with configurable confidence thresholds  
+✅ **Notification System** — In-app notifications, email alerts, and preference controls  
+✅ **Audit Logging** — Complete audit trail of all platform operations  
+✅ **Job Queue** — Redis-backed BullMQ for instant job dispatch (with DB-polling fallback)  
+✅ **SSE Streams** — Live submission updates via Server-Sent Events  
+✅ **Multi-Course Support** — Isolated courses with independent project configurations  
 
-| Tool      | Required | Notes                                        |
-| --------- | -------- | -------------------------------------------- |
-| Node.js   | ≥ 18     |                                              |
-| npm       | ≥ 9      |                                              |
-| git       | any      |                                              |
-| Docker    | yes      | Runs local Postgres via Docker Compose       |
-| unzip     | yes      | Used by `nibras setup`                       |
-| wget/curl | yes      | Used by `nibras setup` for HTTP(S) downloads |
-| ngrok     | optional | Required for live GitHub webhook testing     |
-| check50   | optional | Required only for check50-type projects      |
+### System Updates (Latest)
 
----
-
-## Quick Start (Local Dev)
-
-```bash
-# 1. Clone and install
-git clone https://github.com/NibrasPlatform/nibras-cli.git
-cd nibras-cli
-npm ci
-
-# 2. Configure environment
-cp .env.example .env
-# Edit .env — database URL is pre-filled for Docker dev stack
-
-# 3. Start everything
-npm run dev
-```
-
-`npm run dev` will:
-
-1. Start the Postgres container via Docker Compose
-2. Wait for Postgres readiness
-3. Apply Prisma migrations (`prisma migrate deploy`)
-4. Build TypeScript services once
-5. Start watch mode + API + worker + web dev servers in parallel
-
-**Local endpoints:**
-
-| Service       | URL                               |
-| ------------- | --------------------------------- |
-| API health    | `http://127.0.0.1:4848/v1/health` |
-| Web dashboard | `http://127.0.0.1:3000`           |
-| Worker health | `http://127.0.0.1:9090/healthz`   |
-
----
-
-## CLI Usage
-
-### Install
-
-Install the current release from npm (works on macOS, Linux, and Windows):
-
-```bash
-npm install -g @nibras/cli@1.0.2
-```
-
-If npm returns `404 Not Found`, the tagged CLI release has not been published to npm yet.
-
-Verify:
-
-```bash
-nibras --version   # → v1.0.2
-```
-
-> To run from source, use `npm run build` then `node bin/nibras.js` (source checkouts may append `-<commit>` to the version output).
-
-For platform-specific prerequisites (Node.js, git, permission fixes) and a full step-by-step walkthrough, see **[docs/student-guide.md](docs/student-guide.md)**.
-
-### Hosted onboarding
-
-Pass the API URL your admin provides during login. A fresh install defaults to the local dev API at `http://127.0.0.1:4848`.
-
-```bash
-nibras login --api-base-url https://nibras.yourschool.edu
-```
-
-### Core workflow
-
-```bash
-nibras login --api-base-url https://nibras.yourschool.edu  # Device-flow GitHub OAuth
-nibras setup --project cs101/assignment-1                  # Bootstrap or refresh a project
-nibras task                                                # Print assignment instructions
-nibras test                                                # Run manifest-configured tests locally
-nibras submit                                              # Stage → commit → push → verify
-```
-
-| Command                  | What it does                                                                                                   |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| `nibras setup --project` | Writes `.nibras/project.json` + `.nibras/task.md`, inits git, adds `origin`, optionally extracts starter files |
-| `nibras test`            | Runs the OS-aware test command from the manifest; non-zero exit = failure                                      |
-| `nibras submit`          | Runs tests, stages only allowed files, commits, pushes, registers with API, polls verification                 |
-
-`nibras submit` never stops on local test failure — the result is recorded and server-side verification always runs.
-
-### Discovery
-
-```bash
-nibras list     # List all enrolled courses and projects
-nibras status   # Show recent submissions with live status badges
-```
-
-### Diagnostics / session
-
-```bash
-nibras whoami   # Signed-in user, linked GitHub account, active API URL
-nibras ping     # Full connectivity check: API · auth · GitHub · App install · project
-nibras logout   # Clear the local session
-```
-
-`nibras ping` is the fastest way to diagnose any problem — run it first.
-
-### Update & uninstall
-
-```bash
-nibras update --check                   # Compare installed version against latest release
-nibras update --version v1.0.2          # Reinstall a specific published CLI release
-nibras update --force --version v1.0.2  # Force reinstall the same version
-nibras uninstall                         # Remove binary; config is preserved
-```
-
-### Advanced / compatibility
-
-```bash
-nibras update-buildpack --node 20   # Edit .nibras/project.json buildpack version
-nibras legacy ...                   # Run the legacy src/ entrypoint (CS161 backwards compat)
-```
+- **CLI Improvements**: `nibras list`, `nibras status`, and `nibras submit --milestone <slug>` fully integrated
+- **Live Submission UX**: Web app streams submission state via SSE for real-time updates
+- **Analytics**: Per-course student analytics and instructor class-wide milestone tracking
+- **Notifications**: Built-in notification preferences, unread counts, and per-type controls
+- **Admin Operations**: Audit log browsing, bulk submission retry, enhanced review tooling
+- **Submission Control**: Cancelled submissions tracked and queryable by status
+- **Job Dispatch**: Redis/BullMQ for instant processing with graceful DB polling fallback
+- **Grading Intelligence**: AI confidence thresholds push work to `needs_review` with automatic instructor notification
 
 ---
 
 ## Architecture
 
-### Data flows
+### System Topology
 
 ```
-Student CLI
-  └─ nibras submit
-       ├─ stage allowed files
-       ├─ git commit + push → student's GitHub repo
-       └─ POST /v1/submissions → API
-             └─ Worker picks up job
-                   ├─ clone + run tests in sandbox
-                   ├─ (optional) AI semantic grading
-                   ├─ POST commit status to GitHub
-                   ├─ send email notification
-                   └─ write results back to DB
+┌─────────────────────────────────────────────────────────────┐
+│                     Student CLI (@nibras/cli)               │
+│                    Instructor Web Dashboard                 │
+│                        (Next.js 15/React)                   │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      API (Fastify)                          │
+│          ├─ Device Flow OAuth / GitHub Integration          │
+│          ├─ Project Setup & Manifest Management             │
+│          ├─ Submission Pipeline & Verification              │
+│          ├─ Tracking & Analytics Engine                     │
+│          └─ Webhook & Event Processing                      │
+└────┬──────────────────────────────────────────────────────┬─┘
+     │                                                      │
+     ▼                                                      ▼
+┌──────────────────────┐              ┌──────────────────────┐
+│  PostgreSQL Database │              │   GitHub Repositories│
+│  (Prisma ORM)        │              │   (via GitHub App)   │
+└──────────────────────┘              └──────────────────────┘
+     ▲                                                      │
+     │                                                      │
+     └──────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Worker Service                         │
+│          ├─ Submission Verification & Testing               │
+│          ├─ AI Grading Pipeline                             │
+│          ├─ Job Queue Consumer (BullMQ/Polling)             │
+│          ├─ Email Notification Dispatcher                   │
+│          └─ Health & Metrics Reporting                      │
+└─────────────────────────────────────────────────────────────┘
+     ▲
+     │ Optional
+     ▼
+┌──────────────────────┐    ┌──────────────────────┐
+│    Redis (BullMQ)    │    │  Sentry (Monitoring) │
+│    (Job Queue)       │    │  Resend (Email)      │
+└──────────────────────┘    └──────────────────────┘
 ```
 
+### Runtime Components
+
+| Component | Purpose | Technology | Port |
+|-----------|---------|-----------|------|
+| **API Server** | REST API, authentication, project setup, submissions, tracking | Fastify, Node.js | `4848` |
+| **Web App** | Instructor dashboard, student progress, submission review | Next.js 15, React 19 | `3000` |
+| **Worker** | Async verification, grading, job processing, notifications | Node.js, BullMQ | `9090` (health) |
+| **Proxy** | Local dev proxy for same-origin GitHub callbacks | Node.js HTTP | `8080` |
+| **Database** | Persistent data storage, migrations, schema management | PostgreSQL 16+ | `5432` |
+
+### Shared Packages (Dependency Order)
+
+| Package | Purpose | Exports |
+|---------|---------|---------|
+| `@nibras/contracts` | Zod schemas, TypeScript types, API contracts | Type definitions, validators |
+| `@nibras/core` | CLI utilities, API client, config/manifest management, git operations | Client, helpers, types |
+| `@nibras/github` | GitHub App JWT signing, webhook HMAC validation | Auth helpers |
+| `@nibras/grading` | AI semantic grading runner, OpenAI-compatible interface | Grading engine, types |
+
+### Data Flow Examples
+
+#### Device Login Flow
 ```
-Student Dashboard (Next.js)
-  └─ reads/writes via API /v1/* and /v1/tracking/*
-       ├─ multi-course switcher (URL-persisted)
-       ├─ project list with milestone previews and counts
-       ├─ status-aware submission modal
-       │     ├─ POST /v1/github/repositories/validate  (repo ownership check)
-       │     └─ POST /v1/submissions
-       └─ live GitHub App install status
+1. Student: nibras login --api-base-url <url>
+2. CLI requests device code from API
+3. API generates device code, shows authorization URL
+4. Student opens URL in browser, authorizes CLI app
+5. API exchanges device code for GitHub OAuth token
+6. Token stored in ~/.nibras/cli.json (encrypted)
+7. CLI now authenticated for all operations
 ```
 
+#### Submission Flow
 ```
-Instructor Dashboard (Next.js)
-  └─ reads/writes via API /v1/tracking/*
-       ├─ courses, projects, milestones
-       ├─ submission review queue (with student notes + AI evidence)
-       └─ grade CSV export
+1. Student: nibras submit
+2. CLI stages tracked files to index
+3. CLI commits with metadata to git
+4. CLI pushes to linked GitHub repository
+5. API creates submission record with status=queued
+6. Worker picks up job (via BullMQ or polling)
+7. Worker runs verification tests in isolated environment
+8. Worker updates submission status and stores results
+9. Web app streams status updates via SSE to instructor
+10. Instructor reviews and grades submission
 ```
 
-### Packages (build dependency order)
-
+#### Grading Flow (Optional)
 ```
-contracts → core → github
-                 → grading
+1. Worker receives verified submission
+2. Worker calls AI grading service (if NIBRAS_AI_API_KEY set)
+3. AI returns semantic grade and confidence score
+4. If confidence < NIBRAS_AI_MIN_CONFIDENCE, push to needs_review
+5. Instructor notified of review-needed submissions
+6. Instructor reviews and approves/corrects grade
+7. Final grade stored and exported
 ```
-
-| Package             | Description                                                                                     |
-| ------------------- | ----------------------------------------------------------------------------------------------- |
-| `@nibras/contracts` | Zod schemas and TypeScript types shared by all layers (incl. `systemRole`, repo-validate types) |
-| `@nibras/core`      | API client (with token refresh), config, manifest, git helpers                                  |
-| `@nibras/github`    | GitHub App JWT signing and webhook HMAC validation                                              |
-| `@nibras/grading`   | AI semantic grading runner (OpenAI-compatible)                                                  |
-
-### Legacy CLI (`src/`)
-
-`bin/nibras.js` tries `apps/cli/bundle/index.js` first, then `apps/cli/dist/index.js`. If neither modern build is present it falls back to `src/cli.js` — the original CommonJS CLI kept for backwards compatibility (used by the CS161 course).
 
 ---
 
-## Environment Variables
+## Quick Start
 
-Copy `.env.example` to `.env`. Groups:
+### Requirements
 
-| Group      | Required                 | Key vars                                                                                                       |
-| ---------- | ------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| Database   | yes                      | `DATABASE_URL`                                                                                                 |
-| GitHub App | yes (for OAuth/webhooks) | `GITHUB_APP_ID`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` |
-| Session    | yes                      | `SESSION_SECRET`                                                                                               |
-| App URLs   | yes                      | `NIBRAS_API_BASE_URL`, `NIBRAS_WEB_BASE_URL`                                                                   |
-| AI Grading | optional                 | `NIBRAS_AI_API_KEY`, `NIBRAS_AI_MODEL`, `NIBRAS_AI_BASE_URL`, `NIBRAS_AI_MIN_CONFIDENCE`                       |
-| Email      | optional                 | `RESEND_API_KEY`, `NIBRAS_EMAIL_FROM`                                                                          |
-| Monitoring | optional                 | `SENTRY_DSN`                                                                                                   |
+Before you begin, ensure you have:
 
-See `.env.example` for all variables with documentation.
+- **Node.js** `>=18.0.0`
+- **npm** `>=9.0.0`
+- **git** (version 2.0+)
+- **Docker & Docker Compose** (for local database)
+- **PostgreSQL CLI tools** (`pg_isready` for health checks)
 
----
+Verify your setup:
+```bash
+node --version  # Should be v18.0.0 or higher
+npm --version   # Should be v9.0.0 or higher
+docker --version
+docker-compose --version
+```
 
-## Database
+### Local Development
 
-PostgreSQL via Prisma ORM. Schema: `prisma/schema.prisma`.
+#### 1. Clone and Install
 
 ```bash
-npm run db:generate      # Regenerate Prisma client after schema changes
-npm run db:push          # Push schema without migration (disposable dev)
-npm run db:migrate       # Create a named migration
-npm run db:deploy        # Apply pending migrations (production path)
-npm run db:local:reset   # Tear down and recreate local Docker volume (destructive)
+# Clone the repository
+git clone https://github.com/NibrasPlatform/nibras-cli.git
+cd nibras-cli
+
+# Install all dependencies
+npm ci
 ```
 
-Always run `npm run db:generate` after editing `prisma/schema.prisma`.
+#### 2. Configure Environment
+
+```bash
+# Copy example configuration
+cp .env.example .env
+
+# Edit .env with your values:
+# - GITHUB_APP_ID, GITHUB_APP_CLIENT_ID, etc.
+# - DATABASE_URL (optional for local dev)
+# - NIBRAS_ENCRYPTION_KEY (generate a random 32-char string)
+nano .env
+```
+
+#### 3. Start the Full Development Stack
+
+```bash
+# This single command will:
+# - Start PostgreSQL in Docker (if not running)
+# - Apply database migrations
+# - Build all packages
+# - Start watch mode for file changes
+# - Start the API server
+# - Start the worker
+# - Start the Next.js web app
+
+npm run dev
+```
+
+**Expected output:**
+```
+> api listening on http://127.0.0.1:4848
+> web ready on http://127.0.0.1:3000
+> worker started
+> watch mode enabled
+```
+
+#### 4. Verify the Setup
+
+In a new terminal, check all services are healthy:
+
+```bash
+# API health
+curl http://127.0.0.1:4848/v1/health
+
+# Worker health
+curl http://127.0.0.1:9090/healthz
+
+# Web (open in browser)
+open http://127.0.0.1:3000
+```
+
+#### Service Endpoints
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| **API** | `http://127.0.0.1:4848` | Main backend API |
+| **API Health** | `http://127.0.0.1:4848/v1/health` | Health check endpoint |
+| **Web** | `http://127.0.0.1:3000` | Instructor dashboard |
+| **Proxy** | `http://127.0.0.1:8080` | Local OAuth callback proxy |
+| **Worker Health** | `http://127.0.0.1:9090/healthz` | Worker health endpoint |
+
+### CLI Installation
+
+#### Install from NPM (Global)
+
+The published `@nibras/cli` package is available on npm:
+
+```bash
+# Install the latest stable version
+npm install -g @nibras/cli
+
+# Or install a specific version
+npm install -g @nibras/cli@1.0.2
+
+# Verify installation
+nibras --version
+```
+
+#### Build and Install Locally
+
+To test your local changes:
+
+```bash
+# Build the CLI package
+npm run build
+
+# Link it globally for testing
+cd apps/cli
+npm link
+
+# Test it
+nibras --version
+
+# Unlink when done
+npm unlink @nibras/cli
+```
+
+#### First Login
+
+```bash
+# Login to a Nibras instance
+nibras login --api-base-url https://nibras.yourschool.edu
+
+# This will:
+# 1. Show you a device authorization URL
+# 2. Wait for you to authorize in your browser
+# 3. Save your token to ~/.nibras/cli.json
+```
+
+---
+
+## Student Workflow
+
+### Complete Example: CS161 Lab 1
+
+```bash
+# Step 1: Login once per device
+$ nibras login --api-base-url https://nibras.stanford.edu
+? Device code: ABCD-1234
+? Go to: https://github.com/login/device
+✓ Authorization complete!
+✓ Saved to ~/.nibras/cli.json
+
+# Step 2: List your courses and projects
+$ nibras list
+Courses:
+  cs161 - Computer Security
+    ├─ lab1 (Core)
+    ├─ lab2 (Core)
+    └─ project (Milestone 1, Milestone 2)
+
+# Step 3: Set up a specific project
+$ nibras setup --project cs161/lab1
+✓ Created .nibras/project.json
+✓ Downloaded starter code
+✓ Ready to start!
+
+# Step 4: Read the task instructions
+$ nibras task
+CS161 Lab 1: Buffer Overflow Exploits
+================================
+Due: 2026-05-24
+
+Your task: [detailed instructions...]
+
+# Step 5: Run the public test suite
+$ nibras test
+Running public tests...
+  ✓ test_basic_overflow (45ms)
+  ✓ test_environment_variable (67ms)
+  ✓ test_file_input (89ms)
+✓ All tests passed! (2/2)
+
+# Step 6: Submit your work
+$ nibras submit
+Running tests before submission...
+✓ All tests passed!
+
+Staging files...
+✓ Staged 5 files
+
+Committing...
+✓ Created commit abc123def
+
+Pushing...
+✓ Pushed to origin/main
+
+Submitted! Submission ID: sub_abc123
+Waiting for verification... ⏳
+
+(After verification completes)
+✓ Verification passed
+✓ Ready for instructor review
+
+# Step 7: Check submission status
+$ nibras status
+Recent submissions:
+  cs161/lab1
+    Status: passed ✓
+    Submitted: 2026-05-10T14:23:45Z
+    Grade: Pending Review
+    URL: https://nibras.stanford.edu/submissions/sub_abc123
+```
+
+### Common Workflows
+
+#### Re-submit with Fixes
+
+```bash
+# Make changes to your code
+vim src/exploit.c
+
+# Run tests locally
+nibras test
+
+# If tests pass, submit again
+nibras submit
+
+# Check status
+nibras status
+```
+
+#### Submit for a Specific Milestone
+
+```bash
+# If your project has milestones, target one
+nibras submit --milestone "milestone-1"
+
+# View all available milestones
+nibras list --verbose
+```
+
+#### Check Previous Test Results
+
+```bash
+# View test output from last submission
+nibras test --previous
+
+# Or submit with debug output
+DEBUG=* nibras submit
+```
+
+#### Verify Environment
+
+```bash
+# Quick health check
+nibras ping
+
+# This verifies:
+# ✓ API is reachable
+# ✓ You are authenticated
+# ✓ Your GitHub app is installed
+# ✓ Your project repo exists
+```
+
+---
+
+## CLI Command Reference
+
+### Authentication
+
+#### `nibras login`
+Authenticate the CLI with a hosted Nibras instance.
+
+```bash
+# Login to a specific instance
+nibras login --api-base-url https://nibras.yourschool.edu
+
+# Don't open browser automatically
+nibras login --api-base-url https://nibras.yourschool.edu --no-open
+
+# Reset to a different instance
+nibras logout
+nibras login --api-base-url https://different-instance.edu
+```
+
+**Stores:** Token to `~/.nibras/cli.json` (encrypted)
+
+#### `nibras logout`
+Clear the local CLI session.
+
+```bash
+nibras logout
+```
+
+**Removes:** Token from `~/.nibras/cli.json`
+
+#### `nibras whoami`
+Show the currently authenticated user and linked GitHub account.
+
+```bash
+$ nibras whoami
+Logged in as: alice@stanford.edu
+GitHub: @alice-github
+API: https://nibras.stanford.edu
+```
+
+### Project Discovery
+
+#### `nibras list`
+List all enrolled courses and available projects.
+
+```bash
+# Basic listing
+$ nibras list
+Courses:
+  cs161 - Computer Security (4 projects)
+  cs161b - Applied Cryptography (2 projects)
+
+# Detailed view with milestones
+$ nibras list --verbose
+cs161 - Computer Security
+  ├─ lab1 (Core project)
+  ├─ lab2 (Core project)
+  └─ final-project (Milestones: part1, part2, part3)
+```
+
+#### `nibras status`
+Show recent submission statuses across all projects.
+
+```bash
+$ nibras status
+cs161/lab1
+  Submission 1: passed ✓ (2 days ago)
+    Grade: 95/100
+    Review: Complete
+  Submission 2: failed ✗ (1 day ago)
+    Status: failed_tests
+    Review: Pending
+
+cs106L/warmup
+  Submission 1: cancelled ⊘ (3 days ago)
+    Reason: Manual cancellation
+```
+
+### Project Setup
+
+#### `nibras setup`
+Bootstrap a local project from the hosted manifest.
+
+```bash
+# Setup a specific project
+nibras setup --project cs161/lab1
+
+# This will:
+# ✓ Create .nibras/project.json
+# ✓ Copy starter code to working directory
+# ✓ Download task instructions to .nibras/task.md
+# ✓ Initialize git repo (if needed)
+# ✓ Add remote origin (if needed)
+```
+
+**Creates:**
+- `.nibras/project.json` — Project manifest and configuration
+- `.nibras/task.md` — Task instructions and requirements
+- Starter code files in current directory
+
+#### `nibras task`
+Display the current project's task instructions.
+
+```bash
+# Print task instructions
+nibras task
+
+# Save to file
+nibras task > task-backup.txt
+
+# Open in editor
+nibras task | less
+```
+
+**Source:** `.nibras/task.md` (created during `nibras setup`)
+
+### Testing
+
+#### `nibras test`
+Run the project's public test suite locally.
+
+```bash
+# Run all tests
+nibras test
+
+# Expected output:
+# Running public tests...
+#   ✓ test_basic_functionality (125ms)
+#   ✓ test_edge_case (89ms)
+#   ✓ test_performance (234ms)
+# ✓ All tests passed! (3/3)
+
+# Run with previous output
+nibras test --previous
+
+# Run with verbose output
+DEBUG=* nibras test
+```
+
+**Runs:** Test command defined in `.nibras/project.json` (e.g., `npm test`, `./run-tests.sh`)
+
+**Note:** Tests must pass before submission (unless `--force` is used).
+
+### Submission
+
+#### `nibras submit`
+Stage files, commit, push, and submit your work.
+
+```bash
+# Simple submission
+nibras submit
+
+# Submit with all flags
+nibras submit --force --milestone "part-1"
+
+# What it does:
+# 1. Runs local tests (stops if failed, unless --force)
+# 2. Stages tracked files to git index
+# 3. Creates commit with submission metadata
+# 4. Pushes to origin/main
+# 5. Creates submission record on API
+# 6. Waits for verification to complete
+```
+
+**Options:**
+- `--force` — Skip local test pass requirement
+- `--milestone <slug>` — Target a specific milestone
+
+**Returns:** Submission ID for tracking
+
+#### `nibras ping`
+Quick health check of API, auth, GitHub, and project state.
+
+```bash
+$ nibras ping
+✓ API is reachable
+✓ Authenticated (alice@stanford.edu)
+✓ GitHub installed on account
+✓ Repository exists and is accessible
+✓ Project configuration is valid
+All systems operational!
+```
+
+### Updates & Maintenance
+
+#### `nibras update`
+Check for or install CLI updates.
+
+```bash
+# Check for available updates
+nibras update --check
+# Output: You have 1.0.2. Latest is 1.0.3 (new features).
+
+# Install latest version
+nibras update
+
+# Install specific version
+nibras update --version v1.0.2
+```
+
+#### `nibras uninstall`
+Remove the global CLI installation.
+
+```bash
+nibras uninstall
+# Removes: npm global package and ~/.nibras/ config
+```
+
+#### `nibras update-buildpack`
+Update the Node.js version for this project.
+
+```bash
+# Upgrade to Node 20
+nibras update-buildpack --node 20
+
+# This updates: .nibras/project.json
+# Worker will use Node 20 for next verification
+```
+
+### Legacy Commands
+
+#### `nibras legacy`
+Run the legacy subject/project CLI (for backwards compatibility).
+
+```bash
+nibras legacy
+# Loads: src/cli.js (CommonJS legacy CLI)
+```
+
+---
+
+## Configuration & Environment
+
+### Environment Variables
+
+Nibras uses environment variables for all configuration. Copy `.env.example` to `.env` and fill in your values.
+
+#### Required Configuration
+
+##### Database
+```bash
+# PostgreSQL connection string
+# Format: postgresql://user:password@host:port/database
+DATABASE_URL=postgresql://nibras:password@localhost:5432/nibras
+```
+
+##### Encryption
+```bash
+# 32-character random string for encrypting sensitive data
+# Generate with: openssl rand -hex 16
+NIBRAS_ENCRYPTION_KEY=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+```
+
+##### GitHub App
+```bash
+# Create app at: https://github.com/settings/apps/new
+GITHUB_APP_ID=123456
+GITHUB_APP_CLIENT_ID=Iv1.abc123def456
+GITHUB_APP_CLIENT_SECRET=abc123def456...
+GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----\n"
+GITHUB_APP_NAME=nibras-dev
+GITHUB_WEBHOOK_SECRET=your_webhook_secret_here
+```
+
+##### Application URLs
+```bash
+# Must match GitHub App redirect URLs
+NIBRAS_API_BASE_URL=http://localhost:4848
+NIBRAS_WEB_BASE_URL=http://localhost:3000
+
+# Production example:
+# NIBRAS_API_BASE_URL=https://api.nibras.stanford.edu
+# NIBRAS_WEB_BASE_URL=https://nibras.stanford.edu
+```
+
+#### Optional Configuration
+
+##### Job Queue (Redis)
+```bash
+# Enable instant job dispatch (recommended for production)
+REDIS_URL=redis://localhost:6379
+
+# Worker concurrency (default: 5)
+WORKER_CONCURRENCY=10
+```
+
+##### Worker Tuning
+```bash
+# Poll interval for database job checks (default: 5000ms)
+WORKER_POLL_INTERVAL_MS=3000
+
+# Health check port (default: 9090)
+WORKER_HEALTH_PORT=9090
+
+# Run tests in sandbox mode (default: true)
+WORKER_SANDBOX_MODE=true
+```
+
+##### Email Notifications
+```bash
+# Resend API key for email notifications
+RESEND_API_KEY=re_...
+
+# From address for emails
+NIBRAS_EMAIL_FROM=nibras@yourschool.edu
+```
+
+##### Monitoring & Metrics
+```bash
+# Sentry DSN for error tracking
+SENTRY_DSN=https://...@sentry.io/...
+
+# Metrics collection token
+NIBRAS_METRICS_TOKEN=your_metrics_token
+```
+
+##### AI Grading
+```bash
+# OpenAI-compatible API key
+NIBRAS_AI_API_KEY=sk-...
+
+# Model to use (e.g., gpt-4, gpt-3.5-turbo)
+NIBRAS_AI_MODEL=gpt-4
+
+# Custom API endpoint (if not OpenAI)
+NIBRAS_AI_BASE_URL=https://api.openai.com/v1
+
+# Minimum confidence threshold (0.0-1.0, default: 0.85)
+NIBRAS_AI_MIN_CONFIDENCE=0.85
+```
+
+### Environment Validation
+
+Validate your configuration before deploying:
+
+```bash
+# Check all required variables are set
+npm run validate:env
+
+# Output:
+# ✓ DATABASE_URL is set
+# ✓ GITHUB_APP_ID is set
+# ✓ GITHUB_APP_CLIENT_ID is set
+# ... (checks all required variables)
+# All required environment variables are configured!
+```
+
+### Runtime Behavior
+
+**Database Polling (Default)**
+- When `REDIS_URL` is unset, the worker polls the database for jobs
+- Poll interval: `WORKER_POLL_INTERVAL_MS` (default: 5000ms)
+- Suitable for small deployments with low submission volume
+
+**Job Queue with Redis (Recommended)**
+- When `REDIS_URL` is set, the API enqueues jobs to BullMQ
+- Worker consumes jobs with zero latency
+- Concurrency controlled by `WORKER_CONCURRENCY`
+- Recommended for production and high-volume scenarios
+
+**Email Notifications**
+- When `RESEND_API_KEY` is set, email notifications are sent
+- Subscription status controlled via user preferences
+- When unset, in-app notifications still function
+
+**Error Monitoring**
+- When `SENTRY_DSN` is set, errors are sent to Sentry
+- When unset, errors are logged locally only
+
+**AI Grading**
+- When `NIBRAS_AI_API_KEY` is set, submissions are graded automatically
+- When unset, all submissions default to `needs_review` status
+- Confidence threshold determines if grade is auto-approved
 
 ---
 
 ## GitHub App Setup
 
-Required for OAuth login and webhook-based commit status checks.
+Nibras requires a GitHub App for:
+- Device flow authentication (CLI and web)
+- Repository access (for cloning starter code, pushing submissions)
+- Webhook processing (for repository events)
 
-1. **Create the App** at [github.com/settings/apps/new](https://github.com/settings/apps/new)
-2. **Fill registration fields:**
-   - `Homepage URL`: `<public-url>/`
-   - `Callback URL`: `<public-url>/v1/github/oauth/callback`
-   - `Setup URL`: `<public-url>/install/complete`
-   - `Webhook URL`: `<public-url>/v1/github/webhooks`
-   - `Webhook secret`: random secret → `GITHUB_WEBHOOK_SECRET`
-3. **Auth modes:** enable `Device Flow`; keep OAuth-during-install disabled
-4. **Permissions:**
-   - Repository → `Contents`: Read and write
-   - Repository → `Metadata`: Read-only
-   - Repository → `Commit statuses`: Read and write
-5. **Events:** subscribe to `Push`
-6. **Credentials:** copy App ID, Client ID, Client Secret, and private key into `.env`
+### Creating the App
 
-For live local testing, use ngrok:
+1. **Navigate to GitHub Settings:**
+   ```
+   https://github.com/settings/apps/new
+   ```
+
+2. **Fill in Basic Information:**
+   - **App name:** `nibras-dev` (or your instance name)
+   - **Homepage URL:** `http://localhost:3000` (or your public URL)
+   - **Webhook URL:** `http://localhost:4848/v1/github/webhooks` (required for receiving events)
+   - **Webhook secret:** Generate a random string (store in `GITHUB_WEBHOOK_SECRET`)
+
+3. **Configure Permissions:**
+   - **Repository permissions:**
+     - Contents: Read & Write
+     - Metadata: Read only
+     - Commit statuses: Read & Write
+   - **User permissions:**
+     - Email addresses: Read only
+
+4. **Enable Features:**
+   - ✅ **Device Flow:** Required for CLI authentication
+   - ✅ **Webhooks:** Required for real-time repository updates
+
+5. **Set Authorization Callbacks:**
+   - **Authorization callback URL:** `http://localhost:4848/v1/github/oauth/callback`
+   - **Setup URL:** `http://localhost:3000/install/complete`
+
+6. **Copy Your Credentials:**
+   - **App ID:** Copy to `GITHUB_APP_ID`
+   - **Client ID:** Copy to `GITHUB_APP_CLIENT_ID`
+   - **Client Secret:** Copy to `GITHUB_APP_CLIENT_SECRET`
+   - **Private Key:** Generate and download, copy to `GITHUB_APP_PRIVATE_KEY`
+
+7. **Verify Installation:**
+   ```bash
+   npm run dev
+   open http://localhost:3000
+   # You should be able to start the login flow
+   ```
+
+### Local Testing with ngrok
+
+For testing webhooks locally:
 
 ```bash
-npm run proxy:dev   # Start proxy on :8080 (/v1/* → API, else → web)
-ngrok http 8080     # Expose :8080 publicly
+# Terminal 1: Start the dev server
+npm run dev
+
+# Terminal 2: Start ngrok tunnel
+ngrok http 8080
+
+# Update GitHub App settings with ngrok URL:
+# Webhook URL: https://xxx.ngrok.io/v1/github/webhooks
+# Callback URL: https://xxx.ngrok.io/v1/github/oauth/callback
+
+# Update .env
+NIBRAS_API_BASE_URL=https://xxx.ngrok.io
+NIBRAS_WEB_BASE_URL=https://xxx.ngrok.io
 ```
 
-Use the ngrok URL in `NIBRAS_API_BASE_URL`, `NIBRAS_WEB_BASE_URL`, and the GitHub App settings. Update GitHub App URLs whenever the tunnel rotates.
+### GitHub App Permissions Explained
+
+| Permission | Purpose | Why Needed |
+|-----------|---------|-----------|
+| **Contents** (R/W) | Read/write repository code | Push submissions, clone starter code |
+| **Metadata** (R) | Read repository metadata | Get repo info, commit history |
+| **Commit Statuses** (R/W) | Update commit status checks | Show test results on GitHub |
+| **Email** (R) | Read user email | Link GitHub account to Nibras user |
 
 ---
 
-## Optional Integrations
+## Database Management
 
-### AI Grading
+Nibras uses PostgreSQL with Prisma ORM. Schema lives in `prisma/schema.prisma`.
 
-When `NIBRAS_AI_API_KEY` is set, the worker runs semantic grading after verification and pre-fills the instructor review form with:
+### Common Commands
 
-- Confidence scores and criterion breakdowns
-- Reasoning summaries and evidence quotes
-- Auto-flagging of low-confidence submissions for human review
-
-| Env var                    | Default       | Description                                                      |
-| -------------------------- | ------------- | ---------------------------------------------------------------- |
-| `NIBRAS_AI_API_KEY`        | —             | Enables AI grading                                               |
-| `NIBRAS_AI_MODEL`          | `gpt-4o-mini` | Model name                                                       |
-| `NIBRAS_AI_BASE_URL`       | OpenAI        | Override for Azure, Ollama, or other OpenAI-compatible providers |
-| `NIBRAS_AI_MIN_CONFIDENCE` | `0.8`         | Submissions below this threshold are flagged for review          |
-
-Omit `NIBRAS_AI_API_KEY` to disable entirely — no other changes required.
-
-### Email Notifications
-
-When `RESEND_API_KEY` is set, transactional emails are sent automatically:
-
-| Trigger                                              | Recipient                      |
-| ---------------------------------------------------- | ------------------------------ |
-| Submission verified (passed / failed / needs review) | Student                        |
-| Submission flagged for human review                  | All course instructors and TAs |
-| Instructor submits a review                          | Student                        |
-
-```env
-RESEND_API_KEY=re_...
-NIBRAS_EMAIL_FROM=Nibras <noreply@yourdomain.com>
+#### Generate Prisma Client
+Run after editing the schema:
+```bash
+npm run db:generate
 ```
 
-The sender address must be a verified domain in your Resend account. Omit `RESEND_API_KEY` to disable.
-
-### Commit Status Checks
-
-After every verified submission, the worker posts a GitHub commit status to the student's repo:
-
-| Nibras status  | GitHub badge | Label                                     |
-| -------------- | ------------ | ----------------------------------------- |
-| `passed`       | ✅ green     | All tests passed                          |
-| `failed`       | ❌ red       | Tests failed                              |
-| `needs_review` | 🔄 pending   | Tests passed — awaiting instructor review |
-
-Requires the GitHub App to have **Commit statuses: Read and write** and the student to have completed the app install flow. Skipped silently if either is missing.
-
-### GitHub Repository Validation
-
-Before a submission can be created from the web dashboard, the submission modal calls:
-
-```
-POST /v1/github/repositories/validate
-{ "repoUrl": "https://github.com/owner/repo" }
+#### Push Schema (Development Only)
+Apply schema changes without creating a migration:
+```bash
+npm run db:push
 ```
 
-This checks that:
+#### Create a Migration
+Create a named migration for version control:
+```bash
+npm run db:migrate
 
-1. The URL is a valid GitHub repository URL
-2. The authenticated user has a linked GitHub account
-3. The user has **admin or write** permission on the repository
-
-The response includes `owner`, `name`, `defaultBranch`, `visibility`, and `permission`. The modal blocks submission if any check fails and prompts the student to install the GitHub App or fix their repo URL.
-
-### Grade Export
-
-Download a CSV of all grades for a course:
-
-```
-GET /v1/tracking/courses/:courseId/grades.csv
+# Follow the prompts:
+# ? Enter migration name: add_milestone_table
+# Created: prisma/migrations/20260510_add_milestone_table/migration.sql
 ```
 
-One row per student, one column per milestone across all projects. Cell values are the review score when one exists, or the submission status otherwise.
+#### Apply Migrations (Production Path)
+Apply all pending migrations:
+```bash
+npm run db:deploy
+```
 
-### Course Switching
+#### Reset Local Database
+**Destructive operation** — tears down and recreates the local database:
+```bash
+npm run db:local:reset
 
-The student dashboard and project views support switching between multiple enrolled courses without leaving the page. The selected course is persisted in:
+# This will:
+# ✓ Stop Docker container
+# ✓ Delete volume
+# ✓ Start fresh container
+# ✓ Apply all migrations
+```
 
-- The URL search parameter (`?courseId=...`) — shareable and browser-history friendly
-- `localStorage` via `prefs` — restored on next visit
+### Viewing the Schema
 
-### Admin Features
+```bash
+# Open Prisma Studio (web UI for database)
+npx prisma studio
 
-Users with `systemRole: "admin"` (super-admins) get additional capabilities:
+# Navigate to: http://localhost:5555
+```
 
-| Surface         | Feature                                                             |
-| --------------- | ------------------------------------------------------------------- |
-| Settings page   | Super-admin badge and total accessible-course count displayed       |
-| API             | Access to all courses regardless of enrollment                      |
-| Auto-enrollment | New users are auto-enrolled in CS161; admins see all active courses |
+### Creating Migrations for Production
 
-The `systemRole` field is returned by `/v1/web/session` and included in the `UserSchema` contracts type.
+```bash
+# 1. Edit prisma/schema.prisma
+vim prisma/schema.prisma
 
-### Metrics (Prometheus + Grafana)
+# 2. Create a migration
+npm run db:migrate
+# Prompts for migration name
+# Creates: prisma/migrations/<timestamp>_<name>/migration.sql
 
-The API exposes a `/metrics` endpoint (Prometheus format). A pre-built Grafana dashboard is at `grafana/nibras-dashboard.json`.
+# 3. Review the generated SQL
+cat prisma/migrations/*/migration.sql
+
+# 4. Test locally
+npm run build
+npm run test
+
+# 5. Commit to git
+git add prisma/
+git commit -m "migration: add milestone_id to submissions"
+
+# 6. Deploy will run: npm run db:deploy
+```
 
 ---
 
-## Production Deployment
+## Deployment
 
-See `DEPLOY.md` and `docs/ops-guide.md` for the full production guide.
-
-Quick reference:
+### Quick Production Start
 
 ```bash
-# Start all services
+# Using Docker Compose (full stack)
 docker compose -f docker-compose.prod.yml up -d
 
 # Apply migrations
 npm run db:deploy
 
-# Check health
-curl https://your-domain/v1/health
+# Verify health
+curl http://localhost:4848/v1/health
 ```
 
-Nginx config lives in `nginx/`. A `docker-compose.prod.yml` runs API + worker + web + Postgres.
+### Docker Images
+
+Build individual service images:
+
+```bash
+# API service
+docker build -f Dockerfile.api -t nibras-api:latest .
+
+# Worker service  
+docker build -f Dockerfile.worker -t nibras-worker:latest .
+
+# Web application
+docker build -f Dockerfile.web -t nibras-web:latest .
+```
+
+### Production Configuration
+
+Create `.env.prod`:
+```bash
+cp .env.prod.example .env.prod
+```
+
+Key differences from development:
+- Disable `WORKER_SANDBOX_MODE` for performance
+- Set production `NIBRAS_API_BASE_URL` and `NIBRAS_WEB_BASE_URL`
+- Configure `REDIS_URL` for job dispatch
+- Set `SENTRY_DSN` for monitoring
+- Set `RESEND_API_KEY` for email notifications
+- Set `NIBRAS_AI_API_KEY` for AI grading (optional)
+
+### Fly.io Deployment
+
+Deploy to Fly.io using provided configuration:
+
+```bash
+# Install Fly CLI
+curl -L https://fly.io/install.sh | sh
+
+# Authenticate
+flyctl auth login
+
+# Deploy API
+flyctl deploy -c fly.api.toml
+
+# Deploy Worker
+flyctl deploy -c fly.worker.toml
+
+# Deploy Web
+flyctl deploy -c fly.web.toml
+
+# Check status
+flyctl status
+```
+
+### GitHub Actions CI/CD
+
+The repository includes automated workflows:
+
+**Continuous Integration (`ci.yml`):**
+- Lint all code
+- Validate environment
+- Generate Prisma client
+- Build all packages
+- Run test suite
+- Build Next.js web app
+
+**Release (`release.yml`):**
+- Triggered on `v*` git tags
+- Publishes `@nibras/cli` to npm
+- Creates GitHub Release with auto-generated notes
+- Requires `NPM_TOKEN` secret
+
+**Deployment (`deploy.yml`):**
+- Triggered on pushes to `main`
+- Deploys API, worker, web to Fly.io
+- Runs database migrations
+
+### Monitoring & Observability
+
+#### Health Checks
+
+```bash
+# API health
+curl http://your-api.com/v1/health
+
+# Worker health  
+curl http://your-worker.com:9090/healthz
+```
+
+#### Logs
+
+```bash
+# Docker Compose
+docker compose -f docker-compose.prod.yml logs -f api
+
+# Fly.io
+flyctl logs -a nibras-api
+
+# Structured logging available via Sentry
+```
+
+#### Metrics
+
+Configure `NIBRAS_METRICS_TOKEN` to enable metrics collection and dashboards.
+
+### Disaster Recovery
+
+#### Database Backup
+
+```bash
+# Local backup
+docker exec nibras-db pg_dump -U nibras nibras > backup.sql
+
+# Restore from backup
+cat backup.sql | docker exec -i nibras-db psql -U nibras -d nibras
+```
+
+#### Submission Retry
+
+Use the admin dashboard to retry failed submissions:
+
+```
+Admin → Submissions → Filter: failed
+→ Select submissions → Retry
+```
+
+#### Clearing Job Queue
+
+```bash
+# If Redis is stuck, flush and restart worker
+redis-cli FLUSHDB
+docker restart nibras-worker
+```
+
+---
+
+## Development
+
+### Repository Structure
+
+```
+nibras-cli/
+├── apps/
+│   ├── api/              # Fastify REST API
+│   │   ├── src/
+│   │   │   ├── server.ts       # Server setup & middleware
+│   │   │   ├── app.ts          # Route definitions
+│   │   │   ├── features/       # Feature modules (auth, submissions, etc)
+│   │   │   └── lib/            # Shared utilities
+│   │   ├── test/
+│   │   └── package.json
+│   ├── cli/              # @nibras/cli npm package
+│   │   ├── src/          # TypeScript source
+│   │   ├── dist/         # Compiled JavaScript
+│   │   └── package.json
+│   ├── web/              # Next.js instructor dashboard
+│   │   ├── app/          # Next.js App Router
+│   │   ├── components/   # React components
+│   │   └── package.json
+│   ├── worker/           # Async job processor
+│   │   ├── src/
+│   │   │   ├── worker.ts       # Job consumer loop
+│   │   │   ├── verification.ts # Test runner
+│   │   │   ├── grading.ts      # AI grading pipeline
+│   │   │   ├── email.ts        # Email dispatcher
+│   │   │   └── health.ts       # Health endpoint
+│   │   └── package.json
+│   └── proxy/            # Local development proxy
+│
+├── packages/
+│   ├── contracts/        # Zod schemas & types
+│   ├── core/             # CLI utilities & API client
+│   ├── github/           # GitHub App helpers
+│   └── grading/          # AI grading engine
+│
+├── prisma/
+│   ├── schema.prisma     # Database schema
+│   └── migrations/       # Schema migrations
+│
+├── test/                 # Test suite
+│   ├── api/
+│   ├── cli/
+│   └── integration/
+│
+├── src/                  # Legacy CommonJS CLI (fallback)
+├── bin/                  # Root nibras entrypoint
+├── docs/                 # Documentation
+└── .github/workflows/    # GitHub Actions CI/CD
+```
+
+### Build System
+
+```bash
+# Build all packages in dependency order
+npm run build
+
+# Build specific workspace
+npm run build -w apps/api
+
+# Watch mode (rebuilds on file change)
+npm run dev
+
+# Clean build artifacts
+npm run clean
+```
+
+### Linting & Formatting
+
+```bash
+# Lint all workspaces
+npm run lint
+
+# Auto-fix issues
+npm run lint:fix
+
+# ESLint uses flat config: eslint.config.mjs
+# Prettier is run as ESLint plugin
+```
+
+### TypeScript Configuration
+
+- All packages extend `tsconfig.base.json`
+- Target: ES2022
+- Module: CommonJS (for Node.js)
+- Strict mode enabled
+- Each workspace compiles independently
 
 ---
 
 ## Testing
 
+### Test Suites
+
 ```bash
-npm run test               # Build then run all tests (node --test)
-node --test test/<file>.js # Run a single test file
-npm run build              # Build all packages in dependency order
+# Run all tests
+npm run test
+
+# Run specific test file
+node --test test/cli-docs.test.js
+
+# Run with verbose output
+node --test test/*.js --reporter=spec
+
+# Run with coverage (if configured)
+npm run test:coverage
 ```
 
-For the full manual validation sequence, see `TEST.md`.
+### Manual Validation
+
+See [TEST.md](TEST.md) for comprehensive manual testing procedures.
+
+### CI/CD Testing
+
+GitHub Actions automatically:
+- Runs linter on all PRs
+- Builds all packages
+- Runs test suite
+- Builds Next.js web app
+- Validates environment variables
+
+All checks must pass before merging to `main`.
 
 ---
 
-## CI/CD
+## Troubleshooting
 
-**`.github/workflows/ci.yml`** — runs on every push and PR:
+### Common Issues
 
-1. Spin up Postgres 16
-2. `npm ci` → `db:generate` → `db:deploy`
-3. Lint (`eslint` + `prettier --check`)
-4. Build all packages
-5. Run tests
-6. Build web app (`next build`)
+#### PostgreSQL Connection Failed
 
-**`.github/workflows/release.yml`** — triggers on `v*` tags:
+```bash
+# Check Docker is running
+docker ps
 
-1. Verify the tag matches the root and CLI package versions (hardened check — exits on mismatch)
-2. Verify `NPM_TOKEN` is configured and can authenticate to npm
-3. Build all packages
-4. Verify the CLI can be freshly installed from a clean checkout
-5. Dry-run the CLI publish tarball
-6. Publish `@nibras/cli` to npm (public)
-7. Create a GitHub Release with auto-generated notes
+# Check PostgreSQL container health
+docker logs nibras-db
 
-Requires an `NPM_TOKEN` Actions secret that can publish `@nibras/cli`. If your npm account enforces 2FA for writes, this should be a granular token that can bypass 2FA for publishing.
+# Verify DATABASE_URL in .env
+echo $DATABASE_URL
 
-**`.github/workflows/deploy.yml`** — triggers on every push to `main`:
-
-Deploys the Next.js web app to Fly.io automatically:
-
-```yaml
-flyctl deploy \
---config fly.web.toml \
---app nibras-web \
---build-arg NEXT_PUBLIC_NIBRAS_API_BASE_URL=https://nibras-api.fly.dev \
---build-arg NEXT_PUBLIC_NIBRAS_WEB_BASE_URL=https://nibras-web.fly.dev \
---remote-only
+# Test connection
+pg_isready -h localhost -p 5432 -U nibras
 ```
 
-Requires a `FLY_API_TOKEN` Actions secret. Only one deploy runs at a time; newer pushes cancel in-progress deploys automatically.
+#### Worker Not Processing Jobs
+
+```bash
+# Check worker health
+curl http://127.0.0.1:9090/healthz
+
+# Check logs
+docker logs nibras-worker
+
+# If using Redis, verify connection
+redis-cli PING
+
+# Check for stuck jobs
+redis-cli LLEN bull:nibras:submissions:wait
+```
+
+#### GitHub Authentication Issues
+
+```bash
+# Verify GitHub App ID and Client ID are correct
+echo $GITHUB_APP_ID
+echo $GITHUB_APP_CLIENT_ID
+
+# Check webhook secret matches
+# Settings → https://github.com/settings/apps/your-app
+
+# Try re-authorizing
+nibras logout
+nibras login --api-base-url http://localhost:4848
+```
+
+#### Tests Failing Locally
+
+```bash
+# Build first
+npm run build
+
+# Run specific failing test
+node --test test/cli-docs.test.js
+
+# Check Node version matches requirement
+node --version  # Should be >=18
+
+# Clean dependencies
+rm -rf node_modules package-lock.json
+npm ci
+npm run build
+npm run test
+```
+
+#### Submission Verification Stuck
+
+```bash
+# Check worker is running
+curl http://127.0.0.1:9090/healthz
+
+# Check submission status in database
+psql $DATABASE_URL -c "SELECT id, status, created_at FROM submissions ORDER BY created_at DESC LIMIT 5;"
+
+# Retry submission from admin UI
+# Or via API: POST /v1/admin/submissions/:id/retry
+```
+
+### Debugging
+
+#### Enable Debug Logging
+
+```bash
+# Set DEBUG environment variable
+DEBUG=* npm run dev
+
+# Or for specific modules
+DEBUG=nibras:* nibras submit
+```
+
+#### Enable Sentry in Local Development
+
+Add to `.env`:
+```bash
+SENTRY_DSN=https://your-sentry-dsn@sentry.io/xxx
+```
+
+#### Monitor Database Queries
+
+```bash
+# Enable Prisma query logging
+DATABASE_LOG='query' npm run dev
+
+# Or in code:
+const prisma = new PrismaClient({
+  log: ['query', 'info', 'warn', 'error'],
+});
+```
+
+#### Worker Job Queue Inspection
+
+```bash
+# With Redis/BullMQ
+redis-cli
+> KEYS "bull:*"
+> LRANGE "bull:nibras:submissions:wait" 0 -1
+> HGETALL "bull:nibras:submissions:active"
+
+# Monitor in real-time
+> MONITOR
+
+# Clear queue if stuck
+> FLUSHDB
+```
+
+---
+
+## Documentation
+
+Comprehensive guides and references:
+
+| Document | Purpose |
+|----------|---------|
+| [CLAUDE.md](CLAUDE.md) | Developer guide for Claude Code integration |
+| [docs/student-guide.md](docs/student-guide.md) | Complete student workflow guide |
+| [docs/instructor-guide.md](docs/instructor-guide.md) | Instructor dashboard & tools guide |
+| [docs/project-tracking.md](docs/project-tracking.md) | Project configuration & manifest spec |
+| [docs/ops-guide.md](docs/ops-guide.md) | Operations & deployment guide |
+| [docs/runbook.md](docs/runbook.md) | Operational runbook for common tasks |
+| [DEPLOY.md](DEPLOY.md) | Detailed deployment instructions |
+| [TEST.md](TEST.md) | Manual testing procedures |
+| [docs/api-reference.pdf](docs/api-reference.pdf) | Complete API reference documentation |
+
+---
+
+## Contributing
+
+We welcome contributions to Nibras! Here's how to get involved:
+
+### Before You Start
+
+1. **Check existing issues:** https://github.com/NibrasPlatform/nibras-cli/issues
+2. **Review the architecture** in this README
+3. **Understand the codebase** structure in [CLAUDE.md](CLAUDE.md)
+4. **Set up local dev** using the [Local Development](#local-development) guide
+
+### Development Workflow
+
+```bash
+# 1. Create a feature branch
+git checkout -b feature/your-feature-name
+
+# 2. Make your changes
+# ... edit files ...
+
+# 3. Build and test
+npm run build
+npm run test
+npm run lint
+
+# 4. Commit with clear message
+git commit -m "feat: add description of what you changed"
+
+# 5. Push and create PR
+git push origin feature/your-feature-name
+
+# 6. GitHub Actions will automatically:
+# - Run linter
+# - Build packages
+# - Run tests
+# - Build web app
+# - Report status on PR
+```
+
+### Code Style
+
+- Use **TypeScript** for all new code
+- Follow **ESLint rules** (run `npm run lint:fix` to auto-fix)
+- Use **Prettier** formatting (integrated with ESLint)
+- Write **JSDoc comments** for public APIs
+- Keep functions **small and focused**
+
+### Commit Messages
+
+Follow conventional commits format:
+
+```
+feat: add support for milestone-scoped submissions
+fix: handle race condition in submission verification
+docs: update deployment guide for Fly.io
+test: add integration tests for job queue
+```
+
+### Pull Request Guidelines
+
+1. **Title:** Clear, concise description (e.g., "Add milestone support to CLI")
+2. **Description:** Explain the change and why it's needed
+3. **Tests:** Include tests for new functionality
+4. **Docs:** Update relevant documentation
+5. **Backwards Compatibility:** Maintain compatibility with existing APIs
 
 ---
 
 ## License
 
-See `LICENSE`.
+Nibras is licensed under the MIT License. See [LICENSE](LICENSE) file for details.
+
+---
+
+## Support
+
+Need help? Here are your options:
+
+- 📖 **Documentation:** Start with [docs/](docs/)
+- 🐛 **Report Issues:** https://github.com/NibrasPlatform/nibras-cli/issues
+- 💬 **Discussions:** https://github.com/NibrasPlatform/nibras-cli/discussions
+- 📧 **Email:** support@nibras.io (if applicable)
+
+---
+
+## Acknowledgments
+
+Built with ❤️ for CS education by the Nibras team.
+
+**Technologies used:**
+- Node.js, TypeScript, Fastify, Next.js/React, Prisma, PostgreSQL, Docker, GitHub API, OpenAI API
+
+---
+
+**Last Updated:** May 10, 2026  
+**Version:** 1.0.2
+
