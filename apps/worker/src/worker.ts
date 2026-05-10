@@ -19,6 +19,7 @@ import {
 } from '@nibras/grading';
 import { runSandboxed } from './sandbox';
 import { VERIFICATION_QUEUE_NAME, parseRedisUrl, type VerificationJobPayload } from './queue';
+import { sendSubmissionStatusEmail, sendReviewReadyEmail } from './email';
 import {
   MAX_CLAIM_AGE_MS,
   DEFAULT_POLL_INTERVAL_MS,
@@ -453,10 +454,14 @@ async function runAiGrading(
         ? allConfidences.reduce((sum, c) => sum + c, 0) / allConfidences.length
         : 0;
 
+    // Enforce aggregate confidence threshold: flag for review if average confidence
+    // falls below minConfidence, even if no individual question triggered the flag.
+    const globalNeedsReview = anyNeedsReview || avgConfidence < minConfidence;
+
     const aggregated: AiGradeResult = {
       score: totalEarned,
       confidence: avgConfidence,
-      needsReview: anyNeedsReview,
+      needsReview: globalNeedsReview,
       criterionScores: allCriterionScores,
       reasoningSummary: allReasoningSummaries.join('\n\n'),
       evidenceQuotes: allEvidenceQuotes,
@@ -466,7 +471,7 @@ async function runAiGrading(
       gradeResult: aggregated,
       model: aiConfig.model,
       gradedAt: new Date(),
-      reviewRequired: anyNeedsReview,
+      reviewRequired: globalNeedsReview,
     };
   } finally {
     await rm(tmpDir, { recursive: true, force: true });
@@ -549,6 +554,104 @@ async function finalizeJob(
       });
     }
   });
+
+  // ── Post-transaction side-effects ──────────────────────────────────────────
+  // Fetch the submission details needed for notifications/emails
+  const submission = await prisma.submissionAttempt.findUnique({
+    where: { id: submissionAttemptId },
+    include: {
+      user: { select: { id: true, username: true, email: true } },
+      project: { select: { name: true, slug: true, courseId: true } },
+    },
+  });
+  if (!submission) return;
+
+  const webBase = process.env.NIBRAS_WEB_BASE_URL ?? '';
+  const submissionUrl = webBase
+    ? `${webBase}/submissions/${submissionAttemptId}`
+    : `/submissions/${submissionAttemptId}`;
+
+  // Send student notification email
+  const studentEmailStatus =
+    finalStatus === SubmissionStatus.passed
+      ? 'passed'
+      : finalStatus === SubmissionStatus.needs_review
+        ? 'needs_review'
+        : 'failed';
+  try {
+    await sendSubmissionStatusEmail({
+      studentEmail: submission.user.email,
+      studentName: submission.user.username,
+      projectName: submission.project.name,
+      status: studentEmailStatus,
+      submissionUrl,
+    });
+  } catch (err) {
+    log('warn', 'Failed to send student status email (non-fatal)', {
+      submissionAttemptId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  // When the submission needs human review, notify all course instructors and TAs
+  if (finalStatus === SubmissionStatus.needs_review && submission.project.courseId) {
+    const courseId = submission.project.courseId;
+    const reviewQueueUrl = webBase
+      ? `${webBase}/instructor/courses/${courseId}/review-queue`
+      : `/instructor/courses/${courseId}/review-queue`;
+
+    try {
+      const instructorMemberships = await prisma.courseMembership.findMany({
+        where: { courseId, role: { in: ['instructor', 'ta'] } },
+        include: { user: { select: { id: true, username: true, email: true } } },
+      });
+
+      await Promise.allSettled(
+        instructorMemberships.map(async (membership) => {
+          const instructor = (
+            membership as unknown as { user: { id: string; username: string; email: string } }
+          ).user;
+          // In-app notification
+          try {
+            await prisma.notification.create({
+              data: {
+                userId: instructor.id,
+                type: 'review_ready',
+                title: `Review needed — ${submission.project.name}`,
+                body: `${submission.user.username}'s submission for ${submission.project.name} needs review.`,
+                link: reviewQueueUrl,
+              },
+            });
+          } catch (err) {
+            log('warn', 'Failed to create instructor notification', {
+              instructorId: instructor.id,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+          // Email notification
+          try {
+            await sendReviewReadyEmail({
+              instructorEmail: instructor.email,
+              instructorName: instructor.username,
+              studentName: submission.user.username,
+              projectName: submission.project.name,
+              reviewQueueUrl,
+            });
+          } catch (err) {
+            log('warn', 'Failed to send review-ready email to instructor (non-fatal)', {
+              instructorId: instructor.id,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        })
+      );
+    } catch (err) {
+      log('warn', 'Failed to notify instructors of needs_review submission (non-fatal)', {
+        submissionAttemptId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 }
 
 async function checkAndAutoUpgradeStudentLevel(
@@ -731,7 +834,15 @@ async function executeJob(
         });
       }
     }
-    await finalizeJob(jobId, submissionAttemptId, attempt, exitCode, verificationLog, aiResult, prisma);
+    await finalizeJob(
+      jobId,
+      submissionAttemptId,
+      attempt,
+      exitCode,
+      verificationLog,
+      aiResult,
+      prisma
+    );
     if (exitCode === 0) {
       try {
         await checkAndAutoUpgradeStudentLevel(submissionAttemptId, prisma);
