@@ -54,10 +54,6 @@ import {
   hasAnyInstructorAccess,
 } from './policies/access';
 
-function isReviewRecord<T>(value: T | null): value is T {
-  return value !== null;
-}
-
 function isStudentMember(auth: AuthenticatedRequest, courseId: string): boolean {
   return auth.memberships.some((entry) => entry.courseId === courseId && entry.role === 'student');
 }
@@ -441,7 +437,9 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
 
   app.get(
     '/v1/tracking/projects/:projectId/interests',
-    { schema: { tags: ['tracking'], summary: 'List interest requests for a project (instructor)' } },
+    {
+      schema: { tags: ['tracking'], summary: 'List interest requests for a project (instructor)' },
+    },
     async (request, reply) => {
       const auth = await requireUser(request, reply, store);
       if (!auth) return;
@@ -821,8 +819,7 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
         }
         if (
           error instanceof Error &&
-          (error.message.includes('already applied') ||
-            error.message.includes('Unique constraint'))
+          (error.message.includes('already applied') || error.message.includes('Unique constraint'))
         ) {
           reply.code(422).send(Errors.validation(error.message));
           return;
@@ -1141,6 +1138,52 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
         return;
       }
       return TrackingSubmissionSchema.parse(submission);
+    }
+  );
+
+  /**
+   * DELETE /v1/tracking/submissions/:submissionId
+   * Cancel a queued submission. Only the owner or an admin may cancel.
+   * Returns 409 if the submission is not in the 'queued' state.
+   */
+  app.delete(
+    '/v1/tracking/submissions/:submissionId',
+    { schema: { tags: ['tracking'], summary: 'Cancel a queued submission' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { submissionId: string };
+      if (!validateId(params.submissionId, reply, 'submissionId')) return;
+
+      const submission = await store.getSubmissionForAdmin(
+        requestBaseUrl(request),
+        params.submissionId
+      );
+      if (!submission) {
+        return reply.code(404).send(Errors.notFound('Submission'));
+      }
+
+      const isOwner =
+        submission.userId === auth.user.id ||
+        submission.submittedByUserId === auth.user.id ||
+        submission.teamMemberUserIds.includes(auth.user.id);
+      const isAdmin = auth.user.systemRole === 'admin';
+      if (!isOwner && !isAdmin) {
+        return reply.code(403).send(Errors.forbidden());
+      }
+      if (submission.status !== 'queued') {
+        return reply.code(409).send({ error: 'Only queued submissions can be cancelled.' });
+      }
+
+      const cancelled = await store.cancelSubmission(
+        requestBaseUrl(request),
+        params.submissionId,
+        auth.user.id
+      );
+      if (!cancelled) {
+        return reply.code(409).send({ error: 'Only queued submissions can be cancelled.' });
+      }
+      return { ok: true, submissionId: params.submissionId, status: 'cancelled' };
     }
   );
 
@@ -1502,6 +1545,45 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
     }
   );
 
+  /**
+   * POST /v1/tracking/courses/:courseId/invites/bulk
+   * Generate multiple invite codes at once. Instructor / TA only.
+   */
+  app.post(
+    '/v1/tracking/courses/:courseId/invites/bulk',
+    { schema: { tags: ['tracking'], summary: 'Bulk generate course invite links' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const params = request.params as { courseId: string };
+      if (!validateId(params.courseId, reply, 'courseId')) return;
+      if (!canManageCourse(auth, params.courseId)) {
+        return reply.code(403).send(Errors.forbidden());
+      }
+      const body = request.body as {
+        count?: number;
+        role?: string;
+        maxUses?: number;
+        expiresAt?: string | null;
+      };
+      const count = Math.min(Math.max(Number(body.count ?? 1), 1), 50);
+      const role = (body.role as 'student' | 'instructor' | 'ta') || 'student';
+      const invites = await store.bulkCreateCourseInvites(
+        requestBaseUrl(request),
+        params.courseId,
+        count,
+        { role, maxUses: body.maxUses, expiresAt: body.expiresAt }
+      );
+      reply.code(201);
+      return {
+        invites: invites.map((inv) => ({
+          code: inv.code,
+          inviteUrl: `${requestBaseUrl(request)}/join/${inv.code}`,
+        })),
+      };
+    }
+  );
+
   app.get(
     '/v1/tracking/invites/:code',
     { schema: { tags: ['tracking'], summary: 'Look up a course invite' } },
@@ -1548,6 +1630,30 @@ export function registerTrackingRoutes(app: FastifyInstance, store: AppStore): v
           .code(e.statusCode || 409)
           .send(apiError('CONFLICT', e.message || 'Failed to join course.'));
       }
+    }
+  );
+
+  /**
+   * GET /v1/tracking/analytics/instructor?courseId=<required>
+   * Class-wide analytics: submission rates, pass rates per milestone, student progress.
+   * Instructor / TA only.
+   */
+  app.get(
+    '/v1/tracking/analytics/instructor',
+    { schema: { tags: ['tracking'], summary: 'Get class-wide instructor analytics' } },
+    async (request, reply) => {
+      const auth = await requireUser(request, reply, store);
+      if (!auth) return;
+      const query = request.query as { courseId?: string };
+      if (!query.courseId) {
+        return reply.code(400).send(Errors.validation('courseId is required'));
+      }
+      if (!validateId(query.courseId, reply, 'courseId')) return;
+      if (!canManageCourse(auth, query.courseId)) {
+        return reply.code(403).send(Errors.forbidden());
+      }
+      const analytics = await store.getInstructorAnalytics(requestBaseUrl(request), query.courseId);
+      return { analytics };
     }
   );
 
