@@ -5,10 +5,14 @@ import { Errors } from './errors';
 
 function getBearerToken(request: FastifyRequest): string | null {
   const raw = request.headers.authorization;
-  if (!raw || !raw.startsWith('Bearer ')) {
-    return null;
+  if (raw?.startsWith('Bearer ')) {
+    return raw.slice('Bearer '.length).trim();
   }
-  return raw.slice('Bearer '.length).trim();
+  // Allow session token via ?st= query param for EventSource / SSE connections
+  // where browsers cannot set custom headers.
+  const stParam = (request.query as Record<string, string | undefined>)?.st;
+  if (stParam) return stParam;
+  return null;
 }
 
 function getCookieValue(request: FastifyRequest, name: string): string | null {
