@@ -164,11 +164,12 @@ export const SubmissionPrepareRequestSchema = z.object({
   commitSha: z.string().min(1),
   repoUrl: z.string().min(1),
   branch: z.string().min(1),
+  milestoneSlug: z.string().optional(),
 });
 
 export const SubmissionPrepareResponseSchema = z.object({
   submissionId: z.string().min(1),
-  status: z.enum(['queued', 'running', 'passed', 'failed', 'needs_review']),
+  status: z.enum(['queued', 'running', 'passed', 'failed', 'needs_review', 'cancelled']),
 });
 
 export const LocalTestResultRequestSchema = z.object({
@@ -180,7 +181,7 @@ export const LocalTestResultRequestSchema = z.object({
 export const SubmissionStatusResponseSchema = z.object({
   submissionId: z.string().min(1),
   projectKey: z.string().min(1),
-  status: z.enum(['queued', 'running', 'passed', 'failed', 'needs_review']),
+  status: z.enum(['queued', 'running', 'passed', 'failed', 'needs_review', 'cancelled']),
   commitSha: z.string().min(1),
   summary: z.string().min(1),
   createdAt: z.string().datetime(),
