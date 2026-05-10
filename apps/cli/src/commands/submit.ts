@@ -36,6 +36,13 @@ function sleep(ms: number): Promise<void> {
 export async function commandSubmit(plain: boolean, args: string[] = []): Promise<void> {
   const force = args.includes('--force');
 
+  // Parse optional --milestone <slug>
+  let milestoneSlug: string | undefined;
+  const milestoneIdx = args.indexOf('--milestone');
+  if (milestoneIdx !== -1 && args[milestoneIdx + 1]) {
+    milestoneSlug = args[milestoneIdx + 1];
+  }
+
   const config = readCliConfig();
   if (!config.accessToken) {
     throw new Error('You are not logged in. Run `nibras login` first.');
@@ -91,10 +98,19 @@ export async function commandSubmit(plain: boolean, args: string[] = []): Promis
 
   // ── Step 5: Prepare submission ────────────────────────────────────────────
   const prepSpinner = createSpinner('Preparing submission', plain);
+  const prepareBody: Record<string, string> = {
+    projectKey: manifest.projectKey,
+    commitSha,
+    repoUrl,
+    branch,
+  };
+  if (milestoneSlug) {
+    prepareBody.milestoneSlug = milestoneSlug;
+  }
   const prepared = SubmissionPrepareResponseSchema.parse(
     await apiRequest('/v1/submissions/prepare', {
       method: 'POST',
-      body: JSON.stringify({ projectKey: manifest.projectKey, commitSha, repoUrl, branch }),
+      body: JSON.stringify(prepareBody),
     })
   );
   await apiRequest(`/v1/submissions/${prepared.submissionId}/local-test-result`, {

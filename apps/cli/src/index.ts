@@ -14,6 +14,8 @@ import { commandUpdate } from './commands/update';
 import { commandUninstall } from './commands/uninstall';
 import { commandUpdateBuildpack } from './commands/update-buildpack';
 import { commandSubmit } from './commands/submit';
+import { commandList } from './commands/list';
+import { commandStatus } from './commands/status';
 import picocolors from 'picocolors';
 
 function isPlainMode(args: string[]): boolean {
@@ -40,6 +42,8 @@ function printHelp(plain: boolean): void {
       { name: 'login', description: 'Start device login against the hosted API' },
       { name: 'logout', description: 'Clear the local CLI session' },
       { name: 'whoami', description: 'Show the signed-in user and linked GitHub account' },
+      { name: 'list', description: 'List your courses and projects' },
+      { name: 'status', description: 'Show recent submission statuses' },
       { name: 'test', description: 'Run project-local public tests' },
       {
         name: 'submit',
@@ -86,6 +90,8 @@ function isLegacyInvocation(args: string[]): boolean {
     'uninstall',
     'ping',
     'update-buildpack',
+    'list',
+    'status',
     'help',
     'legacy',
     '--help',
@@ -99,6 +105,7 @@ function isLegacyInvocation(args: string[]): boolean {
 
 async function runLegacyCli(argv: string[]): Promise<void> {
   const legacyPath = path.resolve(__dirname, '../../../src/cli.js');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const legacy = require(legacyPath) as { run: (argv: string[]) => Promise<void> };
   await legacy.run(argv);
 }
@@ -188,6 +195,14 @@ export async function runCli(argv: string[]): Promise<void> {
     }
     if (command === 'submit') {
       await commandSubmit(plain, rest);
+      return;
+    }
+    if (command === 'list') {
+      await commandList(plain);
+      return;
+    }
+    if (command === 'status') {
+      await commandStatus(plain);
       return;
     }
     throw new Error(`Unknown command "${command}". Run \`nibras --help\` for available commands.`);
