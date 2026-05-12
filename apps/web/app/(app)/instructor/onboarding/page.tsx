@@ -765,7 +765,30 @@ function FlowOverview() {
 }
 
 // ── Video placeholder ─────────────────────────────────────────────────────────
-function VideoPlaceholder({ title }: { title: string }) {
+function VideoPlaceholder({ title, youtubeId }: { title: string; youtubeId?: string }) {
+  if (youtubeId) {
+    return (
+      <div className={styles.videoEmbed}>
+        <div className={styles.videoEmbedHeader}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <polygon points="3,2 12,7 3,12" fill="currentColor" />
+          </svg>
+          <span className={styles.videoEmbedLabel}>{title}</span>
+        </div>
+        <div className={styles.videoEmbedFrame}>
+          <iframe
+            src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`}
+            title={title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+            className={styles.videoEmbedIframe}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.videoPlaceholder}>
       <div className={styles.videoPlayBtn}>
@@ -1103,7 +1126,7 @@ export default function OnboardingPage() {
               You need <strong>Node.js ≥ 18</strong>, <strong>npm ≥ 9</strong>, and{' '}
               <strong>git</strong> before installing the CLI. Follow the steps for your OS.
             </p>
-            <VideoPlaceholder title="Installing Node.js, npm, and Git" />
+            <VideoPlaceholder title="Installing Node.js, npm, and Git" youtubeId="EPtpi7PvtII" />
 
             {os === 'windows' && (
               <WindowsQuickStart shell={windowsShell} setShell={setWindowsShell} />
