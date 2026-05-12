@@ -169,8 +169,10 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
-  margin-bottom: 40px;
+  margin-bottom: 24px;
   transition: border-color 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .heroDone {
@@ -259,6 +261,51 @@
   margin-top: 4px;
 }
 
+/* Hero radial glow */
+.heroGlow {
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 320px;
+  background: radial-gradient(ellipse, rgba(34, 197, 94, 0.13) 0%, transparent 68%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ensure all hero content sits above the glow */
+.heroTopRow,
+.heroTitle,
+.heroSub,
+.heroOutcomes,
+.heroMeta,
+.osTabs,
+.heroActions {
+  position: relative;
+  z-index: 1;
+}
+
+/* Outcome chips */
+.heroOutcomes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.heroOutcomeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  background: rgba(34, 197, 94, 0.07);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-strong);
+}
+
 /* ── Buttons ───────────────────────────────────────────────────────────────── */
 
 .btnPrimary {
@@ -318,13 +365,17 @@
 .section {
   display: grid;
   gap: 20px;
-  padding: 36px 0;
-  border-bottom: 1px solid var(--border);
+  padding: 28px 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  margin-bottom: 10px;
   scroll-margin-top: 80px;
+  transition: border-color 0.2s ease;
 }
 
-.section:last-of-type {
-  border-bottom: none;
+.section:hover {
+  border-color: var(--border-strong);
 }
 
 .sectionHeader {
@@ -898,6 +949,198 @@
   margin-top: 4px;
 }
 
+/* ── Flow overview ─────────────────────────────────────────────────────────── */
+
+.flowSection {
+  padding: 24px 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  margin-bottom: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.flowEyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--primary-strong);
+}
+
+.flowGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  position: relative;
+}
+
+.flowCard {
+  padding: 16px 18px;
+  position: relative;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.flowCard:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.flowCardIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--primary-soft);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  display: grid;
+  place-items: center;
+  color: var(--primary-strong);
+  margin-bottom: 4px;
+}
+
+.flowCardLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.flowCardDesc {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+
+.flowArrow {
+  position: absolute;
+  right: -9px;
+  top: 26px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: var(--text-soft);
+  z-index: 2;
+  background: var(--surface);
+  border-radius: 50%;
+  line-height: 1;
+}
+
+/* ── Video placeholder ─────────────────────────────────────────────────────── */
+
+.videoPlaceholder {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-muted);
+  cursor: default;
+}
+
+.videoPlayBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  display: grid;
+  place-items: center;
+  color: var(--primary-strong);
+  flex-shrink: 0;
+}
+
+.videoInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.videoTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.videoBadge {
+  font-size: 11.5px;
+  color: var(--text-soft);
+}
+
+/* ── Email template ─────────────────────────────────────────────────────────── */
+
+.emailTemplate {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.emailTemplateHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--surface-strong);
+  border-bottom: 1px solid var(--border);
+}
+
+.emailTemplateLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.emailCopyBtn {
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.13s ease,
+    color 0.13s ease,
+    border-color 0.13s ease;
+}
+
+.emailCopyBtn:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.emailSubject {
+  padding: 10px 16px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.emailBody {
+  margin: 0;
+  padding: 16px;
+  font-family: var(--font-mono-fallback, monospace);
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--text-muted);
+  background: var(--surface);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 
 @media (max-width: 860px) {
@@ -915,6 +1158,37 @@
 
   .hero {
     padding: 28px 24px;
+  }
+
+  .section {
+    padding: 22px 20px;
+  }
+
+  .flowSection {
+    padding: 20px;
+  }
+
+  .flowGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .flowCard:nth-child(odd) {
+    border-right: 1px solid var(--border);
+  }
+
+  .flowCard:nth-child(even) {
+    border-right: none;
+  }
+
+  .flowCard:nth-child(1),
+  .flowCard:nth-child(2) {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    margin-bottom: 4px;
+  }
+
+  .flowArrow {
+    display: none;
   }
 
   .windowsGuide {
@@ -951,7 +1225,41 @@
     gap: 6px;
   }
 
+  .heroOutcomes {
+    gap: 6px;
+  }
+
+  .heroOutcomeChip {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  .flowGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .flowCard {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+  }
+
+  .flowCard:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
   .troubleshootTitle {
     font-size: 12px;
+  }
+
+  .videoPlaceholder {
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .videoPlayBtn {
+    width: 34px;
+    height: 34px;
   }
 }
