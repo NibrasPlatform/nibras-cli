@@ -777,7 +777,7 @@ function VideoPlaceholder({ title, youtubeId }: { title: string; youtubeId?: str
         </div>
         <div className={styles.videoEmbedFrame}>
           <iframe
-            src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`}
+            src={`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1`}
             title={title}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen

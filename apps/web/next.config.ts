@@ -34,6 +34,7 @@ const securityHeaders = [
   //   - style-src: self + inline (CSS-in-JS / Next.js).
   //   - img-src: self + data URIs + GitHub avatar CDN.
   //   - connect-src: self + API base URL for fetch calls.
+  //   - frame-src: youtube-nocookie.com for embedded video walkthroughs.
   //   - frame-ancestors 'none': belt-and-suspenders against framing.
   {
     key: 'Content-Security-Policy',
@@ -41,12 +42,13 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https://avatars.githubusercontent.com",
+      "img-src 'self' data: https://avatars.githubusercontent.com https://i.ytimg.com",
       `connect-src 'self' ${apiBaseUrl}`,
       "font-src 'self'",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
+      "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
       "frame-ancestors 'none'",
     ].join('; '),
   },
