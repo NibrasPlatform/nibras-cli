@@ -1,6 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  Nibras Platform — REST API Reference
+//  Nibras Platform — REST API Reference  v2.0.0
 //  Typst document · May 2026
+//  97 endpoints · 8 namespaces
+//  Changelog: +PATCH /notifications/:id/read, +GET/PATCH /notifications/preferences/:type,
+//             +DELETE /tracking/submissions/:id, +GET /tracking/analytics/instructor,
+//             +POST /tracking/courses/:id/invites/bulk,
+//             +POST /admin/submissions/bulk-retry, +GET /admin/audit-logs
+//             SubmissionStatus: added `cancelled` value
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Colour palette (matches mentor-report.typ) ────────────────────────────────
@@ -194,7 +200,7 @@
   #line(length: 60pt, stroke: 2pt + accent)
   #v(1.6em)
   #text(size: 11pt, fill: muted)[
-    Complete documentation for all 87 endpoints — authentication,\
+    Complete documentation for all 97 endpoints — authentication,\
     project tracking, submissions, team formation, program planning,\
     notifications, and administrative operations.
   ]
@@ -209,7 +215,7 @@
       #v(0.5em)
       #text(font: sans, size: 8pt, weight: "bold", fill: muted,
         tracking: 0.1em, upper("Version")) \
-      #text(font: mono, size: 9pt, fill: ink, "v1")
+      #text(font: mono, size: 9pt, fill: ink, "v2.0.0")
     ],
     [
       #text(font: sans, size: 8pt, weight: "bold", fill: muted,
@@ -218,7 +224,7 @@
       #v(0.5em)
       #text(font: sans, size: 8pt, weight: "bold", fill: muted,
         tracking: 0.1em, upper("Endpoints")) \
-      #text(size: 9pt, fill: ink, "87 total")
+      #text(size: 9pt, fill: ink, "97 total")
     ],
   )
   #v(6mm)
@@ -251,14 +257,14 @@
   #toc-row("02", "System & Health", "5")
   #toc-row("03", "GitHub Integration", "5")
   #toc-row("04", "CLI Projects & Submissions", "9")
-  #toc-row("05", "Tracking — Courses & Members", "13")
+  #toc-row("05", "Tracking — Courses & Members", "14")
   #toc-row("06", "Tracking — Projects & Milestones", "14")
-  #toc-row("07", "Tracking — Submissions & Reviews", "8")
+  #toc-row("07", "Tracking — Submissions & Reviews", "9")
   #toc-row("08", "Tracking — Team Formation", "7")
-  #toc-row("09", "Tracking — Dashboards & Analytics", "6")
+  #toc-row("09", "Tracking — Dashboards & Analytics", "7")
   #toc-row("10", "Program Planning", "22")
-  #toc-row("11", "Notifications", "3")
-  #toc-row("12", "Admin", "11")
+  #toc-row("11", "Notifications", "6")
+  #toc-row("12", "Admin", "13")
 
   #v(1.5em)
   #text(font: sans, size: 10pt, weight: "bold", fill: ink,
@@ -379,6 +385,7 @@
     ..qrow("DELETE", "/v1/tracking/courses/:id/members/:uid",                  true,  "tracking"),
     ..qrow("PATCH",  "/v1/tracking/courses/:id/members/:uid/level",            true,  "tracking"),
     ..qrow("POST",   "/v1/tracking/courses/:id/invites",                       true,  "tracking"),
+    ..qrow("POST",   "/v1/tracking/courses/:id/invites/bulk",                  true,  "tracking"),
     ..qrow("GET",    "/v1/tracking/invites/:code",                             false, "tracking"),
     ..qrow("POST",   "/v1/tracking/invites/:code/join",                        true,  "tracking"),
     ..qrow("GET",    "/v1/tracking/courses/:id/templates",                     true,  "tracking"),
@@ -403,6 +410,7 @@
     ..qrow("POST",   "/v1/tracking/milestones/:id/submissions",                true,  "tracking"),
     ..qrow("GET",    "/v1/tracking/submissions/:id",                           true,  "tracking"),
     ..qrow("PATCH",  "/v1/tracking/submissions/:id",                           true,  "tracking"),
+    ..qrow("DELETE", "/v1/tracking/submissions/:id",                           true,  "tracking"),
     ..qrow("GET",    "/v1/tracking/submissions/:id/commits",                   true,  "tracking"),
     ..qrow("GET",    "/v1/tracking/submissions/:id/review",                    true,  "tracking"),
     ..qrow("POST",   "/v1/tracking/submissions/:id/review",                    true,  "tracking"),
@@ -421,6 +429,7 @@
     ..qrow("GET",    "/v1/tracking/dashboard/instructor",                      true,  "tracking"),
     ..qrow("GET",    "/v1/tracking/dashboard/course/:id",                      true,  "tracking"),
     ..qrow("GET",    "/v1/tracking/analytics/student",                         true,  "tracking"),
+    ..qrow("GET",    "/v1/tracking/analytics/instructor",                      true,  "tracking"),
     ..qrow("GET",    "/v1/tracking/activity",                                  true,  "tracking"),
     // Programs
     ..qrow("GET",    "/v1/programs",                                           true,  "programs"),
@@ -449,11 +458,16 @@
     ..qrow("GET",    "/v1/notifications",                                      true,  "notifications"),
     ..qrow("GET",    "/v1/notifications/count",                                true,  "notifications"),
     ..qrow("POST",   "/v1/notifications/read-all",                             true,  "notifications"),
+    ..qrow("PATCH",  "/v1/notifications/:id/read",                             true,  "notifications"),
+    ..qrow("GET",    "/v1/notifications/preferences",                          true,  "notifications"),
+    ..qrow("PATCH",  "/v1/notifications/preferences/:type",                    true,  "notifications"),
     // Admin
     ..qrow("GET",    "/v1/admin/submissions",                                  true,  "admin"),
     ..qrow("PATCH",  "/v1/admin/submissions/:id/status",                       true,  "admin"),
     ..qrow("GET",    "/v1/admin/submissions/:id/logs",                         true,  "admin"),
     ..qrow("POST",   "/v1/admin/submissions/:id/retry",                        true,  "admin"),
+    ..qrow("POST",   "/v1/admin/submissions/bulk-retry",                       true,  "admin"),
+    ..qrow("GET",    "/v1/admin/audit-logs",                                   true,  "admin"),
     ..qrow("GET",    "/v1/admin/projects",                                     true,  "admin"),
     ..qrow("DELETE", "/v1/admin/courses/:id",                                  true,  "admin"),
     ..qrow("POST",   "/v1/admin/projects/:id/archive",                         true,  "admin"),
@@ -911,6 +925,23 @@ Course management endpoints. Instructors and TAs create and manage courses; stud
   ]
 )
 
+#endpoint("POST", "/v1/tracking/courses/:courseId/invites/bulk", auth: true,
+  desc: "Generate multiple invite codes in a single call. Useful for batch student onboarding. Returns an array of invite records.",
+  body: [
+    #params-table((
+      (text(font:mono,size:7.5pt,"count"),     text(font:mono,size:7.5pt,"number"),  "Number of invites to create (1–50)"),
+      (text(font:mono,size:7.5pt,"role"),      text(font:mono,size:7.5pt,"string?"), `"student" | "instructor" | "ta" (default "student")`),
+      (text(font:mono,size:7.5pt,"maxUses"),   text(font:mono,size:7.5pt,"number?"), "Uses per code (default 1)"),
+      (text(font:mono,size:7.5pt,"expiresAt"), text(font:mono,size:7.5pt,"string?"), "ISO date string"),
+    ))
+    #response-label("201", "")
+    #code-block(
+"{ invites: [{ code: string, inviteUrl: string, expiresAt: string | null }],
+  count: number }"
+    )
+  ]
+)
+
 #endpoint("GET", "/v1/tracking/invites/:code", auth: false,
   desc: "Preview a course invite (course name, role) without joining. Used by the web UI to show a confirmation screen.",
   body: [
@@ -1129,6 +1160,14 @@ Endpoints for milestone submissions and instructor code reviews. Submissions can
   body: [#response-label("200", "Submission")]
 )
 
+#endpoint("DELETE", "/v1/tracking/submissions/:submissionId", auth: true,
+  desc: "Cancel a queued submission. Only allowed when the submission status is `queued`. The pending verification job is removed from the queue. Returns 409 if the submission is already running or has reached a terminal state.",
+  body: [
+    #response-label("200", `{ ok: true, status: "cancelled" }`)
+    #response-label("409", "Submission is not in queued state")
+  ]
+)
+
 #endpoint("GET", "/v1/tracking/submissions/:submissionId/commits", auth: true,
   desc: "Get GitHub push delivery events linked to this submission. Each record represents a webhook push event received from GitHub.",
   body: [
@@ -1330,6 +1369,31 @@ Aggregated views for students and instructors, plus per-student submission analy
 #endpoint("GET", "/v1/tracking/dashboard/course/:courseId", auth: true,
   desc: "Full stats dashboard for a single course. Instructors, TAs, and admins only.",
   body: [#response-label("200", "InstructorDashboardResponse")]
+)
+
+#endpoint("GET", "/v1/tracking/analytics/instructor", auth: true,
+  desc: "Aggregated course analytics for an instructor — total students, submission counts, pass rate, per-milestone breakdown, and per-student progress. Requires course management permission.",
+  body: [
+    #params-table((
+      (text(font:mono,size:7.5pt,"courseId"), text(font:mono,size:7.5pt,"string"), "Required — course to analyse"),
+    ))
+    #response-label("200", "")
+    #code-block(
+"{ courseId, courseTitle,
+  totalStudents: number,
+  submissionCount: number,
+  passRate: number,           // 0.0 – 1.0
+  milestones: [{
+    milestoneId, milestoneTitle,
+    submissionCount, passCount, failCount, needsReviewCount
+  }],
+  students: [{
+    userId, username,
+    submittedMilestones, passedMilestones, totalMilestones
+  }]
+}"
+    )
+  ]
 )
 
 #endpoint("GET", "/v1/tracking/analytics/student", auth: true,
@@ -1651,6 +1715,42 @@ In-app notification endpoints. The web dashboard polls `/count` every 60 seconds
   body: [#response-label("200", `{ ok: true }`)]
 )
 
+#endpoint("PATCH", "/v1/notifications/:id/read", auth: true,
+  desc: "Mark a single notification as read by ID. Returns 404 if the notification does not belong to the authenticated user.",
+  body: [
+    #response-label("200", `{ ok: true }`)
+    #response-label("404", "Notification not found or not owned by user")
+  ]
+)
+
+== Notification Preferences
+
+#endpoint("GET", "/v1/notifications/preferences", auth: true,
+  desc: "List all notification preference settings for the authenticated user. Returns one record per notification type that has been explicitly configured; unset types default to enabled.",
+  body: [
+    #response-label("200", "")
+    #code-block(
+"{ preferences: [{
+    id, userId,
+    type: string,        // e.g. \"feedback\", \"review_ready\"
+    enabled: boolean,
+    createdAt, updatedAt
+  }] }"
+    )
+  ]
+)
+
+#endpoint("PATCH", "/v1/notifications/preferences/:type", auth: true,
+  desc: "Enable or disable a specific notification type for the authenticated user. Upserts — creates the preference record if it does not yet exist.",
+  body: [
+    #params-table((
+      (text(font:mono,size:7.5pt,"enabled"), text(font:mono,size:7.5pt,"boolean"), "true to enable, false to silence"),
+    ))
+    #response-label("200", "")
+    #code-block(`{ id, userId, type, enabled, createdAt, updatedAt }`)
+  ]
+)
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  SECTION 12 — ADMIN
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1691,6 +1791,46 @@ Platform-wide admin endpoints. All require `systemRole: "admin"`.
 #endpoint("POST", "/v1/admin/submissions/:submissionId/retry", auth: true,
   desc: "Re-queue a submission for fresh automated verification. Resets status to `queued`.",
   body: [#response-label("200", `{ ok: true, status: "queued" }`)]
+)
+
+#endpoint("POST", "/v1/admin/submissions/bulk-retry", auth: true,
+  desc: "Re-queue multiple submissions for fresh verification in a single request. Each submission is reset to `queued` and a new verification job is enqueued. Silently skips IDs that are already queued or running.",
+  body: [
+    #params-table((
+      (text(font:mono,size:7.5pt,"submissionIds"), text(font:mono,size:7.5pt,"string[]"), "Array of submission CUIDs to retry"),
+    ))
+    #response-label("200", "")
+    #code-block(`{ ok: true, queued: number, skipped: number }`)
+  ]
+)
+
+== Audit Log
+
+#endpoint("GET", "/v1/admin/audit-logs", auth: true,
+  desc: "Read the platform audit log. Every significant write action (course creation, role changes, submission overrides, etc.) is recorded automatically. Supports filtering and offset pagination.",
+  body: [
+    #params-table((
+      (text(font:mono,size:7.5pt,"action"),     text(font:mono,size:7.5pt,"string?"),  "Filter by action name (substring match)"),
+      (text(font:mono,size:7.5pt,"targetType"), text(font:mono,size:7.5pt,"string?"),  "Entity type (e.g. \"Course\", \"Submission\")"),
+      (text(font:mono,size:7.5pt,"courseId"),   text(font:mono,size:7.5pt,"string?"),  "Filter by course"),
+      (text(font:mono,size:7.5pt,"userId"),     text(font:mono,size:7.5pt,"string?"),  "Filter by acting user"),
+      (text(font:mono,size:7.5pt,"fromDate"),   text(font:mono,size:7.5pt,"string?"),  "ISO date lower bound"),
+      (text(font:mono,size:7.5pt,"toDate"),     text(font:mono,size:7.5pt,"string?"),  "ISO date upper bound"),
+      (text(font:mono,size:7.5pt,"limit"),      text(font:mono,size:7.5pt,"number?"),  "Max records (default 50, max 200)"),
+      (text(font:mono,size:7.5pt,"offset"),     text(font:mono,size:7.5pt,"number?"),  "Records to skip"),
+    ))
+    #response-label("200", "")
+    #code-block(
+"{ logs: [{
+    id, action, targetType, targetId,
+    userId: string | null,
+    courseId: string | null,
+    metadata: Record<string, unknown>,
+    createdAt
+  }],
+  total: number }"
+    )
+  ]
 )
 
 == Platform Management
@@ -1774,8 +1914,8 @@ Platform-wide admin endpoints. All require `systemRole: "admin"`.
   #line(length: 80pt, stroke: 1pt + border)
   #v(1em)
   #text(font: sans, size: 9pt, fill: muted)[
-    Nibras Platform · REST API Reference · May 2026 \
-    87 endpoints · 12 feature areas \
+    Nibras Platform · REST API Reference v2.0.0 · May 2026 \
+    97 endpoints · 12 feature areas \
     Generated from #raw("packages/contracts/src/api-reference.ts")
   ]
   #v(0.5em)

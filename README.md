@@ -1514,7 +1514,7 @@ Need help? Here are your options:
 - 📖 **Documentation:** Start with [docs/](docs/)
 - 🐛 **Report Issues:** https://github.com/NibrasPlatform/nibras-cli/issues
 - 💬 **Discussions:** https://github.com/NibrasPlatform/nibras-cli/discussions
-- 📧 **Email:** support@nibras.io (if applicable)
+- 📧 **Email:** epitomezied@gmail.com (if applicable)
 
 ---
 

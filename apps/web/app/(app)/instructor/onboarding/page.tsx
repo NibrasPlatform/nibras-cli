@@ -669,6 +669,202 @@ function TroubleshootAccordion({
   );
 }
 
+// ── Flow step icon components ─────────────────────────────────────────────────
+function CourseIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="3" y="4" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M7 8h6M7 11h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ProjectIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M4 5h12M4 10h8M4 15h6"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle cx="15.5" cy="14.5" r="2.5" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M15.5 13v1.5l1 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="5" cy="10" r="2" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="15" cy="5" r="2" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="15" cy="15" r="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M7 9l6-3M7 11l6 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ReviewIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M4 10a6 6 0 0112 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M3 10h1M16 10h1" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ── Flow overview data ────────────────────────────────────────────────────────
+const FLOW_STEPS_DATA = [
+  {
+    Icon: CourseIcon,
+    label: 'Create a course',
+    desc: 'Set up your course and project keys on the web dashboard.',
+  },
+  {
+    Icon: ProjectIcon,
+    label: 'Configure projects',
+    desc: 'Define allowed files, test commands, and grading settings.',
+  },
+  {
+    Icon: ShareIcon,
+    label: 'Share with students',
+    desc: 'Students install the CLI, log in, and run nibras setup.',
+  },
+  {
+    Icon: ReviewIcon,
+    label: 'Review submissions',
+    desc: 'Auto-verified results appear instantly in your dashboard.',
+  },
+];
+
+// ── Flow overview ─────────────────────────────────────────────────────────────
+function FlowOverview() {
+  return (
+    <div className={styles.flowSection}>
+      <p className={styles.flowEyebrow}>How Nibras Works</p>
+      <div className={styles.flowGrid}>
+        {FLOW_STEPS_DATA.map(({ Icon, label, desc }, i) => (
+          <div key={label} className={styles.flowCard}>
+            <div className={styles.flowCardIcon}>
+              <Icon />
+            </div>
+            <div className={styles.flowCardLabel}>{label}</div>
+            <div className={styles.flowCardDesc}>{desc}</div>
+            {i < FLOW_STEPS_DATA.length - 1 && (
+              <div className={styles.flowArrow} aria-hidden="true">
+                →
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Video placeholder ─────────────────────────────────────────────────────────
+function VideoPlaceholder({ title, youtubeId }: { title: string; youtubeId?: string }) {
+  if (youtubeId) {
+    return (
+      <div className={styles.videoEmbed}>
+        <div className={styles.videoEmbedHeader}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <polygon points="3,2 12,7 3,12" fill="currentColor" />
+          </svg>
+          <span className={styles.videoEmbedLabel}>{title}</span>
+        </div>
+        <div className={styles.videoEmbedFrame}>
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1`}
+            title={title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+            className={styles.videoEmbedIframe}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.videoPlaceholder}>
+      <div className={styles.videoPlayBtn}>
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <polygon points="5,3 15,9 5,15" fill="currentColor" />
+        </svg>
+      </div>
+      <div className={styles.videoInfo}>
+        <span className={styles.videoTitle}>{title}</span>
+        <span className={styles.videoBadge}>Video walkthrough · Coming soon</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Email template ────────────────────────────────────────────────────────────
+function EmailTemplate({
+  apiBaseUrl,
+  projectKey = 'cs101/assignment-1',
+}: {
+  apiBaseUrl: string | null;
+  projectKey?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const subject = `Getting started with Nibras CLI – ${projectKey}`;
+  const body = [
+    'Hi everyone,',
+    '',
+    "To submit your assignments, you'll use the Nibras CLI tool. Here's how to get started:",
+    '',
+    '1. Install the CLI:',
+    '   npm install -g @nibras/cli@1.0.2',
+    '',
+    '2. Log in with your GitHub account:',
+    `   nibras login --api-base-url ${apiBaseUrl ?? '<api-url>'}`,
+    '',
+    '3. Set up the project:',
+    `   nibras setup --project ${projectKey}`,
+    '',
+    '4. View the task instructions:',
+    '   nibras task',
+    '',
+    '5. Run tests locally:',
+    '   nibras test',
+    '',
+    '6. Submit your work:',
+    '   nibras submit',
+    '',
+    'If you run into any issues, run `nibras ping` and share the output with me.',
+    '',
+    'Good luck!',
+  ].join('\n');
+
+  function copy() {
+    void navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className={styles.emailTemplate}>
+      <div className={styles.emailTemplateHeader}>
+        <span className={styles.emailTemplateLabel}>Student email template</span>
+        <button className={styles.emailCopyBtn} onClick={copy} type="button">
+          {copied ? '✓ Copied' : 'Copy message'}
+        </button>
+      </div>
+      <div className={styles.emailSubject}>
+        <strong>Subject:</strong> {subject}
+      </div>
+      <pre className={styles.emailBody}>{body}</pre>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function OnboardingPage() {
   const [os, setOs] = useState<OS>('mac');
@@ -852,6 +1048,8 @@ export default function OnboardingPage() {
       <div className={styles.page}>
         {/* Hero */}
         <div className={`${styles.hero} ${allDone ? styles.heroDone : ''}`}>
+          {/* Radial glow backdrop */}
+          <div className={styles.heroGlow} aria-hidden="true" />
           <div className={styles.heroTopRow}>
             <div className={styles.heroBadge}>
               {allDone ? '🎉 Setup complete' : 'CLI Setup Guide'}
@@ -870,6 +1068,14 @@ export default function OnboardingPage() {
               ? "The CLI is installed, you're authenticated, and the project is set up. Head to the instructor dashboard to manage courses and review submissions."
               : 'Install the CLI, authenticate with GitHub, create a project, and make your first submission — step by step, for your OS.'}
           </p>
+          {/* Outcome chips */}
+          {!allDone && (
+            <div className={styles.heroOutcomes}>
+              <span className={styles.heroOutcomeChip}>✓ Students submit via CLI</span>
+              <span className={styles.heroOutcomeChip}>✓ Auto-verified results</span>
+              <span className={styles.heroOutcomeChip}>✓ Full instructor dashboard</span>
+            </div>
+          )}
           {/* Meta row */}
           <div className={styles.heroMeta}>
             <span className={styles.heroMetaItem}>
@@ -905,6 +1111,8 @@ export default function OnboardingPage() {
           </div>
         </div>
 
+        <FlowOverview />
+
         <div className={styles.content}>
           {/* ── 01 Prerequisites ──────────────────────────────────────────── */}
           <Section
@@ -918,6 +1126,7 @@ export default function OnboardingPage() {
               You need <strong>Node.js ≥ 18</strong>, <strong>npm ≥ 9</strong>, and{' '}
               <strong>git</strong> before installing the CLI. Follow the steps for your OS.
             </p>
+            <VideoPlaceholder title="Installing Node.js, npm, and Git" youtubeId="EPtpi7PvtII" />
 
             {os === 'windows' && (
               <WindowsQuickStart shell={windowsShell} setShell={setWindowsShell} />
@@ -1052,6 +1261,7 @@ export default function OnboardingPage() {
               <code className={styles.inlineCode}>nibras</code> command available everywhere in your
               terminal.
             </p>
+            <VideoPlaceholder title="Installing the Nibras CLI" />
 
             {os === 'windows' && (
               <div className={`${styles.callout} ${styles.calloutInfo}`}>
@@ -1132,6 +1342,7 @@ export default function OnboardingPage() {
               prints a one-time URL and short code, then tries to open the browser automatically
               unless you pass <code className={styles.inlineCode}>--no-open</code>.
             </p>
+            <VideoPlaceholder title="GitHub OAuth authentication flow" />
             {os === 'windows' && (
               <div className={`${styles.callout} ${styles.calloutInfo}`}>
                 <span className={styles.calloutIcon}>⊞</span>
@@ -1223,6 +1434,7 @@ export default function OnboardingPage() {
               <code className={styles.inlineCode}>.nibras/task.md</code>, initialises git if needed,
               and adds <code className={styles.inlineCode}>origin</code> for the student repo.
             </p>
+            <VideoPlaceholder title="Running nibras setup for a project" />
             <CliCodeBlock code="nibras setup --project cs101/assignment-1" />
             <div className={styles.terminalWrapper}>
               <TerminalMockup title="nibras setup" lines={setupOutput} />
@@ -1285,6 +1497,7 @@ export default function OnboardingPage() {
               <code className={styles.inlineCode}>origin</code>, registers the submission, and polls
               for server-side verification.
             </p>
+            <VideoPlaceholder title="Submitting your first solution" />
             <CliCodeBlock code="nibras submit" />
             <div className={styles.terminalWrapper}>
               <TerminalMockup title="nibras submit" lines={submitOutput} />
@@ -1361,6 +1574,7 @@ export default function OnboardingPage() {
                 </p>
               )}
             </div>
+            <EmailTemplate apiBaseUrl={hostedApiBaseUrl} />
             <p className={styles.hint}>
               Students can view assignment instructions at any time with{' '}
               <code className={styles.inlineCode}>nibras task</code>.
