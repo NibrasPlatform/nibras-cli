@@ -54,6 +54,39 @@
   color: var(--primary, #22c55e);
 }
 
+.customRange {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.customLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.customInput {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-family: inherit;
+  text-transform: none;
+}
+
+.customInput:focus {
+  outline: none;
+  border-color: var(--primary, #22c55e);
+}
+
 .kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

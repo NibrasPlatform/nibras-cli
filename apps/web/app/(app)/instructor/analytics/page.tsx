@@ -8,7 +8,9 @@ import BarChart from '../../_components/widgets/BarChart';
 import { getOverview, type OverviewResponse } from '../../../lib/services/analytics';
 import { friendlyMessage } from '../../../lib/api-clients/errors';
 
-type Range = '7d' | '30d' | '90d' | 'term';
+type Range = '7d' | '30d' | '90d' | 'term' | 'custom';
+
+const ANALYTICS_RANGE_KEY = 'nibras.analytics.range';
 
 function formatDelta(value: number): string {
   if (value === 0) return '0';
@@ -23,21 +25,44 @@ function deltaTrend(value: number): 'up' | 'down' | 'flat' {
 
 export default function AnalyticsOverviewPage() {
   const [range, setRange] = useState<Range>('30d');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [data, setData] = useState<OverviewResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem(ANALYTICS_RANGE_KEY);
+    if (stored === '7d' || stored === '30d' || stored === '90d' || stored === 'term') {
+      setRange(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || range === 'custom') return;
+    window.localStorage.setItem(ANALYTICS_RANGE_KEY, range);
+  }, [range]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setData(await getOverview({ range }));
+      if (range === 'custom') {
+        if (!fromDate || !toDate) {
+          setLoading(false);
+          return;
+        }
+        setData(await getOverview({ from: fromDate, to: toDate }));
+      } else {
+        setData(await getOverview({ range }));
+      }
     } catch (err) {
       setError(friendlyMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [range]);
+  }, [range, fromDate, toDate]);
 
   useEffect(() => {
     void load();
@@ -53,7 +78,7 @@ export default function AnalyticsOverviewPage() {
           </p>
         </div>
         <div className={styles.rangePicker} role="tablist" aria-label="Date range">
-          {(['7d', '30d', '90d', 'term'] as const).map((r) => (
+          {(['7d', '30d', '90d', 'term', 'custom'] as const).map((r) => (
             <button
               key={r}
               type="button"
@@ -62,11 +87,34 @@ export default function AnalyticsOverviewPage() {
               className={`${styles.rangeChip} ${range === r ? styles.rangeChipActive : ''}`}
               onClick={() => setRange(r)}
             >
-              {r === 'term' ? 'Term' : r.replace('d', ' days')}
+              {r === 'term' ? 'Term' : r === 'custom' ? 'Custom' : r.replace('d', ' days')}
             </button>
           ))}
         </div>
       </header>
+
+      {range === 'custom' && (
+        <div className={styles.customRange}>
+          <label className={styles.customLabel}>
+            From
+            <input
+              type="date"
+              className={styles.customInput}
+              value={fromDate}
+              onChange={(event) => setFromDate(event.target.value)}
+            />
+          </label>
+          <label className={styles.customLabel}>
+            To
+            <input
+              type="date"
+              className={styles.customInput}
+              value={toDate}
+              onChange={(event) => setToDate(event.target.value)}
+            />
+          </label>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ height: 360, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--border)' }} />
