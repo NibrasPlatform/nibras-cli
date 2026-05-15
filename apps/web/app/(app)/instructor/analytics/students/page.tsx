@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import styles from './page.module.css';
 import EmptyState from '../../../_components/widgets/EmptyState';
 import Sparkline from '../../../_components/widgets/Sparkline';
@@ -11,6 +11,7 @@ type RiskLevel = 'low' | 'medium' | 'high';
 
 export default function StudentsAnalyticsPage() {
   const [risk, setRisk] = useState<RiskLevel | 'all'>('all');
+  const [cohort, setCohort] = useState<string | null>(null);
   const [rows, setRows] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,18 +20,29 @@ export default function StudentsAnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await getStudents({ risk: risk === 'all' ? undefined : risk });
+      const response = await getStudents({
+        risk: risk === 'all' ? undefined : risk,
+        cohort: cohort ?? undefined,
+      });
       setRows(response.rows ?? []);
     } catch (err) {
       setError(friendlyMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [risk]);
+  }, [risk, cohort]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const cohorts = useMemo(() => {
+    const set = new Set<string>();
+    for (const row of rows) {
+      if (row.cohort) set.add(row.cohort);
+    }
+    return [...set].sort();
+  }, [rows]);
 
   function riskClass(level: RiskLevel) {
     if (level === 'high') return styles.riskHigh;
@@ -62,6 +74,29 @@ export default function StudentsAnalyticsPage() {
           ))}
         </div>
       </header>
+
+      {(cohorts.length > 0 || cohort) && (
+        <div className={styles.cohortFilter}>
+          <span className={styles.cohortLabel}>Cohort:</span>
+          <button
+            type="button"
+            className={`${styles.cohortChip} ${cohort === null ? styles.cohortChipActive : ''}`}
+            onClick={() => setCohort(null)}
+          >
+            All
+          </button>
+          {cohorts.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className={`${styles.cohortChip} ${cohort === c ? styles.cohortChipActive : ''}`}
+              onClick={() => setCohort(cohort === c ? null : c)}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div style={{ height: 300, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--border)' }} />
@@ -95,7 +130,17 @@ export default function StudentsAnalyticsPage() {
                     </div>
                   </td>
                   <td>
-                    <span className={styles.cohort}>{row.cohort ?? '—'}</span>
+                    {row.cohort ? (
+                      <button
+                        type="button"
+                        className={styles.cohortLink}
+                        onClick={() => setCohort(row.cohort ?? null)}
+                      >
+                        {row.cohort}
+                      </button>
+                    ) : (
+                      <span className={styles.cohort}>—</span>
+                    )}
                   </td>
                   <td className={styles.numeric}>{row.hoursWeekly.toFixed(1)}</td>
                   <td className={styles.numeric}>{row.averageGrade.toFixed(1)}</td>
