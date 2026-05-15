@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import styles from './page.module.css';
 import EmptyState from '../../../_components/widgets/EmptyState';
 import VoteButton from '../../../_components/widgets/VoteButton';
@@ -50,6 +50,15 @@ export default function QuestionPage() {
       setLoading(false);
     }
   }, [questionId]);
+
+  const sortedAnswers = useMemo(() => {
+    return [...answers].sort((a, b) => {
+      const aAccepted = a.accepted || question?.acceptedAnswerId === a.id;
+      const bAccepted = b.accepted || question?.acceptedAnswerId === b.id;
+      if (aAccepted !== bAccepted) return aAccepted ? -1 : 1;
+      return b.score - a.score;
+    });
+  }, [answers, question?.acceptedAnswerId]);
 
   useEffect(() => {
     void load();
@@ -157,7 +166,7 @@ export default function QuestionPage() {
           description="Share what you know and help a peer move forward."
         />
       ) : (
-        answers.map((answer) => {
+        sortedAnswers.map((answer) => {
           const accepted =
             answer.accepted || question.acceptedAnswerId === answer.id;
           return (
