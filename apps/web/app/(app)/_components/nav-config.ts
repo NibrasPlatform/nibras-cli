@@ -42,6 +42,13 @@ export const appNavItems: AppNavItem[] = [
     visibility: 'all',
   },
   {
+    href: '/achievements',
+    label: 'Achievements',
+    description: 'Badges, reputation, leaderboards, and level progression.',
+    visibility: 'all',
+    matchPrefixes: ['/levels'],
+  },
+  {
     href: '/instructor',
     label: 'Instructor',
     description: 'Manage courses, templates, team formation, and programs.',
@@ -139,6 +146,26 @@ export const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/settings': {
     title: 'Settings',
     subtitle: 'Manage your account preferences and connected services.',
+  },
+  '/achievements': {
+    title: 'Achievements',
+    subtitle: 'Track the badges you have earned and the milestones still ahead.',
+  },
+  '/achievements/leaderboard': {
+    title: 'Leaderboard',
+    subtitle: 'Compare your standing against the rest of the cohort.',
+  },
+  '/achievements/reputation': {
+    title: 'Reputation',
+    subtitle: 'Detailed breakdown of reputation changes over time.',
+  },
+  '/levels': {
+    title: 'Levels',
+    subtitle: 'Tier progression based on reputation and contributions.',
+  },
+  '/tutor/recommendations': {
+    title: 'Recommendations',
+    subtitle: 'Specialization and track suggestions tailored to your grades.',
   },
 };
 
