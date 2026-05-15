@@ -1,12 +1,78 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import styles from './page.module.css';
 import EmptyState from '../../_components/widgets/EmptyState';
+import {
+  listProblems,
+  setProblemBookmark,
+  type PracticeProblem,
+} from '../../../lib/services/competitions';
+import { friendlyMessage } from '../../../lib/api-clients/errors';
+
+const POPULAR_TAGS = [
+  'dp',
+  'graphs',
+  'greedy',
+  'math',
+  'strings',
+  'two-pointers',
+  'binary-search',
+  'trees',
+];
 
 export default function PracticePage() {
   const [q, setQ] = useState('');
   const [tag, setTag] = useState<string | null>(null);
+  const [difficulty, setDifficulty] = useState<'easy' | 'med' | 'hard' | 'any'>('any');
+  const [problems, setProblems] = useState<PracticeProblem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const ranges = {
+        any: {} as Record<string, number | undefined>,
+        easy: { difficultyMin: 0, difficultyMax: 1200 },
+        med: { difficultyMin: 1200, difficultyMax: 2000 },
+        hard: { difficultyMin: 2000, difficultyMax: 4000 },
+      } as const;
+      const response = await listProblems({
+        q: q.trim() || undefined,
+        tag: tag ?? undefined,
+        ...ranges[difficulty],
+        limit: 50,
+      });
+      setProblems(response.items ?? []);
+    } catch (err) {
+      setError(friendlyMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [q, tag, difficulty]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function toggleBookmark(problem: PracticeProblem) {
+    const next = !problem.bookmarked;
+    setProblems((prev) =>
+      prev.map((p) => (p.id === problem.id ? { ...p, bookmarked: next } : p))
+    );
+    try {
+      const result = await setProblemBookmark(problem.id, next);
+      setProblems((prev) =>
+        prev.map((p) => (p.id === problem.id ? { ...p, bookmarked: result.bookmarked } : p))
+      );
+    } catch {
+      setProblems((prev) =>
+        prev.map((p) => (p.id === problem.id ? { ...p, bookmarked: !next } : p))
+      );
+    }
+  }
 
   return (
     <div className={styles.page}>
@@ -16,6 +82,7 @@ export default function PracticePage() {
           Browse problems from Codeforces, LeetCode, and others. Filter by tag and difficulty.
         </p>
       </header>
+
       <div className={styles.toolbar}>
         <input
           className={styles.searchInput}
@@ -23,9 +90,24 @@ export default function PracticePage() {
           value={q}
           onChange={(event) => setQ(event.target.value)}
         />
+        <div className={styles.difficultyPicker} role="tablist" aria-label="Difficulty">
+          {(['any', 'easy', 'med', 'hard'] as const).map((d) => (
+            <button
+              key={d}
+              type="button"
+              role="tab"
+              aria-selected={difficulty === d}
+              className={`${styles.difficultyChip} ${difficulty === d ? styles.difficultyChipActive : ''}`}
+              onClick={() => setDifficulty(d)}
+            >
+              {d === 'med' ? 'Medium' : d[0].toUpperCase() + d.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
+
       <div className={styles.tagsRow}>
-        {['dp', 'graphs', 'greedy', 'math', 'strings', 'two-pointers'].map((t) => (
+        {POPULAR_TAGS.map((t) => (
           <button
             key={t}
             type="button"
@@ -36,7 +118,55 @@ export default function PracticePage() {
           </button>
         ))}
       </div>
-      <EmptyState title="No problems loaded" description="Practice problems will appear once they're fetched." />
+
+      {loading ? (
+        <div style={{ height: 280, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--border)' }} />
+      ) : error || problems.length === 0 ? (
+        <EmptyState
+          title={error ? 'Could not load problems' : 'No problems match'}
+          description={error ?? 'Try a different tag, difficulty, or search term.'}
+          tone={error ? 'error' : 'default'}
+          action={error ? { label: 'Retry', onClick: () => void load() } : undefined}
+        />
+      ) : (
+        <div className={styles.list}>
+          {problems.map((problem) => (
+            <article
+              key={problem.id}
+              className={`${styles.row} ${problem.solved ? styles.rowSolved : ''}`}
+            >
+              <span className={styles.difficultyBadge}>{problem.difficulty}</span>
+              <div>
+                <h2 className={styles.problemTitle}>
+                  <a href={problem.url} target="_blank" rel="noopener noreferrer">
+                    {problem.title}
+                  </a>
+                </h2>
+                <div className={styles.problemMeta}>
+                  <span className={styles.hostTag}>{problem.host}</span>
+                  {problem.tags.slice(0, 4).map((tagName) => (
+                    <span key={tagName} style={{ marginLeft: 6 }}>
+                      #{tagName}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              {problem.solved ? (
+                <span className={styles.solvedBadge}>Solved</span>
+              ) : (
+                <span />
+              )}
+              <button
+                type="button"
+                className={`${styles.bookmarkBtn} ${problem.bookmarked ? styles.bookmarkBtnActive : ''}`}
+                onClick={() => void toggleBookmark(problem)}
+              >
+                {problem.bookmarked ? 'Saved' : 'Save'}
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
