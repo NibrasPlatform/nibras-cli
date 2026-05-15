@@ -79,10 +79,10 @@ function prepareInit(init: ServiceFetchInit, token: string | null): RequestInit 
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const { query: _ignoredQuery, auth: _ignoredAuth, body: _ignoredBody, ...rest } = init;
-  void _ignoredQuery;
-  void _ignoredAuth;
-  void _ignoredBody;
+  const rest: RequestInit = { ...init } as RequestInit;
+  delete (rest as { query?: unknown }).query;
+  delete (rest as { auth?: unknown }).auth;
+  delete rest.body;
 
   return {
     ...rest,

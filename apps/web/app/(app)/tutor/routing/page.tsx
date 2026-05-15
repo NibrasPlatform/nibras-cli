@@ -28,8 +28,7 @@ export default function SmartRoutingPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleRoute(event: React.FormEvent) {
-    event.preventDefault();
+  async function computeRoute() {
     const trimmed = goal.trim();
     if (!trimmed) return;
     setBusy(true);
@@ -51,6 +50,11 @@ export default function SmartRoutingPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function handleRoute(event: React.FormEvent) {
+    event.preventDefault();
+    await computeRoute();
   }
 
   return (
@@ -83,7 +87,7 @@ export default function SmartRoutingPage() {
           title="Routing failed"
           description={error}
           tone="error"
-          action={{ label: 'Retry', onClick: () => void handleRoute({ preventDefault: () => {} } as React.FormEvent) }}
+          action={{ label: 'Retry', onClick: () => void computeRoute() }}
         />
       ) : !route ? (
         <EmptyState
