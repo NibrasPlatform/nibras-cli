@@ -6,6 +6,7 @@ import ChatPanel, { type ChatMessage } from '../_components/widgets/ChatPanel';
 import EmptyState from '../_components/widgets/EmptyState';
 import { ask } from '../../lib/services/chatbot';
 import { friendlyMessage } from '../../lib/api-clients/errors';
+import { renderMarkdown } from '../../lib/markdown';
 
 type Conversation = {
   id: string;
@@ -164,6 +165,17 @@ export default function TutorPage() {
             onSend={handleSend}
             onFollowUp={(text) => void handleSend(text)}
             busy={busy}
+            renderContent={(message) =>
+              message.role === 'assistant' && !message.pending ? (
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: renderMarkdown(message.content),
+                  }}
+                />
+              ) : (
+                <p>{message.content}</p>
+              )
+            }
           />
         </div>
       </div>
