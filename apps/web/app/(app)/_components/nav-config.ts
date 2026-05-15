@@ -54,6 +54,12 @@ export const appNavItems: AppNavItem[] = [
     visibility: 'all',
   },
   {
+    href: '/competitions',
+    label: 'Competitions',
+    description: 'Contests, practice problems, ranking, and competitive history.',
+    visibility: 'all',
+  },
+  {
     href: '/achievements',
     label: 'Achievements',
     description: 'Badges, reputation, leaderboards, and level progression.',
@@ -66,6 +72,17 @@ export const appNavItems: AppNavItem[] = [
     description: 'Manage courses, templates, team formation, and programs.',
     visibility: 'instructor',
     matchPrefixes: ['/instructor/programs'],
+  },
+  {
+    href: '/instructor/analytics',
+    label: 'Analytics',
+    description: 'Aggregate signal across courses — submissions, pass rate, engagement.',
+    visibility: 'instructor',
+    matchPrefixes: [
+      '/instructor/analytics/courses',
+      '/instructor/analytics/engagement',
+      '/instructor/analytics/students',
+    ],
   },
   {
     href: '/admin',
@@ -198,6 +215,38 @@ export const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/community/discussions': {
     title: 'Course Discussions',
     subtitle: 'Long-form threads scoped to your enrolled courses.',
+  },
+  '/competitions': {
+    title: 'Competitions',
+    subtitle: 'Upcoming contests and linked accounts.',
+  },
+  '/competitions/practice': {
+    title: 'Practice',
+    subtitle: 'Problems from Codeforces, LeetCode, and AtCoder.',
+  },
+  '/competitions/ranking': {
+    title: 'Ranking',
+    subtitle: 'How you rank across linked competitive platforms.',
+  },
+  '/competitions/history': {
+    title: 'Contest History',
+    subtitle: 'Your past contest performance and rating trend.',
+  },
+  '/instructor/analytics': {
+    title: 'Analytics',
+    subtitle: 'Aggregate cross-course signal and risk callouts.',
+  },
+  '/instructor/analytics/courses': {
+    title: 'Course Analytics',
+    subtitle: 'Per-course completion, average grade, and pass rate.',
+  },
+  '/instructor/analytics/engagement': {
+    title: 'Engagement',
+    subtitle: 'Time-on-task broken down by day and course.',
+  },
+  '/instructor/analytics/students': {
+    title: 'Students',
+    subtitle: 'Per-student engagement, grades, and risk classification.',
   },
 };
 
