@@ -1,13 +1,42 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import styles from './page.module.css';
 import EmptyState from '../../../_components/widgets/EmptyState';
+import Sparkline from '../../../_components/widgets/Sparkline';
+import { getStudents, type StudentRow } from '../../../../lib/services/analytics';
+import { friendlyMessage } from '../../../../lib/api-clients/errors';
 
 type RiskLevel = 'low' | 'medium' | 'high';
 
 export default function StudentsAnalyticsPage() {
   const [risk, setRisk] = useState<RiskLevel | 'all'>('all');
+  const [rows, setRows] = useState<StudentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getStudents({ risk: risk === 'all' ? undefined : risk });
+      setRows(response.rows ?? []);
+    } catch (err) {
+      setError(friendlyMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [risk]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  function riskClass(level: RiskLevel) {
+    if (level === 'high') return styles.riskHigh;
+    if (level === 'medium') return styles.riskMedium;
+    return styles.riskLow;
+  }
 
   return (
     <div className={styles.page}>
@@ -33,7 +62,68 @@ export default function StudentsAnalyticsPage() {
           ))}
         </div>
       </header>
-      <EmptyState title="No student data" description="Student analytics haven't loaded yet." />
+
+      {loading ? (
+        <div style={{ height: 300, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--border)' }} />
+      ) : error || rows.length === 0 ? (
+        <EmptyState
+          title="No student data"
+          description={error ?? "Student analytics haven't loaded yet."}
+          tone={error ? 'error' : 'default'}
+          action={error ? { label: 'Retry', onClick: () => void load() } : undefined}
+        />
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Cohort</th>
+                <th className={styles.numeric}>Hrs / wk</th>
+                <th className={styles.numeric}>Avg grade</th>
+                <th>Trend</th>
+                <th>Risk</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.studentId}>
+                  <td>
+                    <div className={styles.userCell}>
+                      <strong>{row.username}</strong>
+                      {row.email && <span className={styles.cohort}>{row.email}</span>}
+                    </div>
+                  </td>
+                  <td>
+                    <span className={styles.cohort}>{row.cohort ?? '—'}</span>
+                  </td>
+                  <td className={styles.numeric}>{row.hoursWeekly.toFixed(1)}</td>
+                  <td className={styles.numeric}>{row.averageGrade.toFixed(1)}</td>
+                  <td>
+                    <Sparkline
+                      values={Array.from({ length: 8 }, (_, idx) =>
+                        Math.max(0, row.averageGrade + (row.trend ?? 0) * (idx / 8) + (idx % 2 ? -0.2 : 0.2))
+                      )}
+                      width={80}
+                      height={28}
+                      color={
+                        (row.trend ?? 0) >= 0
+                          ? 'var(--primary, #22c55e)'
+                          : 'var(--danger, #ef4444)'
+                      }
+                    />
+                  </td>
+                  <td>
+                    <span className={`${styles.riskBadge} ${riskClass(row.riskLevel)}`}>
+                      {row.riskLevel}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
