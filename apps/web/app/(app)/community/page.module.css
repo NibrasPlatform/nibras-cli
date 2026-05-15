@@ -129,6 +129,56 @@
   color: #052e16;
 }
 
+.activeFilters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.activeFilterPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 10px 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--primary, #22c55e) 12%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--primary, #22c55e) 30%, var(--border));
+  color: var(--text);
+}
+
+.activeFilterPill strong {
+  color: var(--primary, #22c55e);
+  font-weight: 700;
+}
+
+.activeFilterPill button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.clearAllBtn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.clearAllBtn:hover {
+  color: var(--text);
+}
+
 .list {
   display: flex;
   flex-direction: column;

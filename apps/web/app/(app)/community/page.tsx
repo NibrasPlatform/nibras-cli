@@ -131,6 +131,41 @@ export default function CommunityPage() {
         </div>
       )}
 
+      {(tag || q.trim()) && (
+        <div className={styles.activeFilters}>
+          {tag && (
+            <span className={styles.activeFilterPill}>
+              tag: <strong>{tag}</strong>
+              <button
+                type="button"
+                aria-label={`Clear tag ${tag}`}
+                onClick={() => setTag(undefined)}
+              >
+                ×
+              </button>
+            </span>
+          )}
+          {q.trim() && (
+            <span className={styles.activeFilterPill}>
+              search: <strong>{q.trim()}</strong>
+              <button type="button" aria-label="Clear search" onClick={() => setQ('')}>
+                ×
+              </button>
+            </span>
+          )}
+          <button
+            type="button"
+            className={styles.clearAllBtn}
+            onClick={() => {
+              setTag(undefined);
+              setQ('');
+            }}
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div style={{ height: 320, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--border)' }} />
       ) : error && questions.length === 0 ? (
