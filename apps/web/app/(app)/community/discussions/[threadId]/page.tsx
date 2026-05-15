@@ -65,20 +65,26 @@ export default function ThreadPage() {
 
   async function handlePinToggle() {
     if (!thread) return;
+    const previous = thread.pinned;
+    setThread({ ...thread, pinned: !previous });
     try {
-      const updated = await setThreadPinned(thread.id, !thread.pinned);
+      const updated = await setThreadPinned(thread.id, !previous);
       setThread(updated);
     } catch (err) {
+      setThread((current) => (current ? { ...current, pinned: previous } : current));
       setError(friendlyMessage(err));
     }
   }
 
   async function handleCloseToggle() {
     if (!thread) return;
+    const previous = thread.closed;
+    setThread({ ...thread, closed: !previous });
     try {
-      const updated = await setThreadClosed(thread.id, !thread.closed);
+      const updated = await setThreadClosed(thread.id, !previous);
       setThread(updated);
     } catch (err) {
+      setThread((current) => (current ? { ...current, closed: previous } : current));
       setError(friendlyMessage(err));
     }
   }
