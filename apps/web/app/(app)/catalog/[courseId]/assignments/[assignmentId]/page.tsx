@@ -37,15 +37,42 @@ function formatDue(iso?: string): string {
   }
 }
 
+function draftStorageKey(assignmentId: string): string {
+  return `nibras.assignment.draft.${assignmentId}`;
+}
+
 export default function AssignmentDetailPage() {
   const params = useParams<{ courseId: string; assignmentId: string }>();
   const courseId = params?.courseId ?? '';
   const assignmentId = params?.assignmentId ?? '';
   const [assignment, setAssignment] = useState<AssignmentDetail | null>(null);
   const [draft, setDraft] = useState('');
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!assignmentId || typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem(draftStorageKey(assignmentId));
+    if (stored) {
+      setDraft(stored);
+      setDraftSavedAt(Date.now());
+    }
+  }, [assignmentId]);
+
+  useEffect(() => {
+    if (!assignmentId || typeof window === 'undefined') return;
+    const handle = window.setTimeout(() => {
+      if (draft.trim()) {
+        window.localStorage.setItem(draftStorageKey(assignmentId), draft);
+      } else {
+        window.localStorage.removeItem(draftStorageKey(assignmentId));
+      }
+      setDraftSavedAt(Date.now());
+    }, 800);
+    return () => window.clearTimeout(handle);
+  }, [draft, assignmentId]);
 
   const load = useCallback(async () => {
     if (!assignmentId) return;
@@ -91,6 +118,9 @@ export default function AssignmentDetailPage() {
       await submitAssignment(assignment.id, { content: draft.trim() });
       setAssignment({ ...assignment, status: 'submitted' });
       setDraft('');
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(draftStorageKey(assignment.id));
+      }
     } catch (err) {
       setError(friendlyMessage(err));
     } finally {
@@ -200,6 +230,11 @@ export default function AssignmentDetailPage() {
                 </div>
               </div>
               <div className={styles.actions}>
+                {draftSavedAt && draft.trim() && (
+                  <span className={styles.draftStatus}>
+                    Draft saved {new Date(draftSavedAt).toLocaleTimeString()}
+                  </span>
+                )}
                 <button type="submit" className={styles.submitBtn} disabled={!canSubmit}>
                   {submitting ? 'Submitting…' : 'Submit'}
                 </button>
