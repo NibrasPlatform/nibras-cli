@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './VoteButton.module.css';
 
 export type VoteState = -1 | 0 | 1;
@@ -25,6 +25,14 @@ export default function VoteButton({
   const [localScore, setLocalScore] = useState(score);
   const [localVote, setLocalVote] = useState<VoteState>(myVote);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    setLocalScore(score);
+  }, [score]);
+
+  useEffect(() => {
+    setLocalVote(myVote);
+  }, [myVote]);
 
   async function cast(direction: 1 | -1) {
     if (disabled || pending) return;
