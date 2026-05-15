@@ -130,3 +130,15 @@
   font-size: 12px;
   font-weight: 600;
 }
+
+.tableSkeleton {
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 1; }
+}
