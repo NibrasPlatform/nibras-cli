@@ -42,6 +42,18 @@ export const appNavItems: AppNavItem[] = [
     visibility: 'all',
   },
   {
+    href: '/tutor',
+    label: 'Tutor',
+    description: 'Chat, insights, smart routing, and recommendations.',
+    visibility: 'all',
+  },
+  {
+    href: '/community',
+    label: 'Community',
+    description: 'Ask questions, share answers, and join course discussions.',
+    visibility: 'all',
+  },
+  {
     href: '/achievements',
     label: 'Achievements',
     description: 'Badges, reputation, leaderboards, and level progression.',
@@ -163,9 +175,29 @@ export const pageTitles: Record<string, { title: string; subtitle: string }> = {
     title: 'Levels',
     subtitle: 'Tier progression based on reputation and contributions.',
   },
+  '/tutor': {
+    title: 'AI Tutor',
+    subtitle: 'Chat with the tutor about any topic you’re working through.',
+  },
+  '/tutor/insights': {
+    title: 'Learning Insights',
+    subtitle: 'Where you’re strong, where you’re struggling, and what to study next.',
+  },
+  '/tutor/routing': {
+    title: 'Smart Routing',
+    subtitle: 'Map a learning goal to a step-by-step study plan.',
+  },
   '/tutor/recommendations': {
     title: 'Recommendations',
     subtitle: 'Specialization and track suggestions tailored to your grades.',
+  },
+  '/community': {
+    title: 'Community',
+    subtitle: 'Ask questions, share answers, and learn from your peers.',
+  },
+  '/community/discussions': {
+    title: 'Course Discussions',
+    subtitle: 'Long-form threads scoped to your enrolled courses.',
   },
 };
 
