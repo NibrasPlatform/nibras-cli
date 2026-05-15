@@ -5,9 +5,11 @@ import styles from './page.module.css';
 import EmptyState from '../_components/widgets/EmptyState';
 import {
   getLinkedAccounts,
+  linkAccount,
   listContests,
   setContestBookmark,
   setContestReminder,
+  unlinkAccount,
   type Contest,
   type LinkedAccount,
 } from '../../lib/services/competitions';
@@ -34,6 +36,11 @@ export default function CompetitionsPage() {
   const [accounts, setAccounts] = useState<LinkedAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [linkModal, setLinkModal] = useState(false);
+  const [linkHost, setLinkHost] = useState<'codeforces' | 'leetcode' | 'atcoder'>('codeforces');
+  const [linkHandle, setLinkHandle] = useState('');
+  const [linkSubmitting, setLinkSubmitting] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -95,7 +102,7 @@ export default function CompetitionsPage() {
             Upcoming contests, linked accounts, and quick access to your competitive history.
           </p>
         </div>
-        <button type="button" className={styles.linkBtn} disabled>
+        <button type="button" className={styles.linkBtn} onClick={() => setLinkModal(true)}>
           Link account
         </button>
       </header>
@@ -106,8 +113,100 @@ export default function CompetitionsPage() {
             <span key={`${acc.host}-${acc.handle}`} className={styles.linkedChip}>
               {acc.host}: <span className={styles.linkedChipHandle}>{acc.handle}</span>
               {!acc.verified && <span style={{ fontSize: 10, color: 'var(--warning, #f59e0b)' }}>unverified</span>}
+              <button
+                type="button"
+                className={styles.unlinkBtn}
+                aria-label={`Unlink ${acc.host}`}
+                onClick={async () => {
+                  try {
+                    await unlinkAccount(acc.host);
+                    setAccounts((prev) => prev.filter((a) => a.host !== acc.host));
+                  } catch (err) {
+                    setError(friendlyMessage(err));
+                  }
+                }}
+              >
+                ×
+              </button>
             </span>
           ))}
+        </div>
+      )}
+
+      {linkModal && (
+        <div className={styles.modalBackdrop} role="dialog" aria-modal="true" aria-label="Link account">
+          <form
+            className={styles.modal}
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (!linkHandle.trim()) return;
+              setLinkSubmitting(true);
+              setLinkError(null);
+              try {
+                const created = await linkAccount({ host: linkHost, handle: linkHandle.trim() });
+                setAccounts((prev) => [...prev.filter((a) => a.host !== created.host), created]);
+                setLinkHandle('');
+                setLinkModal(false);
+              } catch (err) {
+                setLinkError(friendlyMessage(err));
+              } finally {
+                setLinkSubmitting(false);
+              }
+            }}
+          >
+            <h2 className={styles.modalTitle}>Link a competitive account</h2>
+            <p className={styles.modalHint}>
+              We&apos;ll fetch contest history, problems, and ratings for the linked account.
+              Verification may take a moment.
+            </p>
+            <div className={styles.formRow}>
+              <label className={styles.formLabel} htmlFor="link-host">
+                Platform
+              </label>
+              <select
+                id="link-host"
+                className={styles.formSelect}
+                value={linkHost}
+                onChange={(event) => setLinkHost(event.target.value as typeof linkHost)}
+              >
+                <option value="codeforces">Codeforces</option>
+                <option value="leetcode">LeetCode</option>
+                <option value="atcoder">AtCoder</option>
+              </select>
+            </div>
+            <div className={styles.formRow}>
+              <label className={styles.formLabel} htmlFor="link-handle">
+                Handle
+              </label>
+              <input
+                id="link-handle"
+                className={styles.formInput}
+                value={linkHandle}
+                onChange={(event) => setLinkHandle(event.target.value)}
+                placeholder="e.g. tourist"
+                autoFocus
+              />
+            </div>
+            {linkError && (
+              <p style={{ color: 'var(--danger, #ef4444)', fontSize: 12, margin: 0 }}>{linkError}</p>
+            )}
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => setLinkModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className={styles.submitBtn}
+                disabled={linkSubmitting || !linkHandle.trim()}
+              >
+                {linkSubmitting ? 'Linking…' : 'Link'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
