@@ -66,6 +66,12 @@ export default function CourseVideosPage() {
     }
   }
 
+  function advanceToNext(current: CourseVideo) {
+    const idx = videos.findIndex((v) => v.id === current.id);
+    const next = videos[idx + 1];
+    if (next) setActiveId(next.id);
+  }
+
   useEffect(() => {
     if (!active) return;
     function handleKey(event: KeyboardEvent) {
@@ -146,7 +152,10 @@ export default function CourseVideosPage() {
                       key={active.id}
                       src={active.url}
                       controls
-                      onEnded={() => void markWatched(active)}
+                      onEnded={() => {
+                        void markWatched(active);
+                        advanceToNext(active);
+                      }}
                     />
                   )}
                 </div>
