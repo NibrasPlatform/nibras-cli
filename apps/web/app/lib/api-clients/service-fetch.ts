@@ -164,3 +164,25 @@ export async function serviceFetch<T = unknown>(
   }
   return body as T;
 }
+
+/**
+ * Variant of `serviceFetch` that resolves to `null` when the backend returns
+ * HTTP 404. Used for endpoints the legacy dashboard exposes but the production
+ * Railway backend doesn't — the page degrades to an `EmptyState` instead of
+ * surfacing an `ApiError`. All other failure modes (401, 500, network) still
+ * throw an `ApiError` so genuine outages remain visible.
+ */
+export async function serviceFetchOptional<T = unknown>(
+  service: ApiServiceName,
+  path: string,
+  init: ServiceFetchInit = {}
+): Promise<T | null> {
+  try {
+    return await serviceFetch<T>(service, path, init);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) {
+      return null;
+    }
+    throw err;
+  }
+}

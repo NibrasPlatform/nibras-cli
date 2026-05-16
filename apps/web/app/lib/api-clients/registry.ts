@@ -24,7 +24,10 @@ const DEFAULT_SERVICE_URLS: Record<ApiServiceName, string> = {
   admin: 'https://nibras-backend.up.railway.app/api',
   community: 'https://nibras-backend.up.railway.app/api',
   tracking: 'https://nibras-api.fly.dev',
-  competitions: 'https://nibras-backend.up.railway.app/api',
+  // Competitions uses the bare host (no `/api` prefix) per
+  // `nibras-student-dashboard/client/config.js` — its endpoints live at
+  // `/contests`, `/user-contests`, `/problems`, `/contests/...`.
+  competitions: 'https://nibras-backend.up.railway.app',
   recommendation: 'https://recommendationmodel-production-0f8e.up.railway.app/api',
 };
 

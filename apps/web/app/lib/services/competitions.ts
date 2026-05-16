@@ -1,4 +1,4 @@
-import { serviceFetch } from '../api-clients/service-fetch';
+import { serviceFetch, serviceFetchOptional } from '../api-clients/service-fetch';
 
 export type Contest = {
   id: string;
@@ -62,7 +62,7 @@ export async function listContests(filters: { upcoming?: boolean; host?: string 
 export async function setContestReminder(contestId: string, on: boolean) {
   return serviceFetch<{ reminderSet: boolean }>(
     'competitions',
-    `/contests/${contestId}/reminder`,
+    `/user-contests/${contestId}/reminder`,
     {
       method: 'POST',
       auth: true,
@@ -74,7 +74,7 @@ export async function setContestReminder(contestId: string, on: boolean) {
 export async function setContestBookmark(contestId: string, on: boolean) {
   return serviceFetch<{ bookmarked: boolean }>(
     'competitions',
-    `/contests/${contestId}/bookmark`,
+    `/user-contests/${contestId}/bookmark`,
     {
       method: 'POST',
       auth: true,
@@ -103,8 +103,15 @@ export async function listProblems(filters: {
   );
 }
 
-export async function setProblemBookmark(problemId: string, on: boolean) {
-  return serviceFetch<{ bookmarked: boolean }>(
+// Invented by the port: legacy dashboard doesn't expose problem bookmarks.
+// Optional variant swallows 404 so the UI can hide the affordance silently.
+// Returns the optimistic `on` value when the endpoint is unavailable so the
+// caller can continue without crashing on `null`.
+export async function setProblemBookmark(
+  problemId: string,
+  on: boolean
+): Promise<{ bookmarked: boolean }> {
+  const data = await serviceFetchOptional<{ bookmarked: boolean }>(
     'competitions',
     `/problems/${problemId}/bookmark`,
     {
@@ -113,40 +120,65 @@ export async function setProblemBookmark(problemId: string, on: boolean) {
       body: { on },
     }
   );
+  return data ?? { bookmarked: on };
 }
 
 // ── Ranking ─────────────────────────────────────────────────────────────────
-export async function getRanking(host?: string) {
-  return serviceFetch<RankingEntry[]>('competitions', '/ranking', {
+// Invented endpoint — degrades to empty list when backend returns 404.
+export async function getRanking(host?: string): Promise<RankingEntry[]> {
+  const data = await serviceFetchOptional<RankingEntry[]>('competitions', '/ranking', {
     auth: true,
     query: host ? { host } : undefined,
   });
+  return data ?? [];
 }
 
 // ── History ─────────────────────────────────────────────────────────────────
-export async function getMyHistory(host?: string) {
-  return serviceFetch<ContestHistoryEntry[]>('competitions', '/me/history', {
-    auth: true,
-    query: host ? { host } : undefined,
-  });
+export async function getMyHistory(host?: string): Promise<ContestHistoryEntry[]> {
+  const data = await serviceFetchOptional<ContestHistoryEntry[]>(
+    'competitions',
+    '/contests/user-contests/history',
+    {
+      auth: true,
+      query: host ? { host } : undefined,
+    }
+  );
+  return data ?? [];
 }
 
 // ── Linked accounts ─────────────────────────────────────────────────────────
-export async function getLinkedAccounts() {
-  return serviceFetch<LinkedAccount[]>('competitions', '/me/accounts', { auth: true });
+// Legacy backend has no GET list endpoint — only verify-flow POSTs. Degrade
+// to empty so the chips section just renders empty.
+export async function getLinkedAccounts(): Promise<LinkedAccount[]> {
+  const data = await serviceFetchOptional<LinkedAccount[]>(
+    'competitions',
+    '/contests/accounts',
+    { auth: true }
+  );
+  return data ?? [];
 }
 
 export async function linkAccount(payload: { host: string; handle: string; token?: string }) {
-  return serviceFetch<LinkedAccount>('competitions', '/me/accounts', {
+  return serviceFetch<LinkedAccount>('competitions', '/contests/accounts/link', {
     method: 'POST',
     auth: true,
-    body: payload as Record<string, unknown>,
+    // Legacy contract uses `platform`, not `host`.
+    body: {
+      platform: payload.host,
+      handle: payload.handle,
+      ...(payload.token ? { token: payload.token } : {}),
+    },
   });
 }
 
-export async function unlinkAccount(host: string) {
-  return serviceFetch<{ unlinked: true }>('competitions', `/me/accounts/${host}`, {
-    method: 'DELETE',
-    auth: true,
-  });
+// Invented by the port: legacy dashboard has no unlink endpoint.
+export async function unlinkAccount(host: string): Promise<{ unlinked: true } | null> {
+  return serviceFetchOptional<{ unlinked: true }>(
+    'competitions',
+    `/contests/accounts/${host}`,
+    {
+      method: 'DELETE',
+      auth: true,
+    }
+  );
 }

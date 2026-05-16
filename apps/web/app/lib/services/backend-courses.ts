@@ -1,4 +1,4 @@
-import { serviceFetch } from '../api-clients/service-fetch';
+import { serviceFetch, serviceFetchOptional } from '../api-clients/service-fetch';
 
 export type BackendCourse = {
   id: string;
@@ -61,17 +61,22 @@ export async function getCourse(courseId: string) {
 }
 
 // ── Videos ──────────────────────────────────────────────────────────────────
-export async function listVideos(courseId: string) {
-  return serviceFetch<CourseVideo[]>('admin', `/courses/${courseId}/videos`, {
-    auth: true,
-  });
+// Invented endpoints — legacy dashboard doesn't expose course videos via this
+// backend. Optional variants let the page render an empty list cleanly.
+export async function listVideos(courseId: string): Promise<CourseVideo[]> {
+  const data = await serviceFetchOptional<CourseVideo[]>(
+    'admin',
+    `/courses/${courseId}/videos`,
+    { auth: true }
+  );
+  return data ?? [];
 }
 
 export async function setVideoProgress(
   videoId: string,
   payload: { watched?: boolean; watchedProgress?: number }
-) {
-  return serviceFetch<{ watched: boolean; watchedProgress: number }>(
+): Promise<{ watched: boolean; watchedProgress: number }> {
+  const data = await serviceFetchOptional<{ watched: boolean; watchedProgress: number }>(
     'admin',
     `/videos/${videoId}/progress`,
     {
@@ -80,13 +85,16 @@ export async function setVideoProgress(
       body: payload as Record<string, unknown>,
     }
   );
+  return data ?? { watched: payload.watched ?? false, watchedProgress: payload.watchedProgress ?? 0 };
 }
 
 // ── Assignments ─────────────────────────────────────────────────────────────
 export async function listAssignments(courseId: string) {
-  return serviceFetch<BackendAssignment[]>('admin', `/courses/${courseId}/assignments`, {
-    auth: true,
-  });
+  return serviceFetch<BackendAssignment[]>(
+    'admin',
+    `/assignments/course/${courseId}`,
+    { auth: true }
+  );
 }
 
 export async function getAssignmentById(assignmentId: string) {
@@ -95,11 +103,12 @@ export async function getAssignmentById(assignmentId: string) {
   });
 }
 
+// Invented by the port. UI hides the submit form when this is unavailable.
 export async function submitAssignment(
   assignmentId: string,
   payload: { content: string; resources?: Array<{ title: string; url: string }> }
-) {
-  return serviceFetch<AssignmentSubmission>(
+): Promise<AssignmentSubmission | null> {
+  return serviceFetchOptional<AssignmentSubmission>(
     'admin',
     `/assignments/${assignmentId}/submit`,
     {

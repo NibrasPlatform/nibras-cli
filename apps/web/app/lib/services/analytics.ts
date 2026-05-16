@@ -1,4 +1,4 @@
-import { serviceFetch } from '../api-clients/service-fetch';
+import { serviceFetchOptional } from '../api-clients/service-fetch';
 
 export type AnalyticsRange = '7d' | '30d' | '90d' | 'term';
 
@@ -72,6 +72,11 @@ export type StudentsResponse = {
   total: number;
 };
 
+// Aggregate instructor analytics endpoints were invented by the port. The
+// legacy backend only exposes per-student / per-course endpoints, not the
+// cross-course aggregates these pages need. Each function returns `null` when
+// the backend 404s so the corresponding page renders `EmptyState`.
+
 function toQuery(filters: DateRangeFilters): Record<string, string> {
   const out: Record<string, string> = {};
   if (filters.range) out.range = filters.range;
@@ -82,21 +87,24 @@ function toQuery(filters: DateRangeFilters): Record<string, string> {
 }
 
 export async function getOverview(filters: DateRangeFilters = {}) {
-  return serviceFetch<OverviewResponse>('admin', '/analytics/overview', {
+  return serviceFetchOptional<OverviewResponse>('admin', '/analytics/overview', {
     auth: true,
     query: toQuery(filters),
   });
 }
 
-export async function getCourseSummaries(filters: DateRangeFilters = {}) {
-  return serviceFetch<CourseSummary[]>('admin', '/analytics/courses', {
+export async function getCourseSummaries(
+  filters: DateRangeFilters = {}
+): Promise<CourseSummary[]> {
+  const data = await serviceFetchOptional<CourseSummary[]>('admin', '/analytics/courses', {
     auth: true,
     query: toQuery(filters),
   });
+  return data ?? [];
 }
 
 export async function getEngagement(filters: DateRangeFilters = {}) {
-  return serviceFetch<EngagementResponse>('admin', '/analytics/engagement', {
+  return serviceFetchOptional<EngagementResponse>('admin', '/analytics/engagement', {
     auth: true,
     query: toQuery(filters),
   });
@@ -104,12 +112,13 @@ export async function getEngagement(filters: DateRangeFilters = {}) {
 
 export async function getStudents(
   filters: DateRangeFilters & { cohort?: string; risk?: StudentRow['riskLevel'] } = {}
-) {
+): Promise<StudentsResponse> {
   const query = toQuery(filters);
   if (filters.cohort) query.cohort = filters.cohort;
   if (filters.risk) query.risk = filters.risk;
-  return serviceFetch<StudentsResponse>('admin', '/analytics/students', {
+  const data = await serviceFetchOptional<StudentsResponse>('admin', '/analytics/students', {
     auth: true,
     query,
   });
+  return data ?? { rows: [], total: 0 };
 }
