@@ -74,7 +74,6 @@ export type QuestionFilters = {
 };
 
 export type ThreadFilters = {
-  courseId?: string;
   q?: string;
   tag?: string;
   pinned?: boolean;
@@ -90,6 +89,15 @@ export type Paginated<T> = {
   limit: number;
 };
 
+type VoteValue = 1 | -1;
+
+type LegacyVoteResponse = {
+  message?: string;
+  action?: string;
+  voteValue?: number;
+  votesCount?: number;
+};
+
 function toQuery(filters: Record<string, unknown>): Record<string, string | number | boolean> {
   const out: Record<string, string | number | boolean> = {};
   for (const [key, value] of Object.entries(filters)) {
@@ -101,18 +109,29 @@ function toQuery(filters: Record<string, unknown>): Record<string, string | numb
   return out;
 }
 
+function normalizeVoteResponse(
+  body: LegacyVoteResponse
+): { score: number; myVote: 1 | 0 | -1 } {
+  const score = typeof body.votesCount === 'number' ? body.votesCount : 0;
+  const raw = typeof body.voteValue === 'number' ? body.voteValue : 0;
+  const myVote = raw === 1 ? 1 : raw === -1 ? -1 : 0;
+  return { score, myVote };
+}
+
 // ── Questions ───────────────────────────────────────────────────────────────
 export async function listQuestions(filters: QuestionFilters = {}) {
-  return serviceFetch<Paginated<CommunityQuestion>>('community', '/qa/questions', {
+  return serviceFetch<Paginated<CommunityQuestion>>('community', '/community/questions', {
     auth: true,
     query: toQuery(filters),
   });
 }
 
 export async function getQuestion(questionId: string) {
-  return serviceFetch<CommunityQuestion>('community', `/qa/questions/${questionId}`, {
-    auth: true,
-  });
+  return serviceFetch<CommunityQuestion>(
+    'community',
+    `/community/questions/${questionId}`,
+    { auth: true }
+  );
 }
 
 export async function createQuestion(payload: {
@@ -120,36 +139,35 @@ export async function createQuestion(payload: {
   body: string;
   tags?: string[];
 }) {
-  return serviceFetch<CommunityQuestion>('community', '/qa/questions', {
+  return serviceFetch<CommunityQuestion>('community', '/community/questions', {
     method: 'POST',
     auth: true,
     body: payload as Record<string, unknown>,
   });
 }
 
-export async function voteQuestion(questionId: string, direction: 1 | -1 | 0) {
-  return serviceFetch<{ score: number; myVote: 1 | 0 | -1 }>(
-    'community',
-    `/qa/questions/${questionId}/vote`,
-    {
-      method: 'POST',
-      auth: true,
-      body: { direction },
-    }
-  );
+export async function voteQuestion(questionId: string, direction: VoteValue) {
+  const body = await serviceFetch<LegacyVoteResponse>('community', '/community/votes', {
+    method: 'POST',
+    auth: true,
+    body: { targetType: 'question', targetId: questionId, value: direction },
+  });
+  return normalizeVoteResponse(body);
 }
 
 // ── Answers ─────────────────────────────────────────────────────────────────
 export async function listAnswers(questionId: string) {
-  return serviceFetch<CommunityAnswer[]>('community', `/qa/questions/${questionId}/answers`, {
-    auth: true,
-  });
+  return serviceFetch<CommunityAnswer[]>(
+    'community',
+    `/community/answers/question/${questionId}`,
+    { auth: true }
+  );
 }
 
 export async function createAnswer(questionId: string, body: string) {
   return serviceFetch<CommunityAnswer>(
     'community',
-    `/qa/questions/${questionId}/answers`,
+    `/community/answers/${questionId}`,
     {
       method: 'POST',
       auth: true,
@@ -158,61 +176,77 @@ export async function createAnswer(questionId: string, body: string) {
   );
 }
 
-export async function voteAnswer(answerId: string, direction: 1 | -1 | 0) {
-  return serviceFetch<{ score: number; myVote: 1 | 0 | -1 }>(
-    'community',
-    `/qa/answers/${answerId}/vote`,
-    {
-      method: 'POST',
-      auth: true,
-      body: { direction },
-    }
-  );
+export async function voteAnswer(answerId: string, direction: VoteValue) {
+  const body = await serviceFetch<LegacyVoteResponse>('community', '/community/votes', {
+    method: 'POST',
+    auth: true,
+    body: { targetType: 'answer', targetId: answerId, value: direction },
+  });
+  return normalizeVoteResponse(body);
 }
 
 export async function acceptAnswer(answerId: string) {
   return serviceFetch<{ accepted: true }>(
     'community',
-    `/qa/answers/${answerId}/accept`,
-    { method: 'POST', auth: true }
+    `/community/answers/${answerId}/accept`,
+    {
+      method: 'PATCH',
+      auth: true,
+      body: {},
+    }
   );
 }
 
 // ── Discussions / Threads ───────────────────────────────────────────────────
-export async function listThreads(filters: ThreadFilters = {}) {
-  return serviceFetch<Paginated<CommunityThread>>('community', '/discussions/threads', {
-    auth: true,
-    query: toQuery(filters),
-  });
+//
+// The legacy backend exposes threads only PER COURSE. There is no global
+// "all courses" list endpoint — the page must pick a course first.
+export async function listThreads(courseId: string, filters: ThreadFilters = {}) {
+  return serviceFetch<Paginated<CommunityThread>>(
+    'community',
+    `/community/threads/course/${courseId}`,
+    {
+      auth: true,
+      query: toQuery(filters),
+    }
+  );
 }
 
 export async function getThread(threadId: string) {
-  return serviceFetch<CommunityThread>('community', `/discussions/threads/${threadId}`, {
-    auth: true,
-  });
+  return serviceFetch<CommunityThread>(
+    'community',
+    `/community/threads/${threadId}`,
+    { auth: true }
+  );
 }
 
-export async function createThread(payload: {
-  title: string;
-  body?: string;
-  courseId?: string;
-  tags?: string[];
-}) {
-  return serviceFetch<CommunityThread>('community', '/discussions/threads', {
-    method: 'POST',
-    auth: true,
-    body: payload as Record<string, unknown>,
-  });
+export async function createThread(
+  courseId: string,
+  payload: {
+    title: string;
+    body?: string;
+    tags?: string[];
+  }
+) {
+  return serviceFetch<CommunityThread>(
+    'community',
+    `/community/threads/${courseId}`,
+    {
+      method: 'POST',
+      auth: true,
+      body: payload as Record<string, unknown>,
+    }
+  );
 }
 
 export async function setThreadPinned(threadId: string, pinned: boolean) {
   return serviceFetch<CommunityThread>(
     'community',
-    `/discussions/threads/${threadId}/pin`,
+    `/community/threads/${threadId}/${pinned ? 'pin' : 'unpin'}`,
     {
-      method: 'POST',
+      method: 'PATCH',
       auth: true,
-      body: { pinned },
+      body: {},
     }
   );
 }
@@ -220,26 +254,28 @@ export async function setThreadPinned(threadId: string, pinned: boolean) {
 export async function setThreadClosed(threadId: string, closed: boolean) {
   return serviceFetch<CommunityThread>(
     'community',
-    `/discussions/threads/${threadId}/close`,
+    `/community/threads/${threadId}/${closed ? 'close' : 'open'}`,
     {
-      method: 'POST',
+      method: 'PATCH',
       auth: true,
-      body: { closed },
+      body: {},
     }
   );
 }
 
 // ── Posts ───────────────────────────────────────────────────────────────────
 export async function listPosts(threadId: string) {
-  return serviceFetch<CommunityPost[]>('community', `/discussions/threads/${threadId}/posts`, {
-    auth: true,
-  });
+  return serviceFetch<CommunityPost[]>(
+    'community',
+    `/community/posts/thread/${threadId}`,
+    { auth: true }
+  );
 }
 
 export async function createPost(threadId: string, body: string) {
   return serviceFetch<CommunityPost>(
     'community',
-    `/discussions/threads/${threadId}/posts`,
+    `/community/posts/${threadId}`,
     {
       method: 'POST',
       auth: true,
@@ -248,23 +284,20 @@ export async function createPost(threadId: string, body: string) {
   );
 }
 
-export async function votePost(postId: string, direction: 1 | -1 | 0) {
-  return serviceFetch<{ score: number; myVote: 1 | 0 | -1 }>(
-    'community',
-    `/discussions/posts/${postId}/vote`,
-    {
-      method: 'POST',
-      auth: true,
-      body: { direction },
-    }
-  );
+export async function votePost(postId: string, direction: VoteValue) {
+  const body = await serviceFetch<LegacyVoteResponse>('community', '/community/votes', {
+    method: 'POST',
+    auth: true,
+    body: { targetType: 'post', targetId: postId, value: direction },
+  });
+  return normalizeVoteResponse(body);
 }
 
 // ── Tags ────────────────────────────────────────────────────────────────────
 export async function listTags(): Promise<CommunityTag[]> {
   const data = await serviceFetch<CommunityTag[] | { tags: CommunityTag[] }>(
     'community',
-    '/qa/tags',
+    '/community/tags',
     { auth: true }
   );
   if (Array.isArray(data)) return data;

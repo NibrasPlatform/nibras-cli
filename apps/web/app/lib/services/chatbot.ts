@@ -31,7 +31,7 @@ export type ChatPublishResponse = {
 };
 
 export async function ask(payload: ChatAskRequest): Promise<ChatAskResponse> {
-  return serviceFetch<ChatAskResponse>('community', '/chatbot/ask', {
+  return serviceFetch<ChatAskResponse>('community', '/community/chatbot/ask', {
     method: 'POST',
     auth: true,
     body: payload as unknown as Record<string, unknown>,
@@ -39,7 +39,7 @@ export async function ask(payload: ChatAskRequest): Promise<ChatAskResponse> {
 }
 
 export async function publish(payload: ChatPublishRequest): Promise<ChatPublishResponse> {
-  return serviceFetch<ChatPublishResponse>('community', '/chatbot/publish', {
+  return serviceFetch<ChatPublishResponse>('community', '/community/chatbot/publish', {
     method: 'POST',
     auth: true,
     body: payload as unknown as Record<string, unknown>,

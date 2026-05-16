@@ -4,11 +4,25 @@ import { useEffect, useState } from 'react';
 import styles from './VoteButton.module.css';
 
 export type VoteState = -1 | 0 | 1;
+export type VoteDirection = -1 | 1;
 
 export type VoteButtonProps = {
   score: number;
   myVote?: VoteState;
-  onVote: (next: VoteState) => Promise<{ score: number; myVote: VoteState }> | { score: number; myVote: VoteState } | Promise<void> | void;
+  /**
+   * Called with the user's CLICK direction (always 1 or -1). The legacy backend
+   * at `/community/votes` toggles the vote off when the same value is posted
+   * again — the service module forwards the click verbatim and trusts the
+   * server's returned `{ score, myVote }` to settle UI state. Resolving 0
+   * (cleared vote) only happens on the server's response.
+   */
+  onVote: (
+    direction: VoteDirection
+  ) =>
+    | Promise<{ score: number; myVote: VoteState }>
+    | { score: number; myVote: VoteState }
+    | Promise<void>
+    | void;
   disabled?: boolean;
   size?: 'sm' | 'md';
   ariaLabel?: string;
@@ -34,7 +48,7 @@ export default function VoteButton({
     setLocalVote(myVote);
   }, [myVote]);
 
-  async function cast(direction: 1 | -1) {
+  async function cast(direction: VoteDirection) {
     if (disabled || pending) return;
     const next: VoteState = localVote === direction ? 0 : direction;
     const previousVote = localVote;
@@ -44,7 +58,7 @@ export default function VoteButton({
     setLocalScore(optimisticScore);
     setPending(true);
     try {
-      const result = await onVote(next);
+      const result = await onVote(direction);
       if (result && typeof result === 'object' && 'score' in result) {
         setLocalScore(result.score);
         setLocalVote(result.myVote);

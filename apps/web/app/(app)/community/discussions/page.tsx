@@ -4,11 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import styles from './page.module.css';
 import EmptyState from '../../_components/widgets/EmptyState';
-import {
-  listThreads,
-  type CommunityThread,
-  type ThreadFilters,
-} from '../../../lib/services/community';
+import { listThreads, type CommunityThread } from '../../../lib/services/community';
 import { useSession } from '../../_components/session-context';
 import { friendlyMessage } from '../../../lib/api-clients/errors';
 
@@ -41,11 +37,15 @@ export default function DiscussionsPage() {
   }, [user]);
 
   const load = useCallback(async () => {
+    if (!courseId) {
+      setThreads([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const filters: ThreadFilters = { courseId, limit: 30 };
-      const response = await listThreads(filters);
+      const response = await listThreads(courseId, { limit: 30 });
       setThreads(response.items ?? []);
     } catch (err) {
       setError(friendlyMessage(err));
@@ -56,8 +56,12 @@ export default function DiscussionsPage() {
   }, [courseId]);
 
   useEffect(() => {
+    if (!courseId && courses.length > 0) {
+      setCourseId(courses[0].id);
+      return;
+    }
     void load();
-  }, [load]);
+  }, [load, courseId, courses]);
 
   const sortedThreads = useMemo(() => {
     return [...threads].sort((a, b) => {
@@ -85,15 +89,6 @@ export default function DiscussionsPage() {
       {courses.length > 0 && (
         <div className={styles.filters}>
           <div className={styles.coursePicker} role="tablist" aria-label="Course filter">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={courseId === undefined}
-              className={`${styles.courseChip} ${courseId === undefined ? styles.courseChipActive : ''}`}
-              onClick={() => setCourseId(undefined)}
-            >
-              All courses
-            </button>
             {courses.map((c) => (
               <button
                 key={c.id}
@@ -110,7 +105,16 @@ export default function DiscussionsPage() {
         </div>
       )}
 
-      {loading ? (
+      {!courseId ? (
+        <EmptyState
+          title={courses.length === 0 ? 'No courses to discuss' : 'Pick a course to see threads'}
+          description={
+            courses.length === 0
+              ? 'Discussion threads are scoped per course. Enrol in a course to see its threads.'
+              : 'Discussion threads are scoped per course. Choose one above to load its threads.'
+          }
+        />
+      ) : loading ? (
         <div style={{ height: 280, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--border)' }} />
       ) : error ? (
         <EmptyState
@@ -122,7 +126,7 @@ export default function DiscussionsPage() {
       ) : sortedThreads.length === 0 ? (
         <EmptyState
           title="No threads yet"
-          description="Threads from your enrolled courses will appear here."
+          description="Be the first to start a discussion in this course."
         />
       ) : (
         <div className={styles.threadList}>
