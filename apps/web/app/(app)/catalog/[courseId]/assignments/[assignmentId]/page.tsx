@@ -2,12 +2,11 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import styles from './page.module.css';
 import EmptyState from '../../../../_components/widgets/EmptyState';
 import {
   getAssignmentById,
-  submitAssignment,
   type AssignmentDetail,
 } from '../../../../../lib/services/backend-courses';
 import { friendlyMessage } from '../../../../../lib/api-clients/errors';
@@ -37,42 +36,13 @@ function formatDue(iso?: string): string {
   }
 }
 
-function draftStorageKey(assignmentId: string): string {
-  return `nibras.assignment.draft.${assignmentId}`;
-}
-
 export default function AssignmentDetailPage() {
   const params = useParams<{ courseId: string; assignmentId: string }>();
   const courseId = params?.courseId ?? '';
   const assignmentId = params?.assignmentId ?? '';
   const [assignment, setAssignment] = useState<AssignmentDetail | null>(null);
-  const [draft, setDraft] = useState('');
-  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!assignmentId || typeof window === 'undefined') return;
-    const stored = window.localStorage.getItem(draftStorageKey(assignmentId));
-    if (stored) {
-      setDraft(stored);
-      setDraftSavedAt(Date.now());
-    }
-  }, [assignmentId]);
-
-  useEffect(() => {
-    if (!assignmentId || typeof window === 'undefined') return;
-    const handle = window.setTimeout(() => {
-      if (draft.trim()) {
-        window.localStorage.setItem(draftStorageKey(assignmentId), draft);
-      } else {
-        window.localStorage.removeItem(draftStorageKey(assignmentId));
-      }
-      setDraftSavedAt(Date.now());
-    }, 800);
-    return () => window.clearTimeout(handle);
-  }, [draft, assignmentId]);
 
   const load = useCallback(async () => {
     if (!assignmentId) return;
@@ -91,42 +61,6 @@ export default function AssignmentDetailPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  const preflight = useMemo(() => {
-    const trimmed = draft.trim();
-    return {
-      hasContent: trimmed.length > 0,
-      length: trimmed.length,
-      lineCount: trimmed.length === 0 ? 0 : trimmed.split('\n').length,
-      withinLimit: trimmed.length <= 50000,
-      mentionsAuthor: /\bauthor\s*:/i.test(trimmed),
-    };
-  }, [draft]);
-
-  const canSubmit =
-    !submitting &&
-    preflight.hasContent &&
-    preflight.withinLimit &&
-    assignment?.status !== 'submitted' &&
-    assignment?.status !== 'graded';
-
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!canSubmit || !assignment) return;
-    setSubmitting(true);
-    try {
-      await submitAssignment(assignment.id, { content: draft.trim() });
-      setAssignment({ ...assignment, status: 'submitted' });
-      setDraft('');
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(draftStorageKey(assignment.id));
-      }
-    } catch (err) {
-      setError(friendlyMessage(err));
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -204,43 +138,6 @@ export default function AssignmentDetailPage() {
               </ul>
             </section>
           )}
-
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Your submission</h2>
-            <form className={styles.composer} onSubmit={handleSubmit}>
-              <textarea
-                className={styles.composerInput}
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                placeholder="Paste your solution, write-up, or repo description…"
-                disabled={assignment.status === 'submitted' || assignment.status === 'graded'}
-              />
-              <div className={styles.preflight}>
-                <div className={`${styles.preflightRow} ${preflight.hasContent ? styles.preflightOk : ''}`}>
-                  {preflight.hasContent ? '✓' : '○'} Content present ({preflight.length} chars)
-                </div>
-                <div className={`${styles.preflightRow} ${preflight.withinLimit ? styles.preflightOk : styles.preflightWarn}`}>
-                  {preflight.withinLimit ? '✓' : '!'} Within 50 000 character limit
-                </div>
-                <div className={`${styles.preflightRow} ${preflight.mentionsAuthor ? styles.preflightWarn : styles.preflightOk}`}>
-                  {preflight.mentionsAuthor ? '!' : '✓'} No author header — keep submission anonymous
-                </div>
-                <div className={styles.preflightRow}>
-                  Lines: {preflight.lineCount}
-                </div>
-              </div>
-              <div className={styles.actions}>
-                {draftSavedAt && draft.trim() && (
-                  <span className={styles.draftStatus}>
-                    Draft saved {new Date(draftSavedAt).toLocaleTimeString()}
-                  </span>
-                )}
-                <button type="submit" className={styles.submitBtn} disabled={!canSubmit}>
-                  {submitting ? 'Submitting…' : 'Submit'}
-                </button>
-              </div>
-            </form>
-          </section>
         </div>
 
         <aside className={styles.aside}>

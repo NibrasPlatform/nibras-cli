@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from './page.module.css';
 import EmptyState from '../../_components/widgets/EmptyState';
-import {
-  listProblems,
-  setProblemBookmark,
-  type PracticeProblem,
-} from '../../../lib/services/competitions';
+import { listProblems, type PracticeProblem } from '../../../lib/services/competitions';
 import { friendlyMessage } from '../../../lib/api-clients/errors';
 
 const POPULAR_TAGS = [
@@ -56,23 +52,6 @@ export default function PracticePage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  async function toggleBookmark(problem: PracticeProblem) {
-    const next = !problem.bookmarked;
-    setProblems((prev) =>
-      prev.map((p) => (p.id === problem.id ? { ...p, bookmarked: next } : p))
-    );
-    try {
-      const result = await setProblemBookmark(problem.id, next);
-      setProblems((prev) =>
-        prev.map((p) => (p.id === problem.id ? { ...p, bookmarked: result.bookmarked } : p))
-      );
-    } catch {
-      setProblems((prev) =>
-        prev.map((p) => (p.id === problem.id ? { ...p, bookmarked: !next } : p))
-      );
-    }
-  }
 
   return (
     <div className={styles.page}>
@@ -151,18 +130,7 @@ export default function PracticePage() {
                   ))}
                 </div>
               </div>
-              {problem.solved ? (
-                <span className={styles.solvedBadge}>Solved</span>
-              ) : (
-                <span />
-              )}
-              <button
-                type="button"
-                className={`${styles.bookmarkBtn} ${problem.bookmarked ? styles.bookmarkBtnActive : ''}`}
-                onClick={() => void toggleBookmark(problem)}
-              >
-                {problem.bookmarked ? 'Saved' : 'Save'}
-              </button>
+              {problem.solved && <span className={styles.solvedBadge}>Solved</span>}
             </article>
           ))}
         </div>

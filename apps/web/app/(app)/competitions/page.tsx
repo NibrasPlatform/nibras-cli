@@ -9,7 +9,6 @@ import {
   listContests,
   setContestBookmark,
   setContestReminder,
-  unlinkAccount,
   type Contest,
   type LinkedAccount,
 } from '../../lib/services/competitions';
@@ -113,21 +112,6 @@ export default function CompetitionsPage() {
             <span key={`${acc.host}-${acc.handle}`} className={styles.linkedChip}>
               {acc.host}: <span className={styles.linkedChipHandle}>{acc.handle}</span>
               {!acc.verified && <span style={{ fontSize: 10, color: 'var(--warning, #f59e0b)' }}>unverified</span>}
-              <button
-                type="button"
-                className={styles.unlinkBtn}
-                aria-label={`Unlink ${acc.host}`}
-                onClick={async () => {
-                  try {
-                    await unlinkAccount(acc.host);
-                    setAccounts((prev) => prev.filter((a) => a.host !== acc.host));
-                  } catch (err) {
-                    setError(friendlyMessage(err));
-                  }
-                }}
-              >
-                ×
-              </button>
             </span>
           ))}
         </div>
