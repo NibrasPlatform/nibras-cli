@@ -74,22 +74,23 @@ export default function CourseVideosPage() {
 
   useEffect(() => {
     if (!active) return;
+    const current = active;
     function handleKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
       if (event.key === 'j' || event.key === 'J' || event.key === 'ArrowDown') {
         event.preventDefault();
-        const idx = videos.findIndex((v) => v.id === active.id);
+        const idx = videos.findIndex((v) => v.id === current.id);
         const next = videos[idx + 1] ?? videos[idx];
         if (next) setActiveId(next.id);
       } else if (event.key === 'k' || event.key === 'K' || event.key === 'ArrowUp') {
         event.preventDefault();
-        const idx = videos.findIndex((v) => v.id === active.id);
+        const idx = videos.findIndex((v) => v.id === current.id);
         const prev = videos[idx - 1] ?? videos[idx];
         if (prev) setActiveId(prev.id);
       } else if (event.key === 'm' || event.key === 'M') {
         event.preventDefault();
-        void markWatched(active);
+        void markWatched(current);
       }
     }
     window.addEventListener('keydown', handleKey);
