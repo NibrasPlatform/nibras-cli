@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import styles from './page.module.css';
 import EmptyState from '../_components/widgets/EmptyState';
 import {
+  createQuestion,
   listQuestions,
   listTags,
   type CommunityQuestion,
@@ -37,6 +39,7 @@ function formatRelative(iso: string): string {
 }
 
 export default function CommunityPage() {
+  const router = useRouter();
   const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
   const [tags, setTags] = useState<CommunityTag[]>([]);
   const [sort, setSort] = useState<NonNullable<QuestionFilters['sort']>>('newest');
@@ -44,6 +47,42 @@ export default function CommunityPage() {
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [askOpen, setAskOpen] = useState(false);
+  const [askTitle, setAskTitle] = useState('');
+  const [askBody, setAskBody] = useState('');
+  const [askTags, setAskTags] = useState('');
+  const [askSubmitting, setAskSubmitting] = useState(false);
+  const [askError, setAskError] = useState<string | null>(null);
+
+  async function handleAskSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    const title = askTitle.trim();
+    const body = askBody.trim();
+    if (!title || !body) return;
+    setAskSubmitting(true);
+    setAskError(null);
+    try {
+      const parsedTags = askTags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
+      const created = await createQuestion({
+        title,
+        body,
+        tags: parsedTags.length > 0 ? parsedTags : undefined,
+      });
+      setAskOpen(false);
+      setAskTitle('');
+      setAskBody('');
+      setAskTags('');
+      router.push(`/community/q/${created.id}`);
+    } catch (err) {
+      setAskError(friendlyMessage(err));
+    } finally {
+      setAskSubmitting(false);
+    }
+  }
 
   const filters = useMemo<QuestionFilters>(() => ({ sort, tag, q, limit: 30 }), [sort, tag, q]);
 
@@ -75,10 +114,79 @@ export default function CommunityPage() {
           <h1 className={styles.title}>Community</h1>
           <p className={styles.subtitle}>Ask, answer, and learn from your classmates.</p>
         </div>
-        <button type="button" className={styles.askBtn} disabled>
+        <button type="button" className={styles.askBtn} onClick={() => setAskOpen(true)}>
           Ask a question
         </button>
       </header>
+
+      {askOpen && (
+        <div className={styles.modalBackdrop} role="dialog" aria-modal="true" aria-label="Ask a question">
+          <form className={styles.modal} onSubmit={handleAskSubmit}>
+            <h2 className={styles.modalTitle}>Ask a question</h2>
+            <p className={styles.modalHint}>
+              Keep the title focused and the body specific. Add up to 5 comma-separated tags.
+            </p>
+            <div className={styles.formRow}>
+              <label className={styles.formLabel} htmlFor="ask-title">Title</label>
+              <input
+                id="ask-title"
+                className={styles.formInput}
+                value={askTitle}
+                onChange={(e) => setAskTitle(e.target.value)}
+                placeholder="What's the gist of your question?"
+                maxLength={160}
+                autoFocus
+                required
+              />
+            </div>
+            <div className={styles.formRow}>
+              <label className={styles.formLabel} htmlFor="ask-body">Details</label>
+              <textarea
+                id="ask-body"
+                className={styles.formTextarea}
+                value={askBody}
+                onChange={(e) => setAskBody(e.target.value)}
+                placeholder="Provide context, what you've tried, and what you expected."
+                rows={8}
+                required
+              />
+            </div>
+            <div className={styles.formRow}>
+              <label className={styles.formLabel} htmlFor="ask-tags">Tags (optional)</label>
+              <input
+                id="ask-tags"
+                className={styles.formInput}
+                value={askTags}
+                onChange={(e) => setAskTags(e.target.value)}
+                placeholder="e.g. data-structures, algorithms, dp"
+              />
+            </div>
+            {askError && (
+              <p style={{ color: 'var(--danger, #ef4444)', fontSize: 12, margin: 0 }}>{askError}</p>
+            )}
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => {
+                  setAskOpen(false);
+                  setAskError(null);
+                }}
+                disabled={askSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className={styles.submitBtn}
+                disabled={askSubmitting || !askTitle.trim() || !askBody.trim()}
+              >
+                {askSubmitting ? 'Posting…' : 'Post question'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className={styles.toolbar}>
         <div className={styles.searchWrap}>

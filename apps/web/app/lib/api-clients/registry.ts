@@ -24,10 +24,11 @@ const DEFAULT_SERVICE_URLS: Record<ApiServiceName, string> = {
   admin: 'https://nibras-backend.up.railway.app/api',
   community: 'https://nibras-backend.up.railway.app/api',
   tracking: 'https://nibras-api.fly.dev',
-  // Competitions uses the bare host (no `/api` prefix) per
-  // `nibras-student-dashboard/client/config.js` — its endpoints live at
-  // `/contests`, `/user-contests`, `/problems`, `/contests/...`.
-  competitions: 'https://nibras-backend.up.railway.app',
+  // `ensureCompetitionsApiBaseUrl` in the legacy dashboard appends `/api` to
+  // the bare competitions host, so the resolved base is the same `/api` path
+  // as the admin service. Verified: `https://nibras-backend.up.railway.app/api/contests`
+  // returns 200, while the bare-host variant returns 404.
+  competitions: 'https://nibras-backend.up.railway.app/api',
   recommendation: 'https://recommendationmodel-production-0f8e.up.railway.app/api',
 };
 
