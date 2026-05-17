@@ -121,9 +121,7 @@ jobs:
     name: Deploy to Container Apps
     needs: [build-api, build-worker, build-web]
     runs-on: ubuntu-latest
-    if: ${{ vars.AZURE_RESOURCE_GROUP != '' && env.AZURE_CREDENTIALS_PRESENT == 'true' }}
-    env:
-      AZURE_CREDENTIALS_PRESENT: ${{ secrets.AZURE_CREDENTIALS != '' }}
+    if: ${{ vars.AZURE_RESOURCE_GROUP != '' }}
     steps:
       - name: Lowercase IMAGE_REPO
         run: echo "IMAGE_REPO=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
